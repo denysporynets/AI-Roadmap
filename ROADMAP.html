@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>Ruta AI Engineering — Bitácora de artefactos</title>
+<script>
+  // Aplica el tema guardado antes del primer pintado (evita parpadeo)
+  (function() {
+    try {
+      var t = localStorage.getItem('ai-eng-roadmap-theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch(e) {}
+  })();
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d1117;
+    --bg-card:   #151b23;
+    --bg-card-hover: #1a2230;
+    --ink:       #e6edf3;
+    --muted:     #7d8590;
+    --border:    #2a3340;
+    --amber:     #f0a500;
+    --amber-dim: #5c4419;
+    --green:     #3fb950;
+    --green-dim: #1d3a23;
+    --blue:      #4a8cff;
+    --warn:      #d29922;
+    /* tokens conmutables día/noche */
+    --hover:      rgba(255,255,255,0.03);
+    --dod-bg:     rgba(255,255,255,0.02);
+    --grad-start: #1a1410;
+    --warn-ink:   #d8c08a;
+    --faint:      #2a3340;
+  }
+
+  /* ── TEMA CLARO ── paleta reutilizada por el modo auto y el manual ── */
+  /* Auto: aplica claro si el sistema lo prefiere Y no has forzado oscuro */
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg:        #f7f4ee;
+      --bg-card:   #ffffff;
+      --bg-card-hover: #f1ede4;
+      --ink:       #1c2127;
+      --muted:     #5c6470;
+      --border:    #e3ddd0;
+      --amber:     #a86a05;
+      --amber-dim: #f3e7c8;
+      --green:     #1f8a3b;
+      --green-dim: #d7efdc;
+      --blue:      #1f5fc0;
+      --warn:      #9a6700;
+      --hover:      rgba(0,0,0,0.035);
+      --dod-bg:     rgba(0,0,0,0.025);
+      --grad-start: #fbf2dd;
+      --warn-ink:   #7a5a00;
+      --faint:      #cfc8ba;
+    }
+  }
+  /* Manual: claro forzado por el botón, gane lo que diga el sistema */
+  :root[data-theme="light"] {
+    --bg:        #f7f4ee;
+    --bg-card:   #ffffff;
+    --bg-card-hover: #f1ede4;
+    --ink:       #1c2127;
+    --muted:     #5c6470;
+    --border:    #e3ddd0;
+    --amber:     #a86a05;
+    --amber-dim: #f3e7c8;
+    --green:     #1f8a3b;
+    --green-dim: #d7efdc;
+    --blue:      #1f5fc0;
+    --warn:      #9a6700;
+    --hover:      rgba(0,0,0,0.035);
+    --dod-bg:     rgba(0,0,0,0.025);
+    --grad-start: #fbf2dd;
+    --warn-ink:   #7a5a00;
+    --faint:      #cfc8ba;
+  }
+
+  html, body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* ── HEADER ────────────────────────────────────────── */
+  .hero { margin-bottom: 40px; }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 10px;
+  }
+
+  .hero-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: clamp(32px, 5vw, 46px);
+    line-height: 1.05;
+    letter-spacing: -0.5px;
+    margin-bottom: 14px;
+  }
+  .hero-title strong { font-weight: 600; color: var(--amber); }
+
+  .hero-sub {
+    font-size: 14.5px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 600px;
+  }
+  .hero-sub strong { color: var(--ink); font-weight: 600; }
+
+  /* ── PROGRESS BAR (signature element) ─────────────────── */
+  .progress-panel {
+    margin-top: 28px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+  }
+
+  .progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+
+  .progress-label {
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .progress-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .progress-count strong { color: var(--amber); }
+
+  .progress-track {
+    position: relative;
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .progress-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    background: linear-gradient(90deg, var(--amber-dim), var(--amber));
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+
+  .progress-secondary {
+    margin-top: 9px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .progress-state {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* ── ARTEFACTOS (phases) ───────────────────────────── */
+  .phase {
+    margin-bottom: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .phase.complete { border-color: var(--green-dim); }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .phase-header:hover { background: var(--bg-card-hover); }
+
+  .phase-marker {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--amber);
+    background: var(--amber-dim);
+    border-radius: 4px;
+    padding: 3px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .phase.complete .phase-marker { color: var(--green); background: var(--green-dim); }
+
+  .phase-title-block { flex: 1; min-width: 0; }
+
+  .phase-title {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 2px;
+  }
+
+  .phase-meta { font-size: 12px; color: var(--muted); }
+
+  .phase-progress-mini {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .phase.complete .phase-progress-mini { color: var(--green); }
+
+  .phase-chevron {
+    color: var(--muted);
+    flex-shrink: 0;
+    transition: transform 0.25s;
+    font-size: 12px;
+  }
+  .phase.open .phase-chevron { transform: rotate(90deg); }
+
+  .phase-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+  }
+  .phase.open .phase-body { max-height: 1800px; }
+
+  .phase-why {
+    padding: 0 20px 14px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  /* ── DELIVERABLE (the shipped artifact — the star) ── */
+  .deliverable {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: rgba(240,165,0,0.045);
+    border: 1px solid var(--amber-dim);
+    border-radius: 8px;
+    padding: 13px 14px;
+    margin: 2px 12px 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .deliverable:hover { background: rgba(240,165,0,0.08); }
+  .deliverable.checked {
+    border-color: var(--green-dim);
+    background: rgba(63,185,80,0.07);
+  }
+  .deliverable .checkbox {
+    width: 19px; height: 19px;
+    border: 1.5px solid var(--amber);
+    border-radius: 5px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .deliverable.checked .checkbox { background: var(--green); border-color: var(--green); }
+  .deliverable .checkbox svg { width: 12px; height: 12px; opacity: 0; transition: opacity 0.15s; }
+  .deliverable.checked .checkbox svg { opacity: 1; }
+  .deliverable-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 3px;
+  }
+  .deliverable.checked .deliverable-label { color: var(--green); }
+  .deliverable-text { font-size: 13.5px; line-height: 1.5; color: var(--ink); font-weight: 500; }
+  .deliverable.checked .deliverable-text { color: var(--muted); }
+
+  /* ── DEFINICIÓN DE HECHO ──────────────────────────── */
+  .dod {
+    margin: 0 12px 12px;
+    padding: 10px 13px;
+    border-left: 2px solid var(--amber);
+    background: var(--dod-bg);
+    border-radius: 0 6px 6px 0;
+    font-size: 12.5px; line-height: 1.55; color: var(--muted);
+  }
+  .dod strong {
+    color: var(--amber);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    display: block; margin-bottom: 4px;
+  }
+  .dod em { color: var(--ink); font-style: normal; }
+
+  /* ── WARNING (privacidad) ─────────────────────────── */
+  .warn {
+    margin: 0 12px 12px;
+    padding: 9px 13px;
+    border-left: 2px solid var(--warn);
+    background: rgba(210,153,34,0.06);
+    border-radius: 0 6px 6px 0;
+    font-size: 12px; line-height: 1.5; color: var(--warn-ink);
+  }
+  .warn strong { color: var(--warn); }
+
+  /* ── SUPPORT SECTION ──────────────────────────────── */
+  .support-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted);
+    margin: 6px 18px 0;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .support-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .item-list { padding: 4px 12px 14px 12px; }
+  .item-list.steps { padding-bottom: 4px; }
+
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .item:hover { background: var(--hover); }
+
+  .checkbox {
+    width: 17px; height: 17px;
+    border: 1.5px solid var(--muted);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .item.checked .checkbox { background: var(--green); border-color: var(--green); }
+  .checkbox svg { width: 11px; height: 11px; opacity: 0; transition: opacity 0.15s; }
+  .item.checked .checkbox svg { opacity: 1; }
+
+  .item-text { flex: 1; font-size: 13.5px; line-height: 1.5; color: var(--ink); }
+  .item.checked .item-text {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--border);
+  }
+  .item.course-item .item-text { color: var(--muted); font-size: 13px; }
+
+  .item-text .course-name { font-weight: 500; }
+  .item-text .course-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 9.5px;
+    color: var(--blue);
+    background: rgba(74,140,255,0.1);
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .item-text .course-tag.own { color: var(--amber); background: rgba(240,165,0,0.1); }
+
+  /* ── OPTIONAL BOX (fine-tuning, fuera de la espina) ── */
+  .optional-box {
+    margin-top: 16px;
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .opt-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 7px;
+  }
+  .opt-title {
+    font-family: 'Fraunces', serif;
+    font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 7px;
+  }
+  .opt-desc { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+  .opt-desc .course-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 9.5px; color: var(--blue);
+    background: rgba(74,140,255,0.1);
+    border-radius: 3px; padding: 1px 5px; margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ── PRINCIPLE CALLOUT ────────────────────────────── */
+  .principle {
+    margin-top: 32px;
+    background: linear-gradient(135deg, var(--grad-start) 0%, var(--bg-card) 60%);
+    border: 1px solid var(--amber-dim);
+    border-radius: 12px;
+    padding: 24px 26px;
+    position: relative;
+    overflow: hidden;
+  }
+  .principle::before {
+    content: '';
+    position: absolute;
+    top: -40%; right: -10%;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(240,165,0,0.08), transparent 70%);
+  }
+  .principle-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--amber); margin-bottom: 10px;
+  }
+  .principle-text {
+    font-family: 'Fraunces', serif;
+    font-size: 19px; font-weight: 300; line-height: 1.4; color: var(--ink);
+    max-width: 640px;
+  }
+  .principle-text strong { font-weight: 600; color: var(--amber); }
+
+  /* ── FOOTER ────────────────────────────────────────── */
+  .footer {
+    margin-top: 40px;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--faint);
+  }
+  .footer span { color: var(--amber); opacity: 0.6; }
+
+  /* ── RESET BUTTON ──────────────────────────────────── */
+  .reset-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .reset-btn:hover { color: var(--ink); border-color: var(--muted); }
+
+  .top-bar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
+
+  @media (max-width: 600px) {
+    .wrap { padding: 32px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top-bar">
+    <button class="reset-btn" id="themeBtn" title="Cambiar entre tema claro y oscuro">🌙 Noche</button>
+    <button class="reset-btn" id="resetBtn">Reiniciar progreso</button>
+  </div>
+
+  <div class="hero">
+    <div class="hero-eyebrow">Bitácora · columna vertebral: artefactos en producción</div>
+    <h1 class="hero-title">De Data Science a <strong>AI Engineering</strong></h1>
+    <p class="hero-sub">
+      Seis artefactos desplegados, no seis meses de cursos. La métrica de esta ruta es <strong>qué he puesto en producción y alguien usa</strong> — los cursos de DataCamp son material de apoyo colgado de cada artefacto, no el objetivo. Un sistema que sobrevive en producción pesa más que cualquier certificado.
+    </p>
+
+    <div class="progress-panel">
+      <div class="progress-top">
+        <span class="progress-label">Artefactos desplegados</span>
+        <span class="progress-count"><strong id="doneCount">0</strong> / <span id="totalCount">6</span> en producción</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-secondary"><span id="supportDone">0</span> / <span id="supportTotal">0</span> pasos y cursos de apoyo</div>
+      <div class="progress-state" id="progressState">Sin desplegar todavía. La métrica aquí no son cursos completados — son artefactos que alguien usa de verdad.</div>
+    </div>
+  </div>
+
+  <!-- ARTEFACTO 1 -->
+  <div class="phase open" data-phase="1">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-marker">MES 1</span>
+      <div class="phase-title-block">
+        <div class="phase-title">Endpoint LLM en producción</div>
+        <div class="phase-meta">SDK directo · salida estructurada · empaquetado</div>
+      </div>
+      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+      <span class="phase-chevron">▸</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-why">Antes de tocar frameworks, monta tú la llamada cruda. Si solo dominas la capa de LangChain, dominas algo que puede desaparecer; si entiendes el SDK por debajo, todo lo demás es conveniencia.</div>
+
+      <div class="deliverable" data-id="d1" data-deliverable="true">
+        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="deliverable-label">Artefacto</div>
+          <div class="deliverable-text">Un mini-servicio (CLI o FastAPI) que usas tú mismo: recibe input y devuelve salida estructurada llamando al LLM por SDK directo.</div>
+        </div>
+      </div>
+      <div class="dod"><strong>Definición de "hecho"</strong><em>Lo ejecutas desde fuera de tu editor y devuelve JSON válido de forma fiable.</em> No cuenta como hecho si solo corre dentro de un notebook.</div>
+
+      <div class="item-list steps">
+        <div class="item" data-id="s1-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Llamada directa al SDK con <strong>OpenAI y Claude</strong> (compara ambos), sin framework de por medio</div>
+        </div>
+        <div class="item" data-id="s1-2">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Salida estructurada (JSON / schema) validada antes de devolverla</div>
+        </div>
+        <div class="item" data-id="s1-3">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Empaquetado como CLI o FastAPI mínima que de verdad uses para algo</div>
+        </div>
+      </div>
+
+      <div class="support-label">Material de apoyo</div>
+      <div class="item-list">
+        <div class="item course-item" data-id="c1-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text"><span class="course-name">Working with the OpenAI API</span><span class="course-tag">DataCamp</span></div>
+        </div>
+        <div class="item course-item" data-id="c1-2">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text"><span class="course-name">Introduction to Embeddings with the OpenAI API</span><span class="course-tag">DataCamp</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARTEFACTO 2 -->
+  <div class="phase" data-phase="2">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-marker">MES 2</span>
+      <div class="phase-title-block">
+        <div class="phase-title">RAG desplegado sobre el Corpus DOBE</div>
+        <div class="phase-meta">Chunking · vector DB · respuesta con fuentes</div>
+      </div>
+      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+      <span class="phase-chevron">▸</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-why">Tu pieza diferenciadora: las 417 páginas del transcript TEA1 convertidas en conocimiento consultable. Nadie más tiene este dataset. Conecta DS-NEXUS con AI Engineering de forma literal.</div>
+
+      <div class="deliverable" data-id="d2" data-deliverable="true">
+        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="deliverable-label">Artefacto</div>
+          <div class="deliverable-text">Un RAG sobre el corpus DOBE: le preguntas por tu framework y responde citando pasajes reales de las 417 páginas.</div>
+        </div>
+      </div>
+      <div class="dod"><strong>Definición de "hecho"</strong><em>Una pregunta sobre el corpus devuelve una respuesta apoyada en fragmentos reales, con la fuente citada.</em> Si no puedes ver de qué pasaje sale la respuesta, no está hecho.</div>
+      <div class="warn"><strong>⚠ Privacidad antes de portfolio.</strong> El corpus es tu proceso de autodescubrimiento — un RAG puede regurgitar cualquier fragmento a quien pregunte. Mantenlo local, o prepara una versión con corpus neutro/sintético si lo enseñas en entrevistas.</div>
+
+      <div class="item-list steps">
+        <div class="item" data-id="s2-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Chunking + embeddings de las 417 páginas</div>
+        </div>
+        <div class="item" data-id="s2-2">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Vector DB indexando el corpus (<strong>Chroma local</strong> primero; Pinecone solo si necesitas escalar)</div>
+        </div>
+        <div class="item" data-id="s2-3">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Interfaz de consulta que responde citando las fuentes recuperadas</div>
+        </div>
+      </div>
+
+      <div class="support-label">Material de apoyo</div>
+      <div class="item-list">
+        <div class="item course-item" data-id="c2-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text"><span class="course-name">Vector Databases for Embeddings with Pinecone</span><span class="course-tag">DataCamp</span></div>
+        </div>
+        <div class="item course-item" data-id="c2-2">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text"><span class="course-name">Retrieval Augmented Generation (RAG) with LangChain</span><span class="course-tag">DataCamp</span> — el framework como conveniencia; ya conoces el SDK crudo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARTEFACTO 3 -->
+  <div class="phase" data-phase="3">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-marker">MES 2–3</span>
+      <div class="phase-title-block">
+        <div class="phase-title">Harness de evaluación</div>
+        <div class="phase-meta">Dataset de eval · LLM-as-judge · detección de regresiones</div>
+      </div>
+      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+      <span class="phase-chevron">▸</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-why">Esta es la pieza que más te distingue en el mercado, y por eso va aquí y no al final. Construir un RAG es fácil; saber si funciona y detectar cuándo una nueva versión empeora es lo que separa portfolio de prototipo.</div>
+
+      <div class="deliverable" data-id="d3" data-deliverable="true">
+        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="deliverable-label">Artefacto</div>
+          <div class="deliverable-text">Un script que puntúa tu RAG contra un dataset de eval y te avisa cuando una versión nueva empeora respecto a la anterior.</div>
+        </div>
+      </div>
+      <div class="dod"><strong>Definición de "hecho"</strong><em>Cambias algo del RAG, corres el harness y obtienes un número que dice si mejoró o empeoró.</em> La evaluación a ojo no cuenta.</div>
+
+      <div class="item-list steps">
+        <div class="item" data-id="s3-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Dataset de eval: 20–30 pares pregunta / respuesta esperada del corpus</div>
+        </div>
+        <div class="item" data-id="s3-2">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">LLM-as-judge que puntúa fidelidad (¿la respuesta sale de la fuente?) y relevancia</div>
+        </div>
+        <div class="item" data-id="s3-3">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Reporte que compara versiones y marca regresiones</div>
+        </div>
+      </div>
+
+      <div class="support-label">Material de apoyo</div>
+      <div class="item-list">
+        <div class="item course-item" data-id="c3-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text"><span class="course-name">Métricas de evaluación: faithfulness, relevance, BLEU/ROUGE como contexto</span><span class="course-tag own">Propio</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARTEFACTO 4 -->
+  <div class="phase" data-phase="4">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-marker">MES 3–4</span>
+      <div class="phase-title-block">
+        <div class="phase-title">Agente con tool use real</div>
+        <div class="phase-meta">Function calling · orquestación · manejo de errores</div>
+      </div>
+      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+      <span class="phase-chevron">▸</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-why">Ya tienes intuición aquí por Rex+Chef en DS-NEXUS. Esta fase le pone tool use formal: un agente que ejecuta herramientas reales, no que solo conversa. El RAG del Artefacto 2 se convierte en una de sus herramientas.</div>
+
+      <div class="deliverable" data-id="d4" data-deliverable="true">
+        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="deliverable-label">Artefacto</div>
+          <div class="deliverable-text">Rex+Chef formalizado como agente con function calling: ejecuta 2–3 herramientas reales (una de ellas, consultar el RAG DOBE).</div>
+        </div>
+      </div>
+      <div class="dod"><strong>Definición de "hecho"</strong><em>Le das una tarea y el agente decide qué herramienta llamar, la ejecuta y usa el resultado.</em> Si las herramientas son simuladas, no está hecho.</div>
+
+      <div class="item-list steps">
+        <div class="item" data-id="s4-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Function calling / tool use sobre Rex+Chef con SDK (<strong>Claude tool use</strong> y OpenAI)</div>
+        </div>
+        <div class="item" data-id="s4-2">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Orquestación de 2–3 herramientas reales (incluida la búsqueda en el RAG DOBE)</div>
+        </div>
+        <div class="item" data-id="s4-3">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Manejo de errores y reintentos cuando una herramienta falla</div>
+        </div>
+      </div>
+
+      <div class="support-label">Material de apoyo</div>
+      <div class="item-list">
+        <div class="item course-item" data-id="c4-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text"><span class="course-name">Building AI Agents with LangChain / LangGraph</span><span class="course-tag">DataCamp</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARTEFACTO 5 -->
+  <div class="phase" data-phase="5">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-marker">MES 4–5</span>
+      <div class="phase-title-block">
+        <div class="phase-title">Endurecimiento: prompts + structured outputs</div>
+        <div class="phase-meta">Few-shot · CoT · versionado · medido con el harness</div>
+      </div>
+      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+      <span class="phase-chevron">▸</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-why">Técnicas que se aplican el mismo día que las aprendes — pero aquí con disciplina: cada cambio de prompt se mide con el harness del Artefacto 3. Prompt engineering sin evaluación es superstición.</div>
+
+      <div class="deliverable" data-id="d5" data-deliverable="true">
+        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="deliverable-label">Artefacto</div>
+          <div class="deliverable-text">El agente versiona sus prompts y devuelve siempre estructura válida; cada cambio queda justificado por su impacto medido en la métrica.</div>
+        </div>
+      </div>
+      <div class="dod"><strong>Definición de "hecho"</strong><em>Puedes señalar un cambio de prompt y enseñar el número de eval que lo justifica.</em> "Parece mejor" no cuenta.</div>
+
+      <div class="item-list steps">
+        <div class="item" data-id="s5-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Few-shot y chain-of-thought aplicados donde mueven la métrica</div>
+        </div>
+        <div class="item" data-id="s5-2">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Structured outputs con validación de schema en todo el pipeline</div>
+        </div>
+        <div class="item" data-id="s5-3">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Versionado de prompts + comparación A/B con el harness de eval</div>
+        </div>
+      </div>
+
+      <div class="support-label">Material de apoyo</div>
+      <div class="item-list">
+        <div class="item course-item" data-id="c5-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text"><span class="course-name">Prompt Engineering for Business</span><span class="course-tag">DataCamp</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARTEFACTO 6 -->
+  <div class="phase" data-phase="6">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-marker">MES 5–6</span>
+      <div class="phase-title-block">
+        <div class="phase-title">Despliegue en producción real</div>
+        <div class="phase-meta">Docker · API · monitorización · coste por petición</div>
+      </div>
+      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+      <span class="phase-chevron">▸</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-why">El cierre del ciclo, y donde tu base de M7 MLOps (GCP, MLflow, Airflow) te da ventaja. Lo que diferencia un script que corre en tu portátil de un sistema que sobrevive en producción.</div>
+
+      <div class="deliverable" data-id="d6" data-deliverable="true">
+        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="deliverable-label">Artefacto</div>
+          <div class="deliverable-text">Un servicio en contenedor, con monitorización y coste por petición, corriendo donde alguien lo usa de verdad (sobre EOH-INE o el RAG DOBE).</div>
+        </div>
+      </div>
+      <div class="dod"><strong>Definición de "hecho"</strong><em>El servicio está desplegado, alcanzable, y puedes decir cuánto cuesta cada petición y cuántas fallan.</em> Correr en local no es producción.</div>
+
+      <div class="item-list steps">
+        <div class="item" data-id="s6-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Docker + API del sistema, desplegado en GCP</div>
+        </div>
+        <div class="item" data-id="s6-2">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Monitorización básica: latencia, tasa de errores, tokens y coste por petición</div>
+        </div>
+        <div class="item" data-id="s6-3">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text">Apoyo en tu stack de M7 MLOps (MLflow para tracking, Airflow si hay pipeline)</div>
+        </div>
+      </div>
+
+      <div class="support-label">Material de apoyo</div>
+      <div class="item-list">
+        <div class="item course-item" data-id="c6-1">
+          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="item-text"><span class="course-name">MLOps Concepts</span><span class="course-tag">DataCamp</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPCIONAL: FINE-TUNING (fuera de la espina) -->
+  <div class="optional-box">
+    <div class="opt-eyebrow">Opcional · solo si sobra tiempo y un caso lo justifica</div>
+    <div class="opt-title">Fine-tuning</div>
+    <p class="opt-desc">
+      Lo saco de la columna vertebral a propósito: es un agujero profundo y, para la mayoría de roles de AI Engineering en 2026, de retorno bajo para portfolio. RAG + prompting + evaluación + agentes cubren el ~90% de los casos de producción reales. Atácalo solo si te topas con un caso concreto que lo pida — entonces:
+      <span class="course-tag">Fine-Tuning with Llama 3 · DataCamp</span>
+    </p>
+  </div>
+
+  <!-- PRINCIPIO RECTOR -->
+  <div class="principle">
+    <div class="principle-eyebrow">Principio rector</div>
+    <p class="principle-text">
+      Esta bitácora no se completa estudiando. Se completa <strong>desplegando</strong>. Un curso marcado es un medio; un artefacto en producción es la prueba. Empieza el Artefacto 2 (Corpus DOBE) en paralelo al 1 — aplicar mientras aprendes es más DOBE que aprender en línea recta.
+    </p>
+  </div>
+
+  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · bitácora de artefactos</div>
+
+</div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'ai-eng-roadmap-v2';
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch(e) { return {}; }
+  }
+
+  function saveState(state) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+
+  let state = loadState();
+
+  function allCheckables() {
+    return Array.from(document.querySelectorAll('[data-id]'));
+  }
+
+  function updateUI() {
+    const items = allCheckables();
+    items.forEach(el => {
+      el.classList.toggle('checked', !!state[el.dataset.id]);
+    });
+
+    // Main bar = artefactos desplegados (deliverables)
+    const deliverables = Array.from(document.querySelectorAll('[data-deliverable]'));
+    const shipped = deliverables.filter(el => state[el.dataset.id]).length;
+    const totalDeliv = deliverables.length;
+    document.getElementById('doneCount').textContent = shipped;
+    document.getElementById('totalCount').textContent = totalDeliv;
+    const pct = totalDeliv ? Math.round((shipped/totalDeliv)*100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+
+    // Secondary = pasos y cursos de apoyo (todo lo que no es deliverable)
+    const support = items.filter(el => !el.hasAttribute('data-deliverable'));
+    const supportDone = support.filter(el => state[el.dataset.id]).length;
+    document.getElementById('supportDone').textContent = supportDone;
+    document.getElementById('supportTotal').textContent = support.length;
+
+    // Mini-counters por artefacto; complete = artefacto desplegado
+    document.querySelectorAll('.phase').forEach(phase => {
+      const phaseItems = phase.querySelectorAll('[data-id]');
+      const phaseDone = Array.from(phaseItems).filter(i => state[i.dataset.id]).length;
+      const miniDone = phase.querySelector('.mini-done');
+      const miniTotal = phase.querySelector('.mini-total');
+      if (miniDone) miniDone.textContent = phaseDone;
+      if (miniTotal) miniTotal.textContent = phaseItems.length;
+      const deliv = phase.querySelector('[data-deliverable]');
+      phase.classList.toggle('complete', deliv && !!state[deliv.dataset.id]);
+    });
+
+    // Estado segun artefactos desplegados
+    const stateMsg = document.getElementById('progressState');
+    const msgs = {
+      0: 'Sin desplegar todavía. La métrica aquí no son cursos completados — son artefactos que alguien usa de verdad.',
+      1: 'Primer artefacto en producción. Esto ya pesa más en una entrevista que cualquier certificado.',
+      2: 'Dos desplegados. Con el RAG vivo, arranca ya el harness de evaluación — es lo que más te distingue.',
+      3: 'Mitad del camino. RAG + evaluación funcionando: tienes la columna vertebral de un AI Engineer.',
+      4: 'Cuatro artefactos. El agente con tool use real es la pieza que conecta directamente con Rex+Chef.',
+      5: 'Recta final. Solo queda llevar algo a producción de verdad: contenedor, monitorización, coste.',
+      6: 'Seis artefactos en producción. De Data Scientist a AI Engineer — con evidencia desplegada, no con checkboxes de cursos.'
+    };
+    stateMsg.textContent = msgs[shipped] || msgs[0];
+  }
+
+  function toggleItem(el) {
+    const id = el.dataset.id;
+    state[id] = !state[id];
+    saveState(state);
+    updateUI();
+  }
+
+  document.querySelectorAll('[data-id]').forEach(el => {
+    el.addEventListener('click', (e) => { e.stopPropagation(); toggleItem(el); });
+  });
+
+  window.togglePhase = function(headerEl) {
+    headerEl.closest('.phase').classList.toggle('open');
+  };
+
+  // ── Toggle de tema claro/oscuro (anula la preferencia del sistema) ──
+  const THEME_KEY = 'ai-eng-roadmap-theme';
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('themeBtn');
+  const systemDarkMQ = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function effectiveTheme() {
+    const attr = root.getAttribute('data-theme');
+    if (attr === 'light' || attr === 'dark') return attr;
+    return systemDarkMQ.matches ? 'dark' : 'light';
+  }
+
+  function updateThemeBtn() {
+    // El botón ofrece la acción contraria al tema actual
+    themeBtn.textContent = effectiveTheme() === 'dark' ? '☀ Día' : '🌙 Noche';
+  }
+
+  themeBtn.addEventListener('click', () => {
+    const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
+    updateThemeBtn();
+  });
+
+  // Si estás en modo automático, refleja los cambios del sistema en el botón
+  systemDarkMQ.addEventListener('change', () => {
+    if (!root.getAttribute('data-theme')) updateThemeBtn();
+  });
+
+  updateThemeBtn();
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('¿Reiniciar todo el progreso? Esta acción no se puede deshacer.')) {
+      state = {};
+      saveState(state);
+      updateUI();
+    }
+  });
+
+  updateUI();
+})();
+</script>
+</body>
+</html>
