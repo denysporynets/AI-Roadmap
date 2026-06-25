@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artefacto 1 — Analizador de ofertas (LLM → JSON) · Ruta AI Engineering</title>
+<meta name="description" content="Mini-servicio CLI que extrae datos estructurados de ofertas de empleo llamando al LLM por SDK directo. Primer artefacto desplegado de la ruta Data Science → AI Engineering de Denys Porynets.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d1117;
+    --bg-card:   #151b23;
+    --bg-card-h: #1a2230;
+    --ink:       #e6edf3;
+    --muted:     #7d8590;
+    --border:    #2a3340;
+    --amber:     #f0a500;
+    --amber-dim: #5c4419;
+    --green:     #3fb950;
+    --green-dim: #1d3a23;
+    --blue:      #4a8cff;
+    --red:       #f85149;
+  }
+
+  html, body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 24px 80px; }
+
+  /* ── NAV ── */
+  .topnav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 44px; flex-wrap: wrap; gap: 12px;
+  }
+  .topnav a {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--muted); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 12px; transition: all 0.15s;
+  }
+  .topnav a:hover { color: var(--ink); border-color: var(--muted); }
+  .topnav .navgroup { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── HERO ── */
+  .hero { margin-bottom: 40px; }
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .badge-done {
+    color: var(--green); background: var(--green-dim);
+    border-radius: 4px; padding: 2px 8px; letter-spacing: 1px;
+  }
+  .hero-title {
+    font-family: 'Fraunces', serif; font-weight: 300;
+    font-size: clamp(30px, 5vw, 44px); line-height: 1.07;
+    letter-spacing: -0.5px; margin-bottom: 16px;
+  }
+  .hero-title strong { font-weight: 600; color: var(--amber); }
+  .hero-sub { font-size: 15px; color: var(--muted); max-width: 620px; }
+  .hero-sub strong { color: var(--ink); font-weight: 600; }
+
+  /* ── SECTION ── */
+  .section { margin-top: 44px; }
+  .sec-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
+  }
+  .sec-title {
+    font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .sec-p { font-size: 14.5px; color: var(--muted); margin-bottom: 14px; }
+  .sec-p strong { color: var(--ink); font-weight: 600; }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 8px; margin: 18px 0;
+  }
+  .pipe-step { flex: 1; min-width: 150px; padding: 16px; text-align: center; }
+  .pipe-step .pe {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  }
+  .pipe-step .pt { font-size: 14px; color: var(--ink); font-weight: 500; }
+  .pipe-step .pd { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pipe-arrow { display: flex; align-items: center; color: var(--amber); font-size: 18px; }
+  @media (max-width: 620px) { .pipe-arrow { transform: rotate(90deg); margin: 0 auto; } }
+
+  /* ── CODE ── */
+  .codecard {
+    background: #0a0e14; border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; margin: 16px 0;
+  }
+  .code-head {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    padding: 9px 14px; border-bottom: 1px solid var(--border);
+    background: var(--bg-card); display: flex; justify-content: space-between;
+  }
+  .code-head .tag { color: var(--amber); }
+  pre { padding: 14px 16px; overflow-x: auto; }
+  code {
+    font-family: 'DM Mono', monospace; font-size: 12.5px; line-height: 1.7;
+    color: var(--ink); white-space: pre;
+  }
+  .c-key { color: var(--blue); }
+  .c-str { color: var(--green); }
+  .c-com { color: var(--muted); font-style: italic; }
+  .c-num { color: var(--amber); }
+
+  /* ── TWO-COL compare ── */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  @media (max-width: 620px) { .compare { grid-template-columns: 1fr; } }
+
+  /* ── CHECKS ── */
+  .checks { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .check {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--bg-card); border: 1px solid var(--green-dim);
+    border-radius: 8px; padding: 14px 16px;
+  }
+  .check .mark {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
+    background: var(--green); display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+  .check .mark svg { width: 13px; height: 13px; }
+  .check .ctitle { font-weight: 600; font-size: 14.5px; }
+  .check .cdesc { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* ── DOD ── */
+  .dod {
+    margin: 20px 0; padding: 14px 18px;
+    border-left: 3px solid var(--green); background: rgba(63,185,80,0.06);
+    border-radius: 0 8px 8px 0;
+  }
+  .dod-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--green); margin-bottom: 5px;
+  }
+  .dod-text { font-size: 14px; color: var(--ink); }
+
+  /* ── STACK chips ── */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 11px; color: var(--muted);
+  }
+  .chip strong { color: var(--amber); font-weight: 500; }
+
+  /* ── CTA ── */
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+  .cta {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    text-decoration: none; border-radius: 8px; padding: 11px 20px;
+    transition: all 0.18s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .cta-primary { background: var(--amber); color: #0d1117; }
+  .cta-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,165,0,0.25); }
+  .cta-ghost { border: 1px solid var(--border); color: var(--muted); }
+  .cta-ghost:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* ── PRINCIPLE ── */
+  .principle {
+    margin-top: 44px;
+    background: linear-gradient(135deg, #1a1410 0%, var(--bg-card) 60%);
+    border: 1px solid var(--amber-dim); border-radius: 12px;
+    padding: 26px 28px; position: relative; overflow: hidden;
+  }
+  .principle::before {
+    content: ''; position: absolute; top: -40%; right: -10%;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(240,165,0,0.08), transparent 70%);
+  }
+  .principle-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
+  }
+  .principle-text {
+    font-family: 'Fraunces', serif; font-size: 19px; font-weight: 300;
+    line-height: 1.45; color: var(--ink); max-width: 640px;
+  }
+  .principle-text strong { font-weight: 600; color: var(--amber); }
+
+  .footer {
+    margin-top: 44px; text-align: center;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--border);
+  }
+  .footer span { color: var(--amber); opacity: 0.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topnav">
+    <a href="../ROADMAP.html">← Bitácora del roadmap</a>
+    <div class="navgroup">
+      <a href="https://github.com/denysporynets/AI-Roadmap/tree/main/0_Endpoint%20LLM%20en%20producci%C3%B3n" target="_blank">Ver código en GitHub ↗</a>
+      <a href="https://denysporynets.github.io">Portfolio ↗</a>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <span>Artefacto 1 · Mes 1</span>
+      <span class="badge-done">✓ Desplegado</span>
+    </div>
+    <h1 class="hero-title">Analizador de ofertas de empleo<br><strong>texto → JSON estructurado</strong></h1>
+    <p class="hero-sub">
+      Un mini-servicio de terminal que recibe el texto de una oferta y devuelve sus datos
+      en JSON fiable, llamando al LLM <strong>por SDK directo</strong> — sin frameworks de por medio.
+      Primer artefacto en producción de la ruta <strong>Data Science → AI Engineering</strong>.
+    </p>
+  </div>
+
+  <!-- QUÉ HACE -->
+  <div class="section">
+    <div class="sec-eyebrow">Qué hace</div>
+    <div class="sec-title">De texto caótico a datos manejables</div>
+    <p class="sec-p">
+      Un LLM por defecto devuelve <strong>texto libre</strong>, distinto en cada llamada e
+      inservible para un programa. Este artefacto <strong>fuerza</strong> una salida con forma
+      fija (un molde Pydantic) y la <strong>valida</strong> antes de devolverla.
+    </p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pe">Entrada</div>
+        <div class="pt">Texto de la oferta</div>
+        <div class="pd">desde la terminal o un fichero</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Motor</div>
+        <div class="pt">LLM + molde Pydantic</div>
+        <div class="pd">SDK directo · validación</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Salida</div>
+        <div class="pt">JSON validado</div>
+        <div class="pd">siempre la misma forma</div>
+      </div>
+    </div>
+
+    <div class="codecard">
+      <div class="code-head"><span>$ terminal</span><span class="tag">ejemplo real</span></div>
+<pre><code><span class="c-com"># Entrada</span>
+$ python analizar_oferta.py <span class="c-str">"Machine Learning Engineer 100% remoto,
+  Python, PyTorch, Docker y AWS. Banda 60.000-70.000 EUR. Indefinido."</span>
+
+<span class="c-com"># Salida</span>
+{
+  <span class="c-key">"puesto"</span>:      <span class="c-str">"Machine Learning Engineer"</span>,
+  <span class="c-key">"modalidad"</span>:   <span class="c-str">"remoto"</span>,
+  <span class="c-key">"stack"</span>:       [<span class="c-str">"Python"</span>, <span class="c-str">"PyTorch"</span>, <span class="c-str">"Docker"</span>, <span class="c-str">"AWS"</span>],
+  <span class="c-key">"salario_min"</span>: <span class="c-num">60000</span>,
+  <span class="c-key">"salario_max"</span>: <span class="c-num">70000</span>,
+  <span class="c-key">"contrato"</span>:    <span class="c-str">"indefinido"</span>
+}</code></pre>
+    </div>
+    <p class="sec-p">
+      Ahora el resultado <strong>sí es código</strong>: <code style="color:var(--amber)">if oferta.salario_min &gt;= 40000</code>
+      funciona, porque el salario es un número, no un párrafo.
+    </p>
+  </div>
+
+  <!-- CÓMO: el patrón -->
+  <div class="section">
+    <div class="sec-eyebrow">El patrón</div>
+    <div class="sec-title">Schema → parse → objeto validado</div>
+    <p class="sec-p">
+      El <strong>molde</strong> define qué campos quiero; el SDK obliga al modelo a rellenarlo y
+      lo valida. Lo único específico del dominio son los campos y sus descripciones — el motor
+      es reutilizable para facturas, tickets o contratos.
+    </p>
+    <div class="codecard">
+      <div class="code-head"><span>analizar_oferta.py</span><span class="tag">Pydantic</span></div>
+<pre><code><span class="c-key">class</span> <span class="c-num">Oferta</span>(BaseModel):
+    puesto: str = Field(description=<span class="c-str">"Título del puesto"</span>)
+    stack: list[str] = Field(description=<span class="c-str">"Tecnologías mencionadas"</span>)
+    salario_min: Optional[int] = Field(description=<span class="c-str">"Salario mínimo EUR, o null"</span>)
+    <span class="c-com"># ...</span>
+
+respuesta = client.messages.parse(
+    model=<span class="c-str">"claude-opus-4-8"</span>,
+    messages=[{<span class="c-str">"role"</span>: <span class="c-str">"user"</span>, <span class="c-str">"content"</span>: texto}],
+    output_format=Oferta,        <span class="c-com"># ← se pasa el molde</span>
+)
+oferta = respuesta.parsed_output  <span class="c-com"># ← objeto validado, no texto</span></code></pre>
+    </div>
+  </div>
+
+  <!-- COMPARATIVA -->
+  <div class="section">
+    <div class="sec-eyebrow">Dos proveedores, mismo patrón</div>
+    <div class="sec-title">Claude y OpenAI, lado a lado</div>
+    <p class="sec-p">
+      La misma extracción con los dos SDKs. Cambian tres nombres de parámetro y el id del modelo;
+      el concepto es idéntico. <strong>El SDK por debajo es casi igual — todo lo demás es conveniencia.</strong>
+    </p>
+    <div class="compare">
+      <div class="codecard" style="margin:0">
+        <div class="code-head"><span>Anthropic</span><span class="tag">claude-opus-4-8</span></div>
+<pre><code>client.messages.parse(
+  messages=[...],
+  output_format=Oferta,
+)
+.parsed_output</code></pre>
+      </div>
+      <div class="codecard" style="margin:0">
+        <div class="code-head"><span>OpenAI</span><span class="tag">gpt-4.1</span></div>
+<pre><code>client.responses.parse(
+  input=[...],
+  text_format=Oferta,
+)
+.output_parsed</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- LO QUE SE ENTREGÓ -->
+  <div class="section">
+    <div class="sec-eyebrow">Lo que se entregó</div>
+    <div class="sec-title">Los tres criterios, cumplidos</div>
+    <div class="checks">
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">Llamada directa al SDK con OpenAI y Claude</div>
+          <div class="cdesc">Sin framework de por medio; comparados ambos proveedores.</div>
+        </div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">Salida estructurada validada antes de devolverla</div>
+          <div class="cdesc">Molde Pydantic + validación nativa del SDK.</div>
+        </div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">Empaquetado como CLI que de verdad uso</div>
+          <div class="cdesc">argparse · entrada por argumento o fichero · redirección a JSON.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dod">
+      <div class="dod-label">Definición de "hecho" — cumplida</div>
+      <div class="dod-text">Se ejecuta desde fuera del editor y devuelve JSON válido de forma fiable. No vive en un notebook.</div>
+    </div>
+
+    <div class="chips">
+      <span class="chip"><strong>Python</strong> 3.13</span>
+      <span class="chip"><strong>Pydantic</strong> v2</span>
+      <span class="chip"><strong>anthropic</strong> SDK</span>
+      <span class="chip"><strong>openai</strong> SDK</span>
+      <span class="chip"><strong>argparse</strong> CLI</span>
+      <span class="chip"><strong>.env</strong> · claves protegidas</span>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta cta-primary" href="https://github.com/denysporynets/AI-Roadmap/tree/main/0_Endpoint%20LLM%20en%20producci%C3%B3n" target="_blank">Ver código en GitHub ↗</a>
+      <a class="cta cta-ghost" href="../ROADMAP.html">Ver el roadmap completo →</a>
+    </div>
+  </div>
+
+  <!-- PRINCIPIO -->
+  <div class="principle">
+    <div class="principle-eyebrow">Por qué este artefacto primero</div>
+    <p class="principle-text">
+      Antes de tocar frameworks, monté la llamada cruda. Si solo dominas la capa de LangChain,
+      dominas algo que puede desaparecer; si entiendes el <strong>SDK por debajo</strong>, todo lo demás es conveniencia.
+    </p>
+  </div>
+
+  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · artefacto 1 de 6</div>
+
+</div>
+</body>
+</html>
