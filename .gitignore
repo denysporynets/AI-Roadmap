@@ -1,0 +1,12 @@
+# Seguridad: nunca subir claves/secretos (doble capa, tambien por subcarpeta)
+.env
+**/.env
+*.key
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Python
+__pycache__/
+*.pyc

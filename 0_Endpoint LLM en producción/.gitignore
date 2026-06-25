@@ -1,0 +1,11 @@
+# Claves y secretos — NUNCA subir a git
+.env
+
+# Artefactos de Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Entornos virtuales
+.venv/
+venv/

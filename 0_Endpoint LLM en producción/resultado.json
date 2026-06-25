@@ -1,0 +1,15 @@
+{
+  "puesto": "Data Analyst Junior",
+  "empresa": null,
+  "ubicacion": "Barcelona",
+  "modalidad": "presencial",
+  "seniority": "junior",
+  "stack": [
+    "SQL",
+    "Power BI",
+    "Excel"
+  ],
+  "salario_min": 24000,
+  "salario_max": 24000,
+  "contrato": "practicas"
+}
