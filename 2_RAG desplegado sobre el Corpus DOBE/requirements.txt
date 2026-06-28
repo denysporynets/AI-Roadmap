@@ -1,0 +1,7 @@
+# Dependencias de PRODUCCIÓN del RAG DOBE (solo lo que el servicio necesita para correr).
+# Versiones pineadas a las verificadas en local → la imagen se construye reproducible.
+# (httpx, tiktoken, umap… eran para construir/probar: NO van en la imagen que sirve.)
+fastapi==0.138.1
+uvicorn[standard]==0.49.0
+openai==2.44.0
+numpy==2.4.6

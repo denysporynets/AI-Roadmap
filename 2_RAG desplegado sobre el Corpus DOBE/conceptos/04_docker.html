@@ -1,0 +1,161 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha 04 · Docker (imagen, contenedor, capas, build context)</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; --rojo:#b0392b; }
+  html { transition: filter .35s ease; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:840px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:28px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:18px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:19px;
+        margin:28px 0 6px; padding-top:14px; border-top:2px solid var(--line); }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:6px 0 4px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:14px 18px; margin:12px 0; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:10px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  .ok { color:var(--verde); font-weight:600; }
+  .no { color:var(--rojo); font-weight:600; }
+  .cv { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+        padding:13px 18px; margin:10px 0; font-size:14px; }
+  pre { background:#1e2128; color:#e6e1d6; border-radius:10px; padding:14px 16px; overflow-x:auto;
+        font-family:'DM Mono',ui-monospace,monospace; font-size:12.5px; line-height:1.5; }
+  pre .c { color:#8a8f98; } pre .k { color:#d8a657; } pre .s { color:#a9b665; }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:28px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  b { color:#1a1a1a; }
+  #brillo { position:fixed; top:14px; right:14px; display:flex; align-items:center; gap:7px;
+            background:rgba(255,255,255,.82); border:1px solid var(--line); border-radius:20px;
+            padding:6px 12px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:50; }
+  #brillo input { width:90px; accent-color:var(--ambar); }
+</style></head><body>
+
+<div id="brillo" title="Brillo: día → noche cálida (filtra luz azul)">
+  ☀️<input id="lux" type="range" min="0" max="100" value="0">🌙
+</div>
+
+<div class="kicker">Ficha 04 · conceptos · corpus dobe</div>
+<h1>Empaquetar en una caja: Docker</h1>
+<div class="sub mono">imagen · contenedor · capas · build context · 29 jun 2026 · protocolo ds-nexus</div>
+
+<div class="tldr"><b>En una frase:</b> meter el sistema operativo, Python, las librerías, tu código,
+el corpus y el índice en <b>una caja sellada</b> (la imagen) que corre <b>igual</b> en tu Mac y en la
+nube — para que "en mi máquina funcionaba" deje de ser una excusa.</div>
+
+<h2>El problema que resuelve</h2>
+<p>Hoy tu app corre <b>gracias a tu Mac</b>: tu Python 3.13, tu <code>.venv</code>, tus librerías en
+sus versiones. Si la llevas a otro ordenador o a la nube, nada garantiza que esté lo mismo instalado
+→ rompe. Docker empaqueta <b>el entorno entero</b> junto al código, así que el destino no tiene que
+preparar nada.</p>
+<div class="ana"><b>La mudanza.</b> En vez de pedirle a la casa nueva que tenga tus muebles, mandas un
+<b>contenedor de mudanza</b> con todo dentro, ya montado. Llega, lo abres, y funciona idéntico —
+no dependes de lo que hubiera (o faltara) en destino.</div>
+
+<h2>El vocabulario (que confunde al principio)</h2>
+<table>
+<tr><th>Término</th><th>Qué es</th><th>Analogía</th></tr>
+<tr><td><b>Imagen</b></td><td>La caja sellada: SO + Python + libs + código + datos. <b>Estática</b>, no corre</td><td>El contenedor de mudanza <b>cerrado y etiquetado</b></td></tr>
+<tr><td><b>Contenedor</b></td><td>Una imagen <b>en ejecución</b></td><td>La caja <b>abierta y en uso</b> en su destino</td></tr>
+<tr><td><b><code>Dockerfile</code></b></td><td>La receta de cómo construir la imagen, paso a paso</td><td>La lista de "qué meter y en qué orden"</td></tr>
+<tr><td><b>imagen base</b></td><td>El punto de partida (<code>python:3.13-slim</code>)</td><td>Una caja que ya viene con suelo y paredes</td></tr>
+<tr><td><b>build context</b></td><td>Los ficheros que se <b>envían</b> al constructor</td><td>Lo que cargas al camión antes de empaquetar</td></tr>
+<tr><td><b><code>.dockerignore</code></b></td><td>Lista de lo que <b>NO</b> mandar al constructor</td><td>"esto no se muda" (tu <code>.env</code>, tu <code>.venv</code>)</td></tr>
+</table>
+<div class="ana"><b>Imagen vs contenedor = receta vs plato.</b> La imagen es la <b>receta</b> congelada
+(siempre igual); el contenedor es el <b>plato cocinado</b> a partir de ella. De una imagen puedes
+arrancar muchos contenedores idénticos.</div>
+
+<h2>Las dos decisiones de oficio del Dockerfile</h2>
+
+<h3 style="font-family:Fraunces,serif;font-size:16px;color:var(--ambar);margin:16px 0 4px">1 · Dependencias ANTES que el código (cacheo por capas)</h3>
+<p>Docker construye la imagen en <b>capas</b> apiladas y <b>cachea</b> cada una. Si una capa no cambia,
+la reutiliza. Por eso copiamos e instalamos <code>requirements.txt</code> <b>antes</b> de copiar el
+código: así, cuando cambias <code>api.py</code>, no se reinstalan las librerías otra vez.</p>
+<pre><span class="k">COPY</span> requirements.txt .          <span class="c"># capa 1 — cambia poco</span>
+<span class="k">RUN</span>  pip install -r requirements.txt  <span class="c"># capa 2 — se CACHEA (lo caro)</span>
+<span class="k">COPY</span> rag_core.py api.py ./       <span class="c"># capa 3 — cambia a menudo (lo barato)</span></pre>
+<div class="ana"><b>Mise en place.</b> El cocinero deja preparados los ingredientes que casi nunca
+cambian (capa cacheada) y solo rehace el emplatado final cada vez. Si invirtieras el orden, picarías
+toda la cebolla en cada comanda.</div>
+
+<h3 style="font-family:Fraunces,serif;font-size:16px;color:var(--ambar);margin:16px 0 4px">2 · Copiar solo lo mínimo, nombrado (lista blanca)</h3>
+<p>En vez de <code>COPY . .</code> (mete todo), nombramos <b>uno a uno</b> los ficheros que entran:
+motor, API, frontend, corpus e índice. Doble ventaja: la imagen es <b>ligera</b> y el <code>.env</code>
+<b>no puede colarse</b> aunque exista, porque no lo nombramos.</p>
+<pre><span class="k">COPY</span> rag_core.py api.py ./
+<span class="k">COPY</span> static/ ./static/
+<span class="k">COPY</span> corpus_dobe_enriquecido.json ./
+<span class="k">COPY</span> embeddings/indice_a.npy embeddings/indice_a.json ./embeddings/</pre>
+
+<h2>El secreto que NO viaja en la caja</h2>
+<p>La imagen lleva el <b>corpus</b> (la necesita para responder), pero <b>nunca</b> las claves. La
+<code>OPENAI_API_KEY</code> y el <code>APP_TOKEN</code> llegan <b>por entorno</b> en tiempo de ejecución
+(en la nube los inyecta <b>Secret Manager</b>, Fase 5). Por eso <code>rag_core.py</code> y
+<code>api.py</code> leen <code>os.environ</code> primero: el mismo código corre en tu Mac (lee del
+<code>.env</code>) y en Cloud Run (lee del secreto) <b>sin tocar nada</b>.</p>
+<div class="ana"><b>Por qué la imagen sí lleva el corpus.</b> Es tu proceso personal — pero va dentro
+de una caja que se guarda en un <b>registro privado</b> (Artifact Registry) y cuya puerta de consulta
+exige token. Privacidad por <b>capas</b>: registro privado + endpoint con token, no por esconder el dato.</div>
+
+<h2>El <code>.dockerignore</code> y un truco: la negación</h2>
+<p>Recorta el contexto y blinda secretos. Aquí, una regla fina: queríamos fuera <b>todos</b> los
+<code>.json</code> de <code>embeddings/</code> (metadatos personales) <b>menos</b> el índice servible.
+Se hace excluyendo y luego <b>re-incluyendo con <code>!</code></b> (en Docker gana el último patrón que
+coincide):</p>
+<pre>embeddings/*.json            <span class="c"># fuera meta_g1, meta_seg…</span>
+!embeddings/indice_a.json    <span class="c"># …pero este SÍ (la '!' reincluye)</span></pre>
+<p>Detalle sutil: <code>*.html</code> en la raíz <b>no</b> alcanza a <code>static/index.html</code>,
+porque en Docker el <code>*</code> no cruza la barra <code>/</code>. Por eso el frontend sobrevive.</p>
+
+<h2>Cómo se verificó (sin Docker instalado)</h2>
+<p>El plan construye en la nube (Cloud Build), así que no hacía falta Docker local. Para comprobar la
+receta <b>antes</b> de gastar un build, se <b>simuló el filtrado</b> del <code>.dockerignore</code> con
+las reglas reales de Docker y se auditó qué entraría:</p>
+<table>
+<tr><th>Comprobación</th><th>Resultado</th></tr>
+<tr><td>Contexto de build</td><td class="ok">exactamente 9 ficheros (lo justo)</td></tr>
+<tr><td><code>.env</code> en la caja</td><td class="ok">EXCLUIDO ✅</td></tr>
+<tr><td>metadatos <code>meta_*.json</code></td><td class="ok">EXCLUIDOS ✅</td></tr>
+<tr><td>motor + api + frontend + corpus + índice</td><td class="ok">incluidos ✅</td></tr>
+</table>
+<p>Verificar la receta en seco evita descubrir el fallo <b>después</b> de un build lento en la nube.</p>
+
+<h2>Para el CV (cómo contarlo)</h2>
+<div class="cv">Contenericé un servicio FastAPI con un <b>Dockerfile</b> sobre <code>python:3.13-slim</code>,
+ordenando las capas para <b>aprovechar la caché</b> (dependencias antes que código) y usando
+<b>COPY de lista blanca</b> + <b><code>.dockerignore</code></b> (con reglas de negación) para una imagen
+<b>mínima y sin secretos</b>: las claves se inyectan por entorno (compatible con Secret Manager),
+el contexto de build se redujo a lo imprescindible y se <b>auditó antes de construir</b>.</div>
+
+<div class="foot">ficha 04 · conceptos corpus dobe · relacionada con: api http (ficha 02),
+frontend (ficha 03), cloud run + secret manager (fase 5) · generada en sesión 29 jun · ritmo pausado</div>
+
+<script>
+  // deslizador de brillo: día (0) → noche cálida (100). Filtra azul (sepia) + atenúa. localStorage.
+  (function () {
+    var lux = document.getElementById('lux');
+    function aplicar(v) {
+      var b = 1 - v * 0.0028;          // brillo: 1 → 0.72
+      var s = v * 0.0055;              // calidez: 0 → 0.55 (resta azul)
+      document.documentElement.style.filter = 'brightness(' + b + ') sepia(' + s + ')';
+    }
+    var guardado = localStorage.getItem('ficha-brillo');
+    if (guardado !== null) { lux.value = guardado; }
+    aplicar(+lux.value);
+    lux.addEventListener('input', function () {
+      aplicar(+lux.value);
+      localStorage.setItem('ficha-brillo', lux.value);
+    });
+  })();
+</script>
+</body></html>

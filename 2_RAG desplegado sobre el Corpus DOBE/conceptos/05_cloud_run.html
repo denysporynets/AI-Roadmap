@@ -1,0 +1,153 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha 05 · Cloud Run (serverless, Secret Manager, escala a cero)</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; --rojo:#b0392b; }
+  html { transition: filter .35s ease; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:840px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:28px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:18px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:19px;
+        margin:28px 0 6px; padding-top:14px; border-top:2px solid var(--line); }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:6px 0 4px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:14px 18px; margin:12px 0; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:10px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  .ok { color:var(--verde); font-weight:600; }
+  .no { color:var(--rojo); font-weight:600; }
+  .cv { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+        padding:13px 18px; margin:10px 0; font-size:14px; }
+  pre { background:#1e2128; color:#e6e1d6; border-radius:10px; padding:14px 16px; overflow-x:auto;
+        font-family:'DM Mono',ui-monospace,monospace; font-size:12.5px; line-height:1.5; }
+  pre .c { color:#8a8f98; } pre .k { color:#d8a657; } pre .s { color:#a9b665; }
+  .flow { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:12px 0; font-size:12.5px;
+          font-family:'DM Mono',monospace; }
+  .flow .box { background:var(--card); border:1px solid var(--line); border-radius:9px; padding:8px 12px; }
+  .flow .arr { color:var(--dim); }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:28px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  b { color:#1a1a1a; }
+  #brillo { position:fixed; top:14px; right:14px; display:flex; align-items:center; gap:7px;
+            background:rgba(255,255,255,.82); border:1px solid var(--line); border-radius:20px;
+            padding:6px 12px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:50; }
+  #brillo input { width:90px; accent-color:var(--ambar); }
+</style></head><body>
+
+<div id="brillo" title="Brillo: día → noche cálida (filtra luz azul)">
+  ☀️<input id="lux" type="range" min="0" max="100" value="0">🌙
+</div>
+
+<div class="kicker">Ficha 05 · conceptos · corpus dobe</div>
+<h1>A producción: Cloud Run</h1>
+<div class="sub mono">serverless · escala a cero · secret manager · 29 jun 2026 · protocolo ds-nexus</div>
+
+<div class="tldr"><b>En una frase:</b> subir la caja (la imagen Docker) a un servicio que la
+<b>arranca solo cuando llega una visita</b>, le da una <b>URL pública</b> y le inyecta las claves
+desde una bóveda — sin servidores que mantener y pagando casi nada.</div>
+
+<h2>Qué es "serverless" (y por qué no significa "sin servidores")</h2>
+<p>Sí hay servidores; lo que no haces es <b>gestionarlos</b>. No eliges máquina, ni instalas SO, ni
+parcheas, ni la enciendes/apagas. Subes el contenedor y Cloud Run decide cuántas copias levantar
+según el tráfico — incluida <b>cero</b> cuando no hay nadie.</p>
+<div class="ana"><b>El taxi vs el coche propio.</b> Un servidor clásico es un coche: lo compras, lo
+aparcas, lo mantienes, pague o no lo uses. Serverless es un taxi: aparece cuando lo llamas, pagas
+solo el trayecto, y desaparece al bajarte. Sin garaje, sin ITV, sin seguro.</div>
+
+<h2>Escala a cero: por qué esto casi no cuesta</h2>
+<p>Sin tráfico, Cloud Run mantiene <b>0 instancias</b> → <b>0 coste de cómputo</b>. Cuando llega la
+primera petición, levanta una instancia (el <b>cold start</b>: arrancar el contenedor + cargar tu
+motor en el <code>lifespan</code>). Por eso la primera consulta tras un rato tarda un poco más;
+las siguientes van calientes.</p>
+<table>
+<tr><th>Pieza</th><th>Coste real de tu demo</th></tr>
+<tr><td>Cloud Run (cómputo)</td><td class="ok">≈ 0 — escala a cero sin visitas</td></tr>
+<tr><td>Cloud Build (construir)</td><td class="ok">free tier (minutos/día gratis)</td></tr>
+<tr><td>Artifact Registry (guardar imagen)</td><td>céntimos de almacenamiento</td></tr>
+<tr><td>OpenAI</td><td>solo en consultas 🟢/🟡 (las ⚪ ni llaman al LLM)</td></tr>
+</table>
+<div class="ana"><b>El umbral protege la cartera.</b> La decisión de la Fase 1 (no llamar al LLM si
+no hay recuerdo claro) aquí se traduce en dinero: las preguntas ⚪ se resuelven solo con el embedding,
+sin pagar síntesis. Buena ingeniería = buen coste.</div>
+
+<h2>Las piezas de GCP que tocamos</h2>
+<table>
+<tr><th>Servicio</th><th>Rol</th><th>Analogía</th></tr>
+<tr><td><b>Cloud Build</b></td><td>Construye la imagen en la nube desde el <code>Dockerfile</code></td><td>La fábrica que monta la caja por ti (sin Docker local)</td></tr>
+<tr><td><b>Artifact Registry</b></td><td>Almacén <b>privado</b> de la imagen ya construida</td><td>El guardamuebles cerrado con llave (aquí vive el corpus)</td></tr>
+<tr><td><b>Cloud Run</b></td><td>Ejecuta el contenedor y le da URL pública</td><td>El local que se monta solo cuando entra un cliente</td></tr>
+<tr><td><b>Secret Manager</b></td><td>Bóveda de claves; se inyectan al arrancar</td><td>La caja fuerte: la clave nunca está en la imagen</td></tr>
+</table>
+
+<h2>El viaje de un deploy (un solo comando)</h2>
+<div class="flow">
+  <span class="box">gcloud run deploy --source .</span><span class="arr">→</span>
+  <span class="box">sube 9 ficheros</span><span class="arr">→</span>
+  <span class="box">Cloud Build (Dockerfile)</span><span class="arr">→</span>
+  <span class="box">Artifact Registry</span><span class="arr">→</span>
+  <span class="box">Cloud Run + secretos</span><span class="arr">→</span>
+  <span class="box">URL pública</span>
+</div>
+<pre><span class="k">gcloud run deploy</span> dobe-rag \
+  --source . \                          <span class="c"># construye desde el Dockerfile</span>
+  --region europe-southwest1 \          <span class="c"># Madrid</span>
+  --allow-unauthenticated \             <span class="c"># red abierta para CARGAR la web…</span>
+  --set-secrets OPENAI_API_KEY=OPENAI_API_KEY:latest,\
+                APP_TOKEN=APP_TOKEN:latest   <span class="c"># …pero /preguntar exige token</span></pre>
+
+<h2>Dos capas de acceso (importante no confundirlas)</h2>
+<table>
+<tr><th>Capa</th><th>Quién decide</th><th>En la demo</th></tr>
+<tr><td><b>Red</b> (<code>--allow-unauthenticated</code>)</td><td>Cloud Run / IAM</td><td>Abierta: cualquiera puede <b>cargar</b> la web</td></tr>
+<tr><td><b>App</b> (<code>X-Token</code>)</td><td>Tu código (<code>api.py</code>)</td><td>Cerrada: <b>preguntar</b> exige el token</td></tr>
+</table>
+<p>Esto es justo "demo real protegida por token": la enseñas a quien quieras (URL viva) pero solo
+quien tiene la clave consulta tu corpus. La privacidad va por <b>capas</b>, no por esconder la URL.</p>
+
+<h2>El secreto, de punta a punta</h2>
+<p>La <code>OPENAI_API_KEY</code> nunca tocó la imagen ni el repo: se guardó en Secret Manager y
+Cloud Run la inyecta como variable de entorno al arrancar. Tu código (<code>os.environ</code> primero)
+la encuentra ahí. Además, la cuenta de servicio del contenedor necesitó permiso explícito
+(<code>roles/secretmanager.secretAccessor</code>) para leerla — el robot solo accede a lo justo.</p>
+<div class="ana"><b>El mismo código, dos casas.</b> En tu Mac lee la clave del <code>.env</code>; en la nube
+la lee del secreto. No cambiamos ni una línea: esa portabilidad la dejamos preparada desde la Fase 1.</div>
+
+<h2>Para el CV (cómo contarlo)</h2>
+<div class="cv">Desplegué un servicio RAG como contenedor <b>serverless en Google Cloud Run</b>
+(build en la nube con <b>Cloud Build</b>, imagen en <b>Artifact Registry</b> privado), con secretos
+en <b>Secret Manager</b> inyectados en runtime y una <b>cuenta de servicio</b> con permisos mínimos.
+Acceso en dos capas (red pública + token de aplicación), <b>escala a cero</b> (coste ≈ 0 en reposo) y
+URL pública verificada de punta a punta. Pipeline de un solo comando, sin Docker local.</div>
+
+<div class="foot">ficha 05 · conceptos corpus dobe · relacionada con: docker (ficha 04), api http (ficha 02),
+motor vs interfaz (fase 1) · cierra el artefacto 2 · generada en sesión 29 jun · ritmo pausado</div>
+
+<script>
+  // deslizador de brillo: día (0) → noche cálida (100). Filtra azul (sepia) + atenúa. localStorage.
+  (function () {
+    var lux = document.getElementById('lux');
+    function aplicar(v) {
+      var b = 1 - v * 0.0028;
+      var s = v * 0.0055;
+      document.documentElement.style.filter = 'brightness(' + b + ') sepia(' + s + ')';
+    }
+    var guardado = localStorage.getItem('ficha-brillo');
+    if (guardado !== null) { lux.value = guardado; }
+    aplicar(+lux.value);
+    lux.addEventListener('input', function () {
+      aplicar(+lux.value);
+      localStorage.setItem('ficha-brillo', lux.value);
+    });
+  })();
+</script>
+</body></html>

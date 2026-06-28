@@ -1,0 +1,91 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha 01 · Índice persistente (indexing vs retrieval)</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:840px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:28px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:18px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:19px;
+        margin:28px 0 6px; padding-top:14px; border-top:2px solid var(--line); }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:6px 0 4px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:14px 18px; margin:12px 0; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:10px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  .two { color:var(--verde); font-weight:600; }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:28px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  b { color:#1a1a1a; }
+</style></head><body>
+
+<div class="kicker">Ficha 01 · conceptos · corpus dobe</div>
+<h1>Índice persistente</h1>
+<div class="sub mono">indexing vs retrieval · 28 jun 2026 · protocolo ds-nexus</div>
+
+<div class="tldr"><b>En una frase:</b> guardar en disco, una sola vez, la tabla ya ensamblada
+de "qué vector es puerta de qué momento", para no volver a coserla en memoria en cada búsqueda.</div>
+
+<h2>Las dos cosas que NO hay que confundir</h2>
+<p>En un sistema de búsqueda por significado conviven dos artefactos distintos:</p>
+<table>
+<tr><th>&nbsp;</th><th>Embeddings crudos</th><th>Índice ensamblado</th></tr>
+<tr><td><b>Qué es</b></td><td>Los 1536 números por texto</td><td>La tabla de puertas + mapa <code>puerta→momento</code></td></tr>
+<tr><td><b>Cuesta</b></td><td>Dinero y API (embeber)</td><td>Solo CPU (coser arrays)</td></tr>
+<tr><td><b>¿Guardado?</b></td><td>Sí · <code>vectores_*.npy</code></td><td><span class="two">Ese es el paso nuevo</span></td></tr>
+</table>
+<p>El crudo ya lo persistimos bien. Lo que faltaba era persistir <b>el ensamblaje</b>:
+la decisión de "para #266 uso sus 5 segmentos; para #1 uso su único vector G1", cosida en
+una sola tabla.</p>
+
+<h2>El nombre técnico real</h2>
+<p>Un RAG separa dos fases que ahora teníamos mezcladas en el mismo script:</p>
+<div class="card">
+<b style="color:var(--ambar)">INDEXING</b> — pesado, ocasional. Construir el índice y guardarlo.
+Se rehace solo cuando cambian los datos (añades conversaciones nuevas).<br><br>
+<b style="color:var(--verde)">RETRIEVAL / SERVING</b> — ligero, constante. Embeber la consulta,
+comparar contra el índice ya hecho, devolver los k mejores momentos.
+</div>
+
+<h2>El antes y el después</h2>
+<table>
+<tr><th>&nbsp;</th><th>Antes (efímero)</th><th>Después (persistente)</th></tr>
+<tr><td>Dónde vive la tabla de puertas</td><td>solo en RAM mientras corre el script</td><td>en disco: <code>indice_a.npy</code> + <code>indice_a.json</code></td></tr>
+<tr><td>Quién conoce las reglas multivector</td><td>cada script que busque</td><td>nadie: ya están "horneadas" en el índice</td></tr>
+<tr><td>El buscador</td><td>tendría que recoser todo</td><td>solo <code>cargar + comparar</code></td></tr>
+<tr><td>Cuándo se recalcula</td><td>en cada ejecución</td><td>solo cuando tú lo decidas</td></tr>
+<tr><td>Fuente de la verdad</td><td>se reensambla cada vez</td><td>congelada, una sola</td></tr>
+</table>
+<p>La ganancia con 257 vectores no es velocidad (es instantáneo igual): es
+<b>arquitectura limpia</b> — separar lo que se construye de vez en cuando de lo que se usa
+todo el rato. Eso permite montar encima un buscador o una API sin arrastrar la lógica de
+ensamblaje a todas partes.</p>
+
+<h2>Analogías</h2>
+<div class="ana"><b>El efecto escáner (tu propia metáfora).</b> No recuerdas el objeto, recuerdas
+su ubicación en el sistema. El índice persistente <b>es</b> ese catálogo fijo de ubicaciones.
+Sin él, recolocas todo el almacén en cada consulta.</div>
+<div class="ana"><b>La biblioteca.</b> Sin índice: cada vez que alguien pide un libro, vuelcas
+todas las cajas, ordenas en el suelo, encuentras el libro y vuelves a encajarlo. Con índice:
+colocas los libros en estanterías etiquetadas <b>una vez</b> y todos van directo a la balda.</div>
+<div class="ana"><b>La agenda del móvil (uso diario).</b> El dato crudo son tus SMS y correos con
+nombres y números. Sería absurdo que el móvil releyera todos los mensajes para reconstruir la
+lista de contactos cada vez que llamas. En vez de eso mantiene una <b>agenda</b> (el índice):
+se hace una vez al guardar el contacto y está lista al instante en cada llamada.</div>
+<div class="ana"><b>El índice del final de un libro.</b> Las páginas = embeddings crudos.
+El índice "dopamina → pág. 212" = índice persistente. No relees 400 páginas para encontrar
+"dopamina": miras el índice. Sin persistir, nos releíamos las 400 páginas en cada búsqueda.</div>
+
+<div class="foot">ficha 01 · conceptos corpus dobe · relacionada con: embedding, payload, multi-vector ·
+generada en sesión 28 jun · ritmo pausado</div>
+</body></html>

@@ -10,3 +10,43 @@
 # Python
 __pycache__/
 *.pyc
+
+# Entornos virtuales
+.venv/
+**/.venv/
+
+# Vector store / artefactos pesados (fases posteriores)
+chroma_db/
+**/chroma_db/
+
+# ── Fase 0 · BLINDAJE DEL CORPUS DOBE (datos personales TEA) ──
+# El corpus es autodescubrimiento personal: NUNCA debe subir a un repo publico.
+# Se ignora el dato crudo, los embeddings derivados y los documentos que citan su contenido.
+# (El codigo .py SI puede subir: es la logica, no el dato.)
+
+# Corpus crudo y enriquecido (el dato mas sensible)
+**/corpus_dobe_*.json
+
+# Embeddings / indice (datos derivados del corpus: reconstruibles pero igual de sensibles)
+**/embeddings/*.npy
+**/embeddings/*.json
+# Mapas estelares: HTML interactivo cuyas etiquetas hover incrustan texto del corpus
+**/embeddings/*.html
+
+# Carpetas de trabajo con material personal
+**/construccion_corpus/
+**/FASE2/
+
+# Documentos de resultados que reproducen contenido del corpus
+**/RESULTADOS_*.html
+**/REVISION_*.html
+**/PRUEBA_CIEGA_*.md
+
+# Scripts de construccion con contenido personal hardcodeado (ya consumidos):
+#   18 = caracterizaciones de momentos; 20 = consultas de prueba en voz de Denys
+**/18_revision_dispersion.py
+**/20_indice_punto_a.py
+
+# Material visual de trabajo (mapa vectorial de demo): local, no se publica de momento
+material-visual/
+**/material-visual/

@@ -1,0 +1,155 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha 03 · El frontend (cliente, fetch, localStorage, las tres capas)</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; --rojo:#b0392b; }
+  html { transition: filter .35s ease; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:840px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:28px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:18px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:19px;
+        margin:28px 0 6px; padding-top:14px; border-top:2px solid var(--line); }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:6px 0 4px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:14px 18px; margin:12px 0; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:10px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  .ok { color:var(--verde); font-weight:600; }
+  .no { color:var(--rojo); font-weight:600; }
+  .cv { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+        padding:13px 18px; margin:10px 0; font-size:14px; }
+  pre { background:#1e2128; color:#e6e1d6; border-radius:10px; padding:14px 16px; overflow-x:auto;
+        font-family:'DM Mono',ui-monospace,monospace; font-size:12.5px; line-height:1.5; }
+  pre .c { color:#8a8f98; } pre .k { color:#d8a657; } pre .s { color:#a9b665; }
+  .flow { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:12px 0; font-size:13px;
+          font-family:'DM Mono',monospace; }
+  .flow .box { background:var(--card); border:1px solid var(--line); border-radius:9px; padding:8px 13px; }
+  .flow .arr { color:var(--dim); }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:28px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  b { color:#1a1a1a; }
+  #brillo { position:fixed; top:14px; right:14px; display:flex; align-items:center; gap:7px;
+            background:rgba(255,255,255,.82); border:1px solid var(--line); border-radius:20px;
+            padding:6px 12px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:50; }
+  #brillo input { width:90px; accent-color:var(--ambar); }
+</style></head><body>
+
+<div id="brillo" title="Brillo: día → noche cálida (filtra luz azul)">
+  ☀️<input id="lux" type="range" min="0" max="100" value="0">🌙
+</div>
+
+<div class="kicker">Ficha 03 · conceptos · corpus dobe</div>
+<h1>La cara visible: el frontend</h1>
+<div class="sub mono">cliente · fetch · localStorage · las tres capas · 29 jun 2026 · protocolo ds-nexus</div>
+
+<div class="tldr"><b>En una frase:</b> una sola página (<code>static/index.html</code>) que corre en
+<b>tu navegador</b>, le pide cosas a la API con <code>fetch()</code> y <b>pinta</b> el JSON que recibe.
+No sabe nada de RAG: solo habla con la API por un contrato.</div>
+
+<h2>Servidor vs cliente: dónde corre cada cosa</h2>
+<p>Esta es la confusión típica (la misma que te hizo preguntar si cerrar Safari apagaba la app).
+Hay <b>dos máquinas lógicas distintas</b>, aunque hoy estén en el mismo Mac:</p>
+<table>
+<tr><th>&nbsp;</th><th>Servidor (back)</th><th>Cliente (front)</th></tr>
+<tr><td><b>Qué es</b></td><td><code>api.py</code> + motor, servidos por uvicorn</td><td><code>index.html</code> corriendo dentro de Safari</td></tr>
+<tr><td><b>Dónde corre</b></td><td>en el proceso de uvicorn (puerto 8080)</td><td>en la pestaña del navegador</td></tr>
+<tr><td><b>Si cierras Safari</b></td><td class="ok">sigue vivo (proceso aparte)</td><td class="no">se va (era el cliente)</td></tr>
+<tr><td><b>Tiene la clave OpenAI</b></td><td>sí (en su entorno)</td><td><b>nunca</b> (solo el token de acceso)</td></tr>
+</table>
+<div class="ana"><b>Restaurante.</b> La <b>cocina</b> (servidor) sigue encendida aunque el <b>comensal</b>
+(navegador) se levante y se vaya. Son dos sitios. Por eso uvicorn seguía corriendo tras cerrar la
+pestaña — y por eso conviene <code>kill</code>arlo cuando acabas.</div>
+
+<h2>Las piezas nuevas</h2>
+<table>
+<tr><th>Concepto</th><th>Qué es</th><th>En la web del corpus</th></tr>
+<tr><td><b>frontend estático</b></td><td>HTML/CSS/JS que el servidor entrega tal cual, sin generar nada</td><td>Una sola página; toda la lógica de pintar vive en el navegador</td></tr>
+<tr><td><b><code>fetch()</code></b></td><td>La orden del navegador para hacer una petición HTTP</td><td>Llama a <code>POST /preguntar</code> con tu pregunta</td></tr>
+<tr><td><b><code>localStorage</code></b></td><td>Un cajón del navegador que sobrevive al recargar/cerrar</td><td>Guarda tu token (<code>dobe-token</code>) para no reescribirlo</td></tr>
+<tr><td><b><code>StaticFiles</code></b></td><td>FastAPI sirviendo la carpeta <code>static/</code> en <code>GET /</code></td><td>La misma recepción te entrega también el folleto (la web)</td></tr>
+</table>
+
+<h2>El viaje de una pregunta</h2>
+<div class="flow">
+  <span class="box">escribes + token</span><span class="arr">→</span>
+  <span class="box">fetch() POST /preguntar</span><span class="arr">→</span>
+  <span class="box">API (X-Token ok?)</span><span class="arr">→</span>
+  <span class="box">MotorRAG.preguntar()</span><span class="arr">→</span>
+  <span class="box">JSON de vuelta</span><span class="arr">→</span>
+  <span class="box">el navegador lo pinta</span>
+</div>
+<p>Fíjate: el navegador <b>no decide</b> nada del RAG. Manda texto, recibe un <code>dict</code> y lo
+dibuja. Toda la inteligencia está al otro lado del contrato.</p>
+
+<h2>Cómo se pinta el resultado</h2>
+<table>
+<tr><th>Banda</th><th>Qué muestra la web</th></tr>
+<tr><td>🟢 <b>claro</b> / 🟡 <b>posible</b></td><td>La respuesta, con las citas <code>[#57·pág115–117]</code> resaltadas en ámbar + chips de fuentes</td></tr>
+<tr><td>⚪ <b>lejano</b></td><td>"No guardo un recuerdo claro… no invento" + lo más cercano (no concluyente)</td></tr>
+</table>
+<p>El frontend <b>respeta el umbral del motor</b>: si el dict trae <code>respuesta:null</code>, no
+se inventa nada — muestra la honestidad del sistema. La decisión de no alucinar se tomó en el motor;
+la web solo la refleja.</p>
+
+<h2>Detalles de oficio (pequeños pero importan)</h2>
+<div class="card">
+<b>Escapar el texto.</b> El texto del usuario y del LLM se <b>escapa</b> antes de meterlo en la página
+(<code>&amp;lt;</code> en vez de <code>&lt;</code>) para que un <code>&lt;script&gt;</code> en una respuesta
+no se ejecute. Es la base de no abrir un agujero <b>XSS</b>.<br><br>
+<b>Token solo en el navegador.</b> Viaja en la cabecera <code>X-Token</code> de cada <code>fetch</code>;
+nunca se incrusta en el código de la página. La clave de OpenAI <b>jamás</b> toca el frontend.<br><br>
+<b>Estados de la UI.</b> Spinner mientras espera, y mensajes claros para 401 (token malo), error de
+API y "no contesta el servidor". Una interfaz honesta también lo es cuando algo falla.
+</div>
+
+<h2>La idea grande: tres capas, un contrato</h2>
+<pre><span class="c"># cada capa solo conoce a su vecina, y SOLO por el dict</span>
+MotorRAG.preguntar(texto)  ->  {banda, respuesta, fuentes, ...}   <span class="c"># la lógica</span>
+        |
+  api.py  (envuelve el dict en HTTP, pone el token)              <span class="c"># el transporte</span>
+        |
+index.html (fetch + pinta el dict)                               <span class="c"># la cara</span></pre>
+<p>Cambiar el color de un botón <b>no toca</b> el motor. Cambiar el modelo de embeddings <b>no toca</b>
+la web. Cada capa se puede reemplazar sin romper las otras <b>mientras respete el contrato</b>
+(el <code>dict</code>). Eso es desacoplar — y es justo lo que hace mantenible un sistema.</p>
+
+<h2>Para el CV (cómo contarlo)</h2>
+<div class="cv">Construí un <b>frontend estático</b> (HTML/CSS/JS sin build) servido por FastAPI con
+<b><code>StaticFiles</code></b>, que consume la API por <b><code>fetch</code></b> y persiste el token de
+acceso en <b><code>localStorage</code></b>. La UI refleja el <b>umbral de confianza</b> del motor
+(no muestra respuesta cuando el sistema no la tiene), escapa el contenido para evitar <b>XSS</b> y
+mantiene la clave del LLM fuera del cliente. Arquitectura <b>desacoplada en tres capas</b>
+(motor → API → UI) comunicadas por un contrato JSON.</div>
+
+<div class="foot">ficha 03 · conceptos corpus dobe · relacionada con: api http (ficha 02),
+motor vs interfaz (fase 1), docker (fase 4) · generada en sesión 29 jun · ritmo pausado</div>
+
+<script>
+  // deslizador de brillo: día (0) → noche cálida (100). Filtra azul (sepia) + atenúa. localStorage.
+  (function () {
+    var lux = document.getElementById('lux');
+    function aplicar(v) {
+      var b = 1 - v * 0.0028;          // brillo: 1 → 0.72
+      var s = v * 0.0055;              // calidez: 0 → 0.55 (resta azul)
+      document.documentElement.style.filter = 'brightness(' + b + ') sepia(' + s + ')';
+    }
+    var guardado = localStorage.getItem('ficha-brillo');
+    if (guardado !== null) { lux.value = guardado; }
+    aplicar(+lux.value);
+    lux.addEventListener('input', function () {
+      aplicar(+lux.value);
+      localStorage.setItem('ficha-brillo', lux.value);
+    });
+  })();
+</script>
+</body></html>

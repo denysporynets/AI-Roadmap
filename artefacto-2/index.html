@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artefacto 2 — RAG sobre el Corpus DOBE (memoria episódica) · Ruta AI Engineering</title>
+<meta name="description" content="Sistema RAG desplegado en producción que responde preguntas citando fragmentos reales y dice 'no lo sé' cuando no hay recuerdo. FastAPI + Docker + Cloud Run. Segundo artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d1117;
+    --bg-card:   #151b23;
+    --bg-card-h: #1a2230;
+    --ink:       #e6edf3;
+    --muted:     #7d8590;
+    --border:    #2a3340;
+    --amber:     #f0a500;
+    --amber-dim: #5c4419;
+    --green:     #3fb950;
+    --green-dim: #1d3a23;
+    --yellow:    #d9a520;
+    --blue:      #4a8cff;
+    --red:       #f85149;
+  }
+
+  html, body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 24px 80px; }
+
+  /* ── NAV ── */
+  .topnav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 44px; flex-wrap: wrap; gap: 12px;
+  }
+  .topnav a {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--muted); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 12px; transition: all 0.15s;
+  }
+  .topnav a:hover { color: var(--ink); border-color: var(--muted); }
+  .topnav .navgroup { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── HERO ── */
+  .hero { margin-bottom: 40px; }
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .badge-done {
+    color: var(--green); background: var(--green-dim);
+    border-radius: 4px; padding: 2px 8px; letter-spacing: 1px;
+  }
+  .hero-title {
+    font-family: 'Fraunces', serif; font-weight: 300;
+    font-size: clamp(30px, 5vw, 44px); line-height: 1.07;
+    letter-spacing: -0.5px; margin-bottom: 16px;
+  }
+  .hero-title strong { font-weight: 600; color: var(--amber); }
+  .hero-sub { font-size: 15px; color: var(--muted); max-width: 640px; }
+  .hero-sub strong { color: var(--ink); font-weight: 600; }
+
+  /* ── SECTION ── */
+  .section { margin-top: 44px; }
+  .sec-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
+  }
+  .sec-title {
+    font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .sec-p { font-size: 14.5px; color: var(--muted); margin-bottom: 14px; }
+  .sec-p strong { color: var(--ink); font-weight: 600; }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 8px; margin: 18px 0;
+  }
+  .pipe-step { flex: 1; min-width: 130px; padding: 16px; text-align: center; }
+  .pipe-step .pe {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  }
+  .pipe-step .pt { font-size: 14px; color: var(--ink); font-weight: 500; }
+  .pipe-step .pd { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pipe-arrow { display: flex; align-items: center; color: var(--amber); font-size: 18px; }
+  @media (max-width: 620px) { .pipe-arrow { transform: rotate(90deg); margin: 0 auto; } }
+
+  /* ── CODE ── */
+  .codecard {
+    background: #0a0e14; border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; margin: 16px 0;
+  }
+  .code-head {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    padding: 9px 14px; border-bottom: 1px solid var(--border);
+    background: var(--bg-card); display: flex; justify-content: space-between;
+  }
+  .code-head .tag { color: var(--amber); }
+  pre { padding: 14px 16px; overflow-x: auto; }
+  code {
+    font-family: 'DM Mono', monospace; font-size: 12.5px; line-height: 1.7;
+    color: var(--ink); white-space: pre;
+  }
+  .c-key { color: var(--blue); }
+  .c-str { color: var(--green); }
+  .c-com { color: var(--muted); font-style: italic; }
+  .c-num { color: var(--amber); }
+  .c-grn { color: var(--green); }
+  .c-yel { color: var(--yellow); }
+  .c-gry { color: var(--muted); }
+
+  /* ── BANDS (umbral de confianza) ── */
+  .bands { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+  @media (max-width: 620px) { .bands { grid-template-columns: 1fr; } }
+  .band {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .band .bdot { font-size: 18px; }
+  .band .bname { font-family: 'DM Mono', monospace; font-size: 12px; margin: 6px 0 4px; font-weight: 500; }
+  .band .bdesc { font-size: 12.5px; color: var(--muted); }
+  .band.g { border-color: var(--green-dim); }
+  .band.g .bname { color: var(--green); }
+  .band.y .bname { color: var(--yellow); }
+  .band.w .bname { color: var(--muted); }
+
+  /* ── CHECKS ── */
+  .checks { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .check {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--bg-card); border: 1px solid var(--green-dim);
+    border-radius: 8px; padding: 14px 16px;
+  }
+  .check .mark {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
+    background: var(--green); display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+  .check .mark svg { width: 13px; height: 13px; }
+  .check .ctitle { font-weight: 600; font-size: 14.5px; }
+  .check .cdesc { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* ── DOD ── */
+  .dod {
+    margin: 20px 0; padding: 14px 18px;
+    border-left: 3px solid var(--green); background: rgba(63,185,80,0.06);
+    border-radius: 0 8px 8px 0;
+  }
+  .dod-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--green); margin-bottom: 5px;
+  }
+  .dod-text { font-size: 14px; color: var(--ink); }
+
+  /* ── NOTE (privacidad / token) ── */
+  .note {
+    margin: 18px 0; padding: 14px 18px;
+    border-left: 3px solid var(--amber); background: rgba(240,165,0,0.06);
+    border-radius: 0 8px 8px 0; font-size: 13.5px; color: var(--ink);
+  }
+  .note strong { color: var(--amber); }
+
+  /* ── STACK chips ── */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 11px; color: var(--muted);
+  }
+  .chip strong { color: var(--amber); font-weight: 500; }
+
+  /* ── CTA ── */
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+  .cta {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    text-decoration: none; border-radius: 8px; padding: 11px 20px;
+    transition: all 0.18s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .cta-primary { background: var(--amber); color: #0d1117; }
+  .cta-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,165,0,0.25); }
+  .cta-ghost { border: 1px solid var(--border); color: var(--muted); }
+  .cta-ghost:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* ── ARCH layers ── */
+  .layers { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
+  .layer {
+    display: flex; gap: 14px; align-items: baseline;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 13px 16px;
+  }
+  .layer .lnum {
+    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--amber);
+    flex-shrink: 0; width: 70px;
+  }
+  .layer .lbody { font-size: 13.5px; }
+  .layer .lbody b { color: var(--ink); }
+  .layer .lbody span { color: var(--muted); }
+
+  /* ── PRINCIPLE ── */
+  .principle {
+    margin-top: 44px;
+    background: linear-gradient(135deg, #1a1410 0%, var(--bg-card) 60%);
+    border: 1px solid var(--amber-dim); border-radius: 12px;
+    padding: 26px 28px; position: relative; overflow: hidden;
+  }
+  .principle::before {
+    content: ''; position: absolute; top: -40%; right: -10%;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(240,165,0,0.08), transparent 70%);
+  }
+  .principle-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
+  }
+  .principle-text {
+    font-family: 'Fraunces', serif; font-size: 19px; font-weight: 300;
+    line-height: 1.45; color: var(--ink); max-width: 660px;
+  }
+  .principle-text strong { font-weight: 600; color: var(--amber); }
+
+  .footer {
+    margin-top: 44px; text-align: center;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--border);
+  }
+  .footer span { color: var(--amber); opacity: 0.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topnav">
+    <a href="../ROADMAP.html">← Bitácora del roadmap</a>
+    <div class="navgroup">
+      <a href="https://dobe-rag-1015586629315.europe-southwest1.run.app" target="_blank">Probar demo ↗</a>
+      <a href="https://github.com/denysporynets/AI-Roadmap/tree/main/2_RAG%20desplegado%20sobre%20el%20Corpus%20DOBE" target="_blank">Ver código en GitHub ↗</a>
+      <a href="https://denysporynets.github.io">Portfolio ↗</a>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <span>Artefacto 2 · Mes 2</span>
+      <span class="badge-done">✓ Desplegado</span>
+    </div>
+    <h1 class="hero-title">RAG sobre el Corpus DOBE<br><strong>una memoria episódica consultable</strong></h1>
+    <p class="hero-sub">
+      Un sistema que responde preguntas sobre un corpus personal <strong>citando el fragmento real
+      y su página</strong> — y que dice <strong>"no guardo ese recuerdo"</strong> en vez de inventar
+      cuando la pregunta cae fuera. Desplegado en producción con FastAPI, Docker y Cloud Run.
+      Segundo artefacto de la ruta <strong>Data Science → AI Engineering</strong>.
+    </p>
+  </div>
+
+  <!-- QUÉ HACE -->
+  <div class="section">
+    <div class="sec-eyebrow">Qué hace</div>
+    <div class="sec-title">Recuperar el momento, no resumir un libro</div>
+    <p class="sec-p">
+      No es un buscador ni una enciclopedia: es <strong>recuperación episódica</strong>. Ante una
+      pregunta, encuentra los <strong>momentos reales</strong> del corpus que más se le parecen por
+      significado, y solo entonces redacta una respuesta <strong>anclada a esos momentos</strong>,
+      citando de qué pasaje y página sale cada cosa.
+    </p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pe">Pregunta</div>
+        <div class="pt">Lenguaje natural</div>
+        <div class="pd">se convierte en vector</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Retrieval</div>
+        <div class="pt">Búsqueda por coseno</div>
+        <div class="pd">momentos más cercanos</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Umbral</div>
+        <div class="pt">¿hay recuerdo?</div>
+        <div class="pd">🟢 🟡 ⚪ antes del LLM</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Síntesis</div>
+        <div class="pt">LLM con fuentes</div>
+        <div class="pd">respuesta + citas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LA DECISIÓN CLAVE: EL UMBRAL -->
+  <div class="section">
+    <div class="sec-eyebrow">La decisión de diseño</div>
+    <div class="sec-title">El umbral manda antes que el LLM</div>
+    <p class="sec-p">
+      Antes de llamar al modelo, el sistema mide cuánto se parece la mejor coincidencia. Si no
+      alcanza, <strong>no llama al LLM</strong>: ni inventa una cercanía que no existe, ni gasta una
+      petición. La honestidad es una característica del diseño, no un accidente.
+    </p>
+    <div class="bands">
+      <div class="band g">
+        <div class="bdot">🟢</div>
+        <div class="bname">recuerdo claro</div>
+        <div class="bdesc">Responde y cita el momento + página.</div>
+      </div>
+      <div class="band y">
+        <div class="bdot">🟡</div>
+        <div class="bname">vecindario</div>
+        <div class="bdesc">Responde, pero marca la incertidumbre.</div>
+      </div>
+      <div class="band w">
+        <div class="bdot">⚪</div>
+        <div class="bname">sin recuerdo</div>
+        <div class="bdesc">No inventa. Lo dice y sugiere lo más cercano.</div>
+      </div>
+    </div>
+
+    <div class="codecard">
+      <div class="code-head"><span>POST /preguntar · pregunta fuera del corpus</span><span class="tag">respuesta real</span></div>
+<pre><code><span class="c-com"># una pregunta que el corpus no contiene</span>
+{ <span class="c-key">"consulta"</span>: <span class="c-str">"¿qué ropa me pongo para una boda?"</span> }
+
+<span class="c-com"># el sistema NO inventa: el umbral corta antes del LLM</span>
+{
+  <span class="c-key">"banda"</span>:     <span class="c-gry">"lejano"</span>,        <span class="c-com">// ⚪</span>
+  <span class="c-key">"sim_top"</span>:   <span class="c-num">0.262</span>,
+  <span class="c-key">"respuesta"</span>: <span class="c-key">null</span>,           <span class="c-com">// no se llamó al modelo</span>
+  <span class="c-key">"fuentes"</span>:   [],
+  <span class="c-key">"cercanos"</span>:  [ <span class="c-com">/* lo más próximo, no concluyente */</span> ]
+}</code></pre>
+    </div>
+    <p class="sec-p">
+      Cuando <strong>sí</strong> hay recuerdo (🟢), la respuesta llega redactada y con
+      <code style="color:var(--amber)">[#momento · página]</code> en cada afirmación — para que siempre
+      puedas ver de qué pasaje real sale.
+    </p>
+  </div>
+
+  <!-- ARQUITECTURA DE PRODUCCIÓN -->
+  <div class="section">
+    <div class="sec-eyebrow">De script a servicio</div>
+    <div class="sec-title">Tres capas y una caja en la nube</div>
+    <p class="sec-p">
+      El sistema está <strong>desacoplado en capas que solo se hablan por un contrato</strong> (un JSON).
+      Cambiar la cara no toca el motor; cambiar el modelo no toca la web.
+    </p>
+    <div class="layers">
+      <div class="layer">
+        <div class="lnum">motor</div>
+        <div class="lbody"><b>rag_core.py</b> — <span>retrieval + umbral + síntesis. Carga el índice una sola vez. Devuelve un dict, no imprime.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">API</div>
+        <div class="lbody"><b>FastAPI + uvicorn</b> — <span><code>/preguntar</code> protegido por token, <code>/salud</code> para el orquestador. Motor cargado en el <i>lifespan</i>.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">cara</div>
+        <div class="lbody"><b>frontend estático</b> — <span>chat que hace <code>fetch</code> y pinta el JSON: banda 🟢🟡⚪, respuesta y fuentes.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">caja</div>
+        <div class="lbody"><b>Docker → Cloud Run</b> — <span>imagen mínima construida en la nube (Cloud Build), <i>serverless</i> con escala a cero, claves en Secret Manager.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRIVACIDAD -->
+  <div class="section">
+    <div class="sec-eyebrow">Privacidad por diseño</div>
+    <div class="sec-title">Un corpus personal, protegido por capas</div>
+    <p class="sec-p">
+      El corpus es material personal, así que la privacidad no se deja al azar: el repositorio público
+      <strong>no contiene ni el corpus ni los vectores</strong> (un <code>.gitignore</code> los blinda),
+      la imagen vive en un <strong>registro privado</strong>, las claves se inyectan desde
+      <strong>Secret Manager</strong> (nunca en el código) y la consulta exige <strong>token</strong>.
+    </p>
+    <div class="note">
+      <strong>Demo real, acceso por token.</strong> La URL está viva y abierta para <em>cargar</em>
+      la web, pero preguntar al corpus requiere un token que se comparte de forma selectiva. Así se
+      puede enseñar el sistema funcionando sin abrir el contenido personal a cualquiera.
+    </div>
+  </div>
+
+  <!-- LO QUE SE ENTREGÓ -->
+  <div class="section">
+    <div class="sec-eyebrow">Lo que se entregó</div>
+    <div class="sec-title">Los criterios, cumplidos</div>
+    <div class="checks">
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">Respuestas ancladas a fragmentos reales, con fuente citada</div>
+          <div class="cdesc">Cada afirmación trae [#momento · página]; si no puedes ver de dónde sale, no cuenta.</div>
+        </div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">No alucina: umbral de confianza antes del LLM</div>
+          <div class="cdesc">Sin recuerdo claro → lo dice y no gasta el modelo. Verificado con prueba ciega.</div>
+        </div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">Desplegado en producción con URL pública</div>
+          <div class="cdesc">FastAPI + Docker + Cloud Run serverless; secretos gestionados; verificado de punta a punta.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dod">
+      <div class="dod-label">Definición de "hecho" — cumplida</div>
+      <div class="dod-text">Una pregunta sobre el corpus devuelve respuesta apoyada en fragmentos reales con la fuente citada, servida desde una URL pública. No vive en un notebook.</div>
+    </div>
+
+    <div class="chips">
+      <span class="chip"><strong>Python</strong> · NumPy</span>
+      <span class="chip"><strong>OpenAI</strong> embeddings</span>
+      <span class="chip"><strong>gpt-4o-mini</strong> síntesis</span>
+      <span class="chip"><strong>FastAPI</strong> + uvicorn</span>
+      <span class="chip"><strong>Docker</strong></span>
+      <span class="chip"><strong>Cloud Run</strong> serverless</span>
+      <span class="chip"><strong>Secret Manager</strong></span>
+      <span class="chip"><strong>Cloud Build</strong> + Artifact Registry</span>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta cta-primary" href="https://dobe-rag-1015586629315.europe-southwest1.run.app" target="_blank">Probar la demo ↗</a>
+      <a class="cta cta-ghost" href="https://github.com/denysporynets/AI-Roadmap/tree/main/2_RAG%20desplegado%20sobre%20el%20Corpus%20DOBE" target="_blank">Ver código en GitHub ↗</a>
+      <a class="cta cta-ghost" href="../ROADMAP.html">Ver el roadmap completo →</a>
+    </div>
+  </div>
+
+  <!-- PRINCIPIO -->
+  <div class="principle">
+    <div class="principle-eyebrow">Por qué este artefacto importa</div>
+    <p class="principle-text">
+      Un RAG fácil contesta siempre; uno bueno sabe <strong>cuándo callar</strong>. Poner el umbral
+      antes del modelo convierte "no alucinar" en una decisión de ingeniería —
+      <strong>y eso, además, no cuesta dinero</strong>.
+    </p>
+  </div>
+
+  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · artefacto 2 de 6</div>
+
+</div>
+</body>
+</html>

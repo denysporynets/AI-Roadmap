@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fase 1 — El motor rag_core.py · RAG DOBE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* acentos fijos (cálidos, bajos en azul) */
+  --accent:#b06a1f; --ok:#3a6b3a; --warn:#9a6b1f; --risk:#9a3b3b;
+  /* ── tema 0 · Crema (por defecto) — escala cálida que filtra luz azul ── */
+  --bg:#f6f1e6; --card:#fffdf8; --ink:#2b2620; --soft:#6b6457; --line:#e6ddcc;
+  --chip:#efe7d6; --accent2:#2d4a63; --code-bg:#222831; --code-ink:#e6e3da;
+}
+/* el deslizador cambia data-tema en <html>: 0 claro → 4 noche cálida */
+html[data-tema="1"]{ --bg:#ece0c9; --card:#f7eedb; --ink:#322c20; --soft:#675c46; --line:#dccbac; --chip:#e4d7bd; --accent2:#2c4a5e; --code-bg:#262a2b; --code-ink:#e6e3da; }
+html[data-tema="2"]{ --bg:#dccab0; --card:#e9dcc4; --ink:#322b20; --soft:#5f543f; --line:#cbb594; --chip:#d6c4a4; --accent2:#284756; --code-bg:#23262a; --code-ink:#e6e3da; }
+html[data-tema="3"]{ --bg:#2f2a22; --card:#3a342a; --ink:#ece1cd; --soft:#b3a78f; --line:#4a4234; --chip:#423a2c; --accent2:#d9a55f; --code-bg:#1b1915; --code-ink:#e6dcc8; }
+html[data-tema="4"]{ --bg:#211d17; --card:#2b261e; --ink:#e9dcc4; --soft:#ab9d83; --line:#3a3328; --chip:#322c22; --accent2:#e0ad66; --code-bg:#17150f; --code-ink:#e6dcc8; }
+html,body{transition:background-color .28s ease,color .28s ease}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);margin:0;padding:38px 20px;
+  font:16px/1.65 "DM Sans",-apple-system,Segoe UI,Roboto,sans-serif;max-width:980px;margin:0 auto}
+h1{font-family:"Fraunces",serif;font-size:30px;margin:0 0 4px;line-height:1.15}
+h2{font-family:"Fraunces",serif;font-size:21px;margin:34px 0 12px;padding-bottom:7px;
+  border-bottom:2px solid var(--accent);color:var(--accent2)}
+h3{font-size:16px;margin:20px 0 6px;color:var(--accent);font-weight:700}
+.sub{color:var(--soft);font-size:14px;margin-bottom:10px}
+p{margin:9px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;
+  margin:16px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ctx{border-left:4px solid var(--accent2)}
+.key{border-left:4px solid var(--ok);background:rgba(58,107,58,.10)}
+.note{border-left:4px solid var(--warn);background:rgba(154,107,31,.12)}
+code{background:var(--chip);padding:1px 6px;border-radius:5px;
+  font:13px/1.5 "DM Mono",ui-monospace,Menlo,monospace;color:var(--accent)}
+pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:16px 18px;
+  overflow-x:auto;font:13px/1.62 "DM Mono",ui-monospace,Menlo,monospace;margin:12px 0}
+pre code{background:none;color:inherit;padding:0;font-size:13px}
+.cap{font-size:12.5px;color:var(--soft);margin:-6px 0 14px;padding-left:4px}
+.tok-c{color:#9aa7b8}      /* comentario */
+.tok-k{color:#e0986d}      /* keyword */
+.tok-s{color:#9ece9a}      /* string */
+.tok-f{color:#82aaff}      /* función / nombre */
+.tok-n{color:#d9b07c}      /* número */
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+th{background:var(--chip);color:var(--accent2)}
+.flow{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0;font-size:13.5px;align-items:center}
+.flow span{background:var(--chip);border:1px solid var(--line);border-radius:20px;padding:5px 13px}
+.flow .arrow{background:none;border:none;color:var(--soft);font-weight:700}
+.flow .one{background:rgba(176,106,31,.16);border-color:rgba(176,106,31,.42);color:var(--accent);font-weight:700}
+.flow .many{background:var(--chip);border-color:var(--line);color:var(--accent2)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}
+.split h3{margin-top:0}
+.before{border-left:4px solid var(--risk)}
+.after{border-left:4px solid var(--ok)}
+ul{margin:6px 0;padding-left:22px}li{margin:4px 0}
+.pill{font-size:11px;font-weight:700;padding:2px 9px;border-radius:11px;background:#f3e6d2;color:var(--accent)}
+.foot{color:var(--soft);font-size:12px;margin-top:34px;text-align:center;border-top:1px solid var(--line);padding-top:14px}
+.lead{font-size:17px;color:#41392c}
+@media(max-width:720px){.split{grid-template-columns:1fr}}
+/* ── deslizador de brillo (claro → noche cálida, filtra luz azul) ── */
+.tema-ctrl{position:fixed;top:14px;right:14px;z-index:99;display:flex;align-items:center;gap:8px;
+  background:var(--card);border:1px solid var(--line);border-radius:30px;padding:7px 13px;
+  box-shadow:0 2px 10px rgba(0,0,0,.14)}
+.tema-ctrl .ico{font-size:14px;line-height:1}
+.tema-ctrl .lbl{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--soft);margin-right:2px}
+.tema-ctrl input[type=range]{width:104px;accent-color:var(--accent);cursor:pointer;margin:0}
+@media(max-width:720px){.tema-ctrl{top:8px;right:8px;padding:5px 10px}.tema-ctrl input[type=range]{width:78px}}
+@media print{.tema-ctrl{display:none}}
+</style>
+</head>
+<body>
+
+<div class="tema-ctrl" role="group" aria-label="Brillo de la página">
+  <span class="ico" aria-hidden="true">☀️</span>
+  <span class="lbl">luz</span>
+  <input id="tema" type="range" min="0" max="4" step="1" value="0" aria-label="De claro a noche cálida">
+  <span class="ico" aria-hidden="true">🌙</span>
+</div>
+
+<h1>Fase 1 — El motor <code>rag_core.py</code></h1>
+<div class="sub">RAG sobre el Corpus DOBE · Artefacto 2 · separar la lógica de la interfaz · 28 jun 2026</div>
+
+<div class="card ctx">
+<p class="lead">En la Fase 1 no añadimos ninguna función nueva al RAG. Hicimos algo más sutil y más
+profesional: <b>reorganizar el código que ya funcionaba</b> para que la misma lógica pueda
+servir a una terminal hoy y a una web mañana, sin duplicarse. A eso se le llama
+<b>refactorizar</b>, y es la diferencia entre un script y un sistema.</p>
+</div>
+
+<h2>El punto de partida: lógica y presentación pegadas</h2>
+<p>Hasta ayer, toda la inteligencia del RAG vivía dentro de <code>23_responder.py</code>, mezclada
+con las órdenes de imprimir en pantalla. El programa <i>calculaba</i> la respuesta y a la vez la
+<i>pintaba</i> en la terminal, en las mismas líneas:</p>
+
+<pre><code><span class="tok-c"># ANTES — la decisión y el print, enredados en la misma función</span>
+<span class="tok-k">if</span> banda(sim_top) == <span class="tok-s">"lejano"</span>:
+    <span class="tok-f">print</span>(<span class="tok-s">"⚪  No guardo un recuerdo claro de esto."</span>)
+    <span class="tok-f">print</span>(<span class="tok-s">f"    (lo más cercano cae en sim {sim_top:.3f}...)"</span>)
+    <span class="tok-k">return</span>
+...
+resp = client.chat.completions.<span class="tok-f">create</span>(...)   <span class="tok-c"># llamada al LLM</span>
+<span class="tok-f">print</span>(<span class="tok-s">f"{icono}  Respuesta..."</span>)            <span class="tok-c"># y el print, ahí mismo</span></code></pre>
+<p class="cap">Funciona perfectamente… para la terminal. El problema aparece cuando quieres reutilizarlo.</p>
+
+<div class="card note">
+<h3>¿Por qué esto es un problema?</h3>
+<p>Una página web no quiere <code>print()</code> en una terminal: quiere <b>datos</b> (un JSON) para
+dibujarlos en el navegador. Si la lógica está soldada a los <code>print</code>, la web no puede
+aprovecharla — habría que copiar y pegar toda la lógica en otro sitio. Y código duplicado =
+dos sitios donde corregir cada bug. La Fase 2 (la API web) sería imposible de hacer limpia.</p>
+</div>
+
+<h2>La idea central: <span style="color:var(--accent2)">motor</span> vs <span style="color:var(--accent2)">interfaz</span></h2>
+<p>La solución es una de las ideas más reutilizables de toda la ingeniería de software:
+<b>separar el que PIENSA del que MUESTRA</b>.</p>
+
+<div class="flow">
+  <span class="one">🔧 MOTOR<br>rag_core.py</span>
+  <span class="arrow">→ devuelve datos →</span>
+  <span class="many">🖥️ CLI · 23_responder.py</span>
+  <span class="many">🌐 API web · Fase 2</span>
+  <span class="many">…lo que venga</span>
+</div>
+
+<table>
+<tr><th>Pieza</th><th>Su único trabajo</th><th>Qué NO hace</th></tr>
+<tr><td><b>Motor</b> (<code>rag_core.py</code>)</td><td>Recuperar momentos, decidir la banda de confianza, llamar (o no) al LLM y <b>devolver un diccionario</b>.</td><td>No imprime. No sabe si lo usa una terminal o una web. Le da igual.</td></tr>
+<tr><td><b>Interfaz</b> (<code>23_responder.py</code>)</td><td>Pedir la pregunta y <b>presentar</b> el diccionario en pantalla (🟢🟡⚪ + 📎 Fuentes).</td><td>No calcula nada. No sabe de embeddings ni de umbrales.</td></tr>
+</table>
+<p class="cap">Un motor, muchas interfaces. La regla de oro: <b>la lógica devuelve datos; la interfaz los presenta</b>.</p>
+
+<h2>El corazón del cambio: devolver datos, no imprimirlos</h2>
+<p>El método <code>preguntar()</code> del motor termina <b>devolviendo</b> un diccionario en lugar de
+imprimir. Ese diccionario contiene <i>la decisión</i> tomada, lista para que cualquiera la use:</p>
+
+<pre><code><span class="tok-c"># DESPUÉS — rag_core.py · el motor decide y DEVUELVE (no imprime)</span>
+<span class="tok-k">def</span> <span class="tok-f">preguntar</span>(self, consulta: str) -> dict:
+    top = self.<span class="tok-f">recuperar</span>(consulta)
+    sim_top = top[<span class="tok-n">0</span>][<span class="tok-n">1</span>][<span class="tok-n">0</span>] <span class="tok-k">if</span> top <span class="tok-k">else</span> <span class="tok-n">0.0</span>
+    veredicto = <span class="tok-f">banda</span>(sim_top)
+
+    base = {
+        <span class="tok-s">"consulta"</span>: consulta,
+        <span class="tok-s">"banda"</span>:    veredicto,
+        <span class="tok-s">"sim_top"</span>:  <span class="tok-f">round</span>(sim_top, <span class="tok-n">3</span>),
+        <span class="tok-s">"respuesta"</span>: <span class="tok-k">None</span>,
+        <span class="tok-s">"fuentes"</span>:  [],
+        <span class="tok-s">"cercanos"</span>: cercanos,
+    }
+
+    <span class="tok-c"># El UMBRAL manda: si no hay recuerdo claro, ni LLM ni invención.</span>
+    <span class="tok-k">if</span> veredicto == <span class="tok-s">"lejano"</span>:
+        <span class="tok-k">return</span> base          <span class="tok-c"># ← devuelve la decisión, no la imprime</span>
+
+    <span class="tok-c"># ...si hay recuerdo, llama al LLM y rellena respuesta + fuentes...</span>
+    <span class="tok-k">return</span> base</code></pre>
+
+<p>Cuando lanzas la pregunta-trampa <i>«qué ropa me pongo para ir a una boda»</i> (algo que
+<b>no está</b> en el corpus), el motor devuelve exactamente esto:</p>
+
+<pre><code><span class="tok-c">// El diccionario que devuelve el motor — esto es lo que consumirá la API</span>
+{
+  <span class="tok-s">"consulta"</span>: <span class="tok-s">"qué ropa me pongo para ir a una boda"</span>,
+  <span class="tok-s">"banda"</span>: <span class="tok-s">"lejano"</span>,
+  <span class="tok-s">"sim_top"</span>: <span class="tok-n">0.272</span>,
+  <span class="tok-s">"respuesta"</span>: <span class="tok-k">null</span>,        <span class="tok-c">// el motor decidió NO llamar al LLM</span>
+  <span class="tok-s">"fuentes"</span>: [],
+  <span class="tok-s">"cercanos"</span>: [
+    { <span class="tok-s">"num"</span>: <span class="tok-n">67</span>,  <span class="tok-s">"sim"</span>: <span class="tok-n">0.272</span> },
+    { <span class="tok-s">"num"</span>: <span class="tok-n">126</span>, <span class="tok-s">"sim"</span>: <span class="tok-n">0.267</span> },
+    { <span class="tok-s">"num"</span>: <span class="tok-n">6</span>,   <span class="tok-s">"sim"</span>: <span class="tok-n">0.265</span> }
+  ]
+}</code></pre>
+
+<div class="card key">
+<p>Mira el detalle importante: <code>"respuesta": null</code> y <code>"fuentes": []</code>. El motor
+<b>tomó la decisión de no llamar al LLM</b> (la similitud 0.272 está por debajo del umbral 0.40) y
+dejó esa decisión <b>en los datos</b>, no en un <code>print</code>. La terminal la lee y muestra el ⚪;
+la web la leerá y mostrará lo mismo. <b>Una decisión, dos presentaciones.</b> Eso es lo que antes
+no se podía hacer.</p>
+</div>
+
+<h2>La interfaz, ahora, solo presenta</h2>
+<p>Con la lógica fuera, <code>23_responder.py</code> adelgazó de 161 a ~70 líneas. Ya no calcula nada:
+recibe el diccionario y elige cómo pintarlo. Compara el antes y el después de la misma rama ⚪:</p>
+
+<div class="split">
+<div class="card before">
+<h3>Antes · lógica + print juntos</h3>
+<pre style="margin:0"><code><span class="tok-k">if</span> banda(sim_top) == <span class="tok-s">"lejano"</span>:
+    <span class="tok-f">print</span>(<span class="tok-s">"⚪  No guardo..."</span>)
+    <span class="tok-f">print</span>(<span class="tok-s">f"...sim {sim_top:.3f}..."</span>)
+    <span class="tok-k">return</span>
+<span class="tok-c"># aquí mismo seguía toda la</span>
+<span class="tok-c"># lógica del retrieval y el LLM</span></code></pre>
+</div>
+<div class="card after">
+<h3>Después · solo presentación</h3>
+<pre style="margin:0"><code><span class="tok-k">if</span> r[<span class="tok-s">"banda"</span>] == <span class="tok-s">"lejano"</span>:
+    <span class="tok-f">print</span>(<span class="tok-s">"⚪  No guardo..."</span>)
+    <span class="tok-f">print</span>(<span class="tok-s">f"...sim {r['sim_top']:.3f}..."</span>)
+    <span class="tok-k">return</span>
+<span class="tok-c"># r ya viene resuelto del motor:</span>
+<span class="tok-c"># aquí NO se calcula nada</span></code></pre>
+</div>
+</div>
+<p class="cap">El <code>23</code> de después no sabe qué es un embedding ni un umbral. Solo sabe leer un diccionario y pintarlo.</p>
+
+<h2>Tres conceptos técnicos que aparecen aquí</h2>
+
+<div class="card">
+<h3>1 · Una clase que carga el estado <b>una sola vez</b></h3>
+<p>El motor es una <b>clase</b> (<code>MotorRAG</code>). Su constructor (<code>__init__</code>) carga el índice
+de vectores y el corpus <b>en el momento de crearse</b>, y los guarda en memoria. Luego cada pregunta
+reutiliza eso ya cargado.</p>
+<pre><code><span class="tok-k">class</span> <span class="tok-f">MotorRAG</span>:
+    <span class="tok-k">def</span> <span class="tok-f">__init__</span>(self):
+        self.vecs   = np.<span class="tok-f">load</span>(EMB / <span class="tok-s">"indice_a.npy"</span>)   <span class="tok-c"># 257 vectores, UNA vez</span>
+        self.corpus = <span class="tok-f">cargar_corpus</span>()
+        self.client = <span class="tok-f">OpenAI</span>()</code></pre>
+<p><b>Ejemplo del mundo real:</b> es como un cocinero que <b>prepara la cocina al abrir</b> (saca cuchillos,
+enciende fuegos) en vez de montar la cocina entera cada vez que entra un pedido. Abrir el archivo de 257
+vectores en <i>cada</i> pregunta sería lento y absurdo. En la Fase 2, la API encenderá el motor <b>una vez
+al arrancar</b> y atenderá miles de preguntas con esa misma instancia ya caliente.</p>
+</div>
+
+<div class="card">
+<h3>2 · El diccionario como <b>contrato</b> entre motor e interfaz</h3>
+<p>El motor y la interfaz se ponen de acuerdo en una forma fija de diccionario. Mientras el motor
+respete ese "contrato", puede cambiar por dentro (mejorar el retrieval, cambiar de
+<code>gpt-4o-mini</code> a Claude) sin que la interfaz se entere.</p>
+<table>
+<tr><th>Campo</th><th>Qué guarda</th></tr>
+<tr><td><code>consulta</code></td><td>La pregunta original.</td></tr>
+<tr><td><code>banda</code></td><td>El veredicto de confianza: <code>claro</code> / <code>posible</code> / <code>lejano</code>.</td></tr>
+<tr><td><code>sim_top</code></td><td>La similitud del mejor momento (0–1).</td></tr>
+<tr><td><code>respuesta</code></td><td>El texto del LLM, o <code>null</code> si no hubo recuerdo.</td></tr>
+<tr><td><code>fuentes</code></td><td>Los momentos citados: <code>[{num, pages}]</code>.</td></tr>
+<tr><td><code>cercanos</code></td><td>Los 3 más próximos, por si quieres mirarlos a mano.</td></tr>
+</table>
+<p><b>Por qué importa:</b> ese diccionario se convierte en JSON con <b>una sola línea</b> en la API. El
+JSON es el idioma universal con el que hablan el backend y el navegador. Diseñar bien ese contrato hoy
+es lo que hace que la Fase 2 sea casi trivial.</p>
+</div>
+
+<div class="card">
+<h3>3 · La configuración vive <b>fuera</b> del código (entorno primero, <code>.env</code> después)</h3>
+<p>La clave de OpenAI nunca se escribe en el código. El motor la busca primero en las
+<b>variables de entorno</b> del sistema y, solo si no está, cae al fichero <code>.env</code> local:</p>
+<pre><code><span class="tok-k">def</span> <span class="tok-f">_asegurar_clave</span>():
+    <span class="tok-c"># 1) ¿está en el entorno? (así la inyecta Cloud Run / Secret Manager)</span>
+    <span class="tok-k">if</span> os.environ.<span class="tok-f">get</span>(<span class="tok-s">"OPENAI_API_KEY"</span>):
+        <span class="tok-k">return</span>
+    <span class="tok-c"># 2) si no, leerla del .env local (tu Mac, en desarrollo)</span>
+    <span class="tok-k">for</span> line <span class="tok-k">in</span> (BASE / <span class="tok-s">".env"</span>).<span class="tok-f">read_text</span>().<span class="tok-f">splitlines</span>():
+        <span class="tok-k">if</span> line.<span class="tok-f">startswith</span>(<span class="tok-s">"OPENAI_API_KEY="</span>):
+            os.environ[<span class="tok-s">"OPENAI_API_KEY"</span>] = line.<span class="tok-f">split</span>(<span class="tok-s">"="</span>, <span class="tok-n">1</span>)[<span class="tok-n">1</span>].<span class="tok-f">strip</span>()</code></pre>
+<p><b>El concepto se llama "12-factor app":</b> el mismo código, sin tocar una línea, corre en tu Mac
+(lee el <code>.env</code>) y en la nube (lee la variable que le inyecta Google Secret Manager). El secreto
+y el código viajan por caminos distintos: el código es público, la clave nunca. Es el complemento natural
+del blindaje de privacidad de la Fase 0.</p>
+</div>
+
+<h2>Verificación: ¿da igual que ayer?</h2>
+<p>La regla de un refactor: <b>el comportamiento no cambia</b>. Probamos las 3 ramas con preguntas reales
+y el CLI dio idéntico a antes — solo que ahora por debajo corre el motor nuevo.</p>
+<table>
+<tr><th>Rama</th><th>Pregunta de prueba</th><th>Resultado</th></tr>
+<tr><td>🟢 claro</td><td><i>tendencia al hiperfoco</i></td><td>Síntesis fundada, citando varios momentos con su página.</td></tr>
+<tr><td>🟡 posible</td><td><i>relación con un conocido</i></td><td>Síntesis del vecindario y marca explícita de la incertidumbre.</td></tr>
+<tr><td>⚪ lejano</td><td><i>ropa para una boda</i> (trampa)</td><td>«No guardo un recuerdo claro», sim 0.272 &lt; 0.40, <b>sin llamar al LLM</b>.</td></tr>
+</table>
+
+<div class="card key">
+<h3>En una frase para tu CV</h3>
+<p>«Refactoricé un pipeline RAG separando la <b>lógica</b> (un motor reutilizable que devuelve datos
+estructurados) de la <b>interfaz</b> (CLI), aplicando configuración por entorno estilo 12-factor y
+carga única del índice en memoria — dejándolo listo para envolverlo en una API web sin duplicar código.»</p>
+</div>
+
+<h2>Lo que viene</h2>
+<p><span class="pill">Fase 2</span> Envolver el motor en una <b>API web con FastAPI</b>: un endpoint
+<code>/preguntar</code> protegido por token que devolverá ese diccionario como JSON, un <code>/salud</code>
+para que la nube compruebe que el servicio está vivo, y servir el frontend. El motor no se toca: la API
+solo lo enciende una vez y le pasa las preguntas.</p>
+
+<div class="foot">protocolo ds-nexus · documento de Fase 1 · RAG sobre el Corpus DOBE · ritmo pausado, fase a fase</div>
+
+<script>
+(function(){
+  var s=document.getElementById('tema'), root=document.documentElement, K='dobe-tema';
+  var saved=localStorage.getItem(K);
+  if(saved!==null){ root.setAttribute('data-tema',saved); s.value=saved; }
+  s.addEventListener('input',function(){
+    root.setAttribute('data-tema',s.value);
+    localStorage.setItem(K,s.value);
+  });
+})();
+</script>
+</body>
+</html>

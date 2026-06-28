@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plan — RAG DOBE en producción</title>
+<style>
+:root{
+  --bg:#f6f4ef; --card:#ffffff; --ink:#262219; --soft:#6b6457; --line:#e4ddcf;
+  --accent:#b06a1f; --accent2:#2d4a63; --ok:#3a6b3a; --warn:#9a6b1f; --risk:#9a3b3b;
+  --code:#f0ece2;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);margin:0;padding:34px 20px;
+  font:16px/1.62 -apple-system,Segoe UI,Roboto,sans-serif;max-width:1000px;margin:0 auto}
+h1{font-size:27px;margin:0 0 2px}
+h2{font-size:20px;margin:30px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--accent);color:var(--accent2)}
+h3{font-size:16px;margin:18px 0 6px;color:var(--accent)}
+.sub{color:var(--soft);font-size:14px;margin-bottom:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;
+  margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ctx{border-left:4px solid var(--accent2)}
+.risk{border-left:4px solid var(--risk);background:#fdf4f4}
+.principio{border-left:4px solid var(--ok);background:#f3f8f3}
+code{background:var(--code);padding:1px 6px;border-radius:5px;font:13px/1.5 "DM Mono",ui-monospace,Menlo,monospace}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:#efe9dd;color:var(--accent2)}
+.fase{counter-increment:none}
+.fase h3{display:flex;align-items:center;gap:8px}
+.tag{font-size:11px;font-weight:700;padding:2px 9px;border-radius:11px}
+.tag.must{background:#fbe3e3;color:var(--risk)}
+.tag.new{background:#f3e6d2;color:var(--accent)}
+.tag.reuse{background:#e2efe2;color:var(--ok)}
+.verif{font-size:13px;color:var(--soft);margin-top:6px;padding:7px 10px;background:#f3f0e8;border-radius:7px}
+.verif b{color:var(--ok)}
+ul{margin:6px 0 6px 0;padding-left:22px}
+li{margin:3px 0}
+.flow{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;font-size:13px}
+.flow span{background:#efe9dd;border:1px solid var(--line);border-radius:20px;padding:4px 12px}
+.flow .arrow{background:none;border:none;color:var(--soft)}
+.foot{color:var(--soft);font-size:12px;margin-top:28px;text-align:center}
+</style>
+</head>
+<body>
+
+<h1>RAG DOBE en producción real</h1>
+<div class="sub">FastAPI + Docker + GCP Cloud Run · protocolo DS-NEXUS · Artefacto 2 · 28 jun 2026</div>
+
+<div class="card ctx">
+<h2 style="border:none;margin-top:0;color:var(--accent2)">Contexto</h2>
+<p>El motor RAG ya está <b>completo y verificado por CLI</b> (<code>22_buscar.py</code> retrieval+umbral,
+<code>23_responder.py</code> síntesis con cita de fuentes). El objetivo: convertirlo en <b>algo en
+producción real, con URL pública, para enseñar al mundo</b> como pieza de portfolio — cerrando la
+"definición de hecho" del Artefacto 2 y tu fase LLMOps.</p>
+<p><b>Decisiones tomadas:</b></p>
+<ul>
+<li><b>Acceso:</b> demo REAL (tu corpus) pero <b>protegido por token</b> que compartes selectivamente. URL viva, no abierta a cualquiera.</li>
+<li><b>Despliegue:</b> <b>GCP Cloud Run</b> (proyecto <code>mlops-nuclio-denys</code>), imagen construida en la nube con <b>Cloud Build</b> — sin Docker local.</li>
+</ul>
+</div>
+
+<div class="card risk">
+<h3>⚠️ Riesgo crítico que motiva la Fase 0</h3>
+<p>El corpus es tu proceso de autodescubrimiento TEA (lo más personal que tienes) y está en la carpeta del
+repo <b>público</b> <code>AI-Roadmap</code>, <b>sin trackear pero TAMPOCO ignorado</b>. Un
+<code>git add .</code> despistado lo expondría. <b>Hay que blindarlo antes de nada.</b></p>
+</div>
+
+<div class="card principio">
+<h3>🏎️ Principio rector</h3>
+<p>"Ferrari para carrera de karts, NO." Separar <b>motor</b> (lógica RAG) de <b>interfaz</b> (CLI / API) es
+buena arquitectura, no sobre-ingeniería. Cada fase termina con verificación; podemos parar entre fases
+(ritmo pausado).</p>
+</div>
+
+<h2>Stack tecnológico que tocamos</h2>
+<table>
+<tr><th>Capa</th><th>Tecnología</th><th>¿Nueva?</th></tr>
+<tr><td>Motor / retrieval + síntesis</td><td>Python, NumPy, OpenAI (embeddings + gpt-4o-mini)</td><td><span class="tag reuse">reusa</span></td></tr>
+<tr><td>Interfaz API</td><td><b>FastAPI + Uvicorn</b></td><td><span class="tag new">nueva</span></td></tr>
+<tr><td>Frontend</td><td>HTML/CSS/JS estático (tu línea visual dark/ámbar)</td><td><span class="tag new">nuevo</span></td></tr>
+<tr><td>Empaquetado</td><td><b>Dockerfile</b> + <code>.dockerignore</code></td><td><span class="tag new">nuevo</span></td></tr>
+<tr><td>Build</td><td><b>GCP Cloud Build</b> (desde Dockerfile, sin Docker local)</td><td><span class="tag new">nuevo</span></td></tr>
+<tr><td>Hosting</td><td><b>GCP Cloud Run</b> (escala a cero, URL pública)</td><td><span class="tag new">nuevo</span></td></tr>
+<tr><td>Secretos</td><td><b>GCP Secret Manager</b> (OPENAI_API_KEY, APP_TOKEN)</td><td><span class="tag new">nuevo</span></td></tr>
+<tr><td>Privacidad</td><td><code>.gitignore</code> (blindaje del corpus)</td><td><span class="tag must">endurecer</span></td></tr>
+</table>
+
+<h2>Qué necesitamos (prerequisitos)</h2>
+<ul>
+<li><code>gcloud</code> autenticado en <code>mlops-nuclio-denys</code> con <b>billing activo</b> y APIs habilitadas (Cloud Run, Cloud Build, Secret Manager, Artifact Registry).</li>
+<li>Elegir <b>región</b> (sugerencia: <code>europe-southwest1</code> = Madrid).</li>
+<li>Elegir el <b>token</b> de acceso (cadena secreta → Secret Manager, nunca en el código).</li>
+<li>La imagen Docker llevará el corpus dentro → el registro (Artifact Registry) queda <b>privado</b> y <code>/preguntar</code> exige token.</li>
+</ul>
+
+<h2>Las 6 fases</h2>
+<div class="flow">
+<span>0 · Privacidad</span><span class="arrow">→</span>
+<span>1 · Motor</span><span class="arrow">→</span>
+<span>2 · API</span><span class="arrow">→</span>
+<span>3 · Frontend</span><span class="arrow">→</span>
+<span>4 · Docker</span><span class="arrow">→</span>
+<span>5 · Cloud Run</span><span class="arrow">→</span>
+<span>6 · Lucirlo</span>
+</div>
+
+<div class="card fase">
+<h3>Fase 0 — Blindaje de privacidad <span class="tag must">OBLIGATORIO · primero</span></h3>
+<p><b>Archivo:</b> <code>AI ENGINEERING/.gitignore</code></p>
+<ul>
+<li>Reglas para que NUNCA suban datos personales: <code>**/corpus_dobe_*.json</code>, <code>**/embeddings/*.npy</code>, <code>**/embeddings/*.json</code>, <code>**/construccion_corpus/</code>, <code>**/FASE2/</code>, y los HTML/MD de resultados personales.</li>
+<li>Auditar con <code>git ls-files</code> que nada personal está YA commiteado.</li>
+</ul>
+<div class="verif"><b>Verificación:</b> <code>git check-ignore</code> confirma corpus+embeddings ignorados; <code>git status</code> no muestra datos personales a punto de añadirse.</div>
+</div>
+
+<div class="card fase">
+<h3>Fase 1 — Motor reutilizable <code>rag_core.py</code> + CLI fina</h3>
+<ul>
+<li>Extraer a <code>rag_core.py</code> la lógica de <code>23_responder.py</code>: carga del índice + corpus, <code>recuperar()</code>, bandas de confianza (mismo caveat n=8), y <code>preguntar()</code>.</li>
+<li><code>preguntar(consulta) → dict</code> <b>estructurado</b> (no <code>print</code>): <code>{consulta, banda, sim_top, respuesta, fuentes[], cercanos}</code>.</li>
+<li>Clave OpenAI: <code>os.environ</code> primero (Cloud Run), fallback a <code>.env</code> (local).</li>
+<li><code>23_responder.py</code> queda como CLI fina sobre el motor (misma UX 🟢🟡⚪ + 📎 Fuentes).</li>
+</ul>
+<div class="verif"><b>Verificación:</b> el CLI da idéntico a hoy en las 3 ramas (claro / vecindario / ⚪).</div>
+</div>
+
+<div class="card fase">
+<h3>Fase 2 — API local <code>api.py</code> (FastAPI + token)</h3>
+<p class="sub">Nombre SIN prefijo numérico: uvicorn necesita un módulo importable <code>api:app</code>.</p>
+<ul>
+<li><code>lifespan</code>: instancia el motor <b>una vez</b> al arrancar.</li>
+<li><code>GET /salud</code> → health check sin token (para Cloud Run).</li>
+<li><code>POST /preguntar</code> → JSON del motor; protegido por cabecera <code>X-Token</code> vs <code>APP_TOKEN</code>; <b>401</b> si falla.</li>
+<li><code>GET /</code> → sirve el frontend estático.</li>
+</ul>
+<div class="verif"><b>Verificación local:</b> <code>uvicorn api:app</code>; <code>/salud</code> OK; token bueno → respuesta; token malo → 401; "ropa boda" → ⚪.</div>
+</div>
+
+<div class="card fase">
+<h3>Fase 3 — Frontend <code>static/index.html</code> (tu línea visual)</h3>
+<ul>
+<li>Chat minimalista: campo de <b>token</b> (en <code>localStorage</code>), caja de pregunta, render de respuesta + <b>banda de confianza</b> (🟢🟡⚪) + <b>fuentes</b> (#num · pág).</li>
+<li>Estética portfolio (dark <code>#0d1117</code>, ámbar <code>#f0a500</code>, Fraunces/DM Sans/DM Mono), montado por FastAPI con <code>StaticFiles</code>.</li>
+</ul>
+<div class="verif"><b>Verificación local:</b> abrir <code>localhost:8080</code>, meter token, preguntar, ver respuesta + fuentes.</div>
+</div>
+
+<div class="card fase">
+<h3>Fase 4 — Empaquetado Docker</h3>
+<ul>
+<li><code>requirements.txt</code>: <code>fastapi</code>, <code>uvicorn[standard]</code>, <code>openai</code>, <code>numpy</code> (pin).</li>
+<li><code>Dockerfile</code>: <code>python:3.13-slim</code> → copia motor + api + static + <code>corpus_dobe_enriquecido.json</code> + <code>embeddings/indice_a.*</code> → <code>pip install</code> → <code>uvicorn api:app --port $PORT</code>.</li>
+<li><code>.dockerignore</code>: excluye <code>.env</code>, <code>.venv</code>, <code>construccion_corpus/</code>, <code>FASE2/</code>, HTML/MD de resultados, <code>vectores_*.npy</code> pesados. La imagen lleva SOLO lo mínimo.</li>
+</ul>
+<div class="verif"><b>Verificación:</b> revisar contexto de build (no se cuela <code>.env</code>); el build real se valida en Fase 5 vía Cloud Build.</div>
+</div>
+
+<div class="card fase">
+<h3>Fase 5 — Despliegue en Cloud Run</h3>
+<ul>
+<li>Habilitar APIs (run, cloudbuild, secretmanager, artifactregistry) si faltan.</li>
+<li>Crear secretos <code>OPENAI_API_KEY</code> y <code>APP_TOKEN</code> en <b>Secret Manager</b>.</li>
+<li><code>gcloud run deploy dobe-rag --source . --region europe-southwest1 --allow-unauthenticated --set-secrets …</code> → red pública para ENTRAR a la web; <code>/preguntar</code> sigue cerrado por token a nivel de app (= "demo real protegido por token").</li>
+</ul>
+<div class="verif"><b>Verificación end-to-end:</b> URL pública viva; <code>/salud</code> OK; con token → respuesta+fuentes; sin token → 401; "ropa boda" → ⚪; escala a cero; registro privado.</div>
+</div>
+
+<div class="card fase">
+<h3>Fase 6 — Lucirlo (portfolio + cierre)</h3>
+<ul>
+<li>Enlazar demo (nota "acceso por token, escríbeme") + repo del código desde bitácora y portfolio. Marcar Artefacto 2 desplegado (2/6).</li>
+<li>Ficha en <code>conceptos/</code> (motor vs interfaz, umbral-antes-de-LLM, deploy Cloud Run).</li>
+<li>Actualizar memoria del proyecto.</li>
+</ul>
+</div>
+
+<h2>Riesgos / decisiones abiertas para hablar</h2>
+<div class="card">
+<ul>
+<li><b>Privacidad:</b> la imagen contiene el corpus → Artifact Registry privado + token. Aun "público de red", <code>/preguntar</code> exige token. ¿Suficiente para tu comodidad?</li>
+<li><b>Coste:</b> Cloud Run idle ~gratis; cada pregunta = céntimos de OpenAI. Bajo.</li>
+<li><b>Región</b> y <b>valor del token</b>: decidir en Fase 5.</li>
+<li><b>Opción C</b> sigue APARCADA como mejora futura (no entra en este plan).</li>
+</ul>
+</div>
+
+<div class="foot">protocolo ds-nexus · plan generado para revisión · ritmo pausado · fases con verificación</div>
+</body>
+</html>

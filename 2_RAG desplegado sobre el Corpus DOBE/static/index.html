@@ -1,0 +1,219 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memoria DOBE · RAG sobre el corpus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c222b; --line:#272e38;
+    --txt:#e6edf3; --dim:#8b949e; --ambar:#f0a500; --ambar-soft:#f0a50022;
+    --verde:#3fb950; --amarillo:#d9a520; --gris:#6e7681;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);min-height:100vh;
+       font-family:'DM Sans',-apple-system,system-ui,sans-serif;line-height:1.6;
+       display:flex;flex-direction:column;align-items:center;padding:34px 18px 60px}
+  .wrap{width:100%;max-width:720px}
+  header{margin-bottom:22px}
+  .kicker{font-family:'DM Mono',monospace;font-size:12px;color:var(--ambar);
+          text-transform:uppercase;letter-spacing:.1em}
+  h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:30px;margin:4px 0 4px;
+     letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:14px}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+         padding:18px;margin:14px 0}
+  label{display:block;font-size:12px;color:var(--dim);font-family:'DM Mono',monospace;
+        text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+  .tokenrow{display:flex;gap:8px;align-items:center}
+  input[type=password],input[type=text],textarea{
+        width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;
+        color:var(--txt);font-family:inherit;font-size:15px;padding:11px 13px;outline:none;
+        transition:border-color .15s}
+  input:focus,textarea:focus{border-color:var(--ambar)}
+  textarea{resize:vertical;min-height:74px;line-height:1.5}
+  .togglebtn{background:none;border:1px solid var(--line);color:var(--dim);border-radius:9px;
+        padding:0 13px;height:43px;cursor:pointer;font-family:'DM Mono',monospace;font-size:12px;
+        white-space:nowrap}
+  .togglebtn:hover{border-color:var(--ambar);color:var(--ambar)}
+
+  .askrow{display:flex;gap:10px;margin-top:11px}
+  button.ask{background:var(--ambar);color:#0d1117;border:none;border-radius:9px;
+        font-family:'DM Sans',sans-serif;font-weight:600;font-size:15px;padding:0 22px;height:46px;
+        cursor:pointer;transition:filter .15s;white-space:nowrap}
+  button.ask:hover{filter:brightness(1.08)}
+  button.ask:disabled{opacity:.5;cursor:default}
+
+  .hint{color:var(--gris);font-size:12.5px;margin-top:9px;font-family:'DM Mono',monospace}
+  .hint span{color:var(--dim);cursor:pointer;text-decoration:underline dotted;margin-right:13px}
+  .hint span:hover{color:var(--ambar)}
+
+  #out{margin-top:6px}
+  .resp{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;
+        margin:14px 0;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-family:'DM Mono',monospace;
+         font-size:12.5px;padding:5px 12px;border-radius:20px;border:1px solid;margin-bottom:13px}
+  .b-claro{color:var(--verde);border-color:#3fb95055;background:#3fb9500f}
+  .b-posible{color:var(--amarillo);border-color:#d9a52055;background:#d9a5200f}
+  .b-lejano{color:var(--gris);border-color:#6e768155;background:#6e76810f}
+  .answer{font-size:15.5px;white-space:pre-wrap}
+  .answer .cita{font-family:'DM Mono',monospace;font-size:.86em;color:var(--ambar)}
+  .lejano-msg{color:var(--dim);font-size:15px}
+
+  .fuentes{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .fuentes .lbl{font-family:'DM Mono',monospace;font-size:11.5px;color:var(--dim);
+        text-transform:uppercase;letter-spacing:.06em;margin-bottom:9px}
+  .chip{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:7px;
+        padding:5px 11px;margin:0 7px 7px 0;font-family:'DM Mono',monospace;font-size:12.5px;
+        color:var(--txt)}
+  .chip b{color:var(--ambar)}
+
+  .err{background:#b0392b18;border:1px solid #b0392b55;color:#ff9b8a;border-radius:11px;
+       padding:13px 16px;margin:14px 0;font-size:14px}
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid #0d1117;
+        border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;
+        vertical-align:-2px;margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  footer{color:var(--gris);font-size:11.5px;font-family:'DM Mono',monospace;margin-top:30px;
+         text-align:center;line-height:1.8}
+  footer .meta{color:var(--ambar)}
+</style></head><body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">RAG · memoria episódica</div>
+    <h1>Memoria del corpus DOBE</h1>
+    <div class="sub">Pregúntale a la memoria. Responde solo desde momentos reales y cita su página.
+      Si no guarda un recuerdo claro, lo dice — no inventa.</div>
+  </header>
+
+  <div class="panel">
+    <label for="token">Token de acceso</label>
+    <div class="tokenrow">
+      <input id="token" type="password" placeholder="X-Token (se recuerda en este navegador)" autocomplete="off">
+      <button class="togglebtn" id="ver" type="button">ver</button>
+    </div>
+
+    <div style="margin-top:15px">
+      <label for="q">Tu pregunta</label>
+      <textarea id="q" placeholder="¿Qué descubrí sobre mi forma de pensar?"></textarea>
+    </div>
+
+    <div class="askrow">
+      <button class="ask" id="ask">Preguntar</button>
+    </div>
+    <div class="hint">
+      Prueba:
+      <span data-q="¿Qué descubrí sobre mi forma de pensar?">forma de pensar</span>
+      <span data-q="¿Qué pasó con Andrés?">Andrés</span>
+      <span data-q="¿Qué ropa me pongo para una boda?">una trampa (⚪)</span>
+    </div>
+  </div>
+
+  <div id="out"></div>
+
+  <footer>
+    motor RAG · text-embedding-3-small + gpt-4o-mini · umbral antes del LLM<br>
+    <span class="meta">protocolo ds-nexus</span> · artefacto 2 · demo protegida por token
+  </footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var token = $('token'), q = $('q'), ask = $('ask'), out = $('out');
+
+  // 1) localStorage: recordar el token (la "tarjeta-llave" en el bolsillo)
+  var KEY = 'dobe-token';
+  token.value = localStorage.getItem(KEY) || '';
+  token.addEventListener('input', function(){ localStorage.setItem(KEY, token.value); });
+
+  // mostrar/ocultar el token
+  $('ver').addEventListener('click', function(){
+    var v = token.type === 'password';
+    token.type = v ? 'text' : 'password';
+    $('ver').textContent = v ? 'ocultar' : 'ver';
+  });
+
+  // chips de ejemplo
+  document.querySelectorAll('.hint span').forEach(function(s){
+    s.addEventListener('click', function(){ q.value = s.dataset.q; q.focus(); });
+  });
+
+  // escapar HTML para no romper el render con el texto del usuario/LLM
+  function esc(t){ return (t||'').replace(/[&<>]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+  // resaltar las citas [#57 · pág 115–117] que mete el LLM
+  function citas(t){ return esc(t).replace(/\[#[^\]]+\]/g, function(m){
+    return '<span class="cita">'+m+'</span>'; }); }
+
+  function banda(b){
+    if(b==='claro')   return {cls:'b-claro',   ico:'🟢', txt:'recuerdo claro'};
+    if(b==='posible') return {cls:'b-posible', ico:'🟡', txt:'vecindario · posible'};
+    return                   {cls:'b-lejano',  ico:'⚪', txt:'sin recuerdo claro'};
+  }
+
+  function render(d){
+    var b = banda(d.banda);
+    var html = '<div class="resp">';
+    html += '<span class="badge '+b.cls+'">'+b.ico+' '+b.txt+
+            ' · sim '+(d.sim_top!=null?d.sim_top:'—')+'</span>';
+
+    if(d.banda==='lejano' || !d.respuesta){
+      html += '<div class="lejano-msg">No guardo un recuerdo claro de esto. '+
+              'Prefiero decírtelo a inventar una cercanía que no existe.</div>';
+      if(d.cercanos && d.cercanos.length){
+        html += '<div class="fuentes"><div class="lbl">lo más cercano (no concluyente)</div>';
+        d.cercanos.forEach(function(c){
+          html += '<span class="chip">#<b>'+c.num+'</b> · sim '+c.sim+'</span>'; });
+        html += '</div>';
+      }
+    } else {
+      html += '<div class="answer">'+citas(d.respuesta)+'</div>';
+      if(d.fuentes && d.fuentes.length){
+        html += '<div class="fuentes"><div class="lbl">📎 fuentes</div>';
+        d.fuentes.forEach(function(f){
+          html += '<span class="chip">#<b>'+f.num+'</b> · '+esc(f.pages)+'</span>'; });
+        html += '</div>';
+      }
+    }
+    html += '</div>';
+    out.innerHTML = html;
+  }
+
+  function error(msg){ out.innerHTML = '<div class="err">'+esc(msg)+'</div>'; }
+
+  async function preguntar(){
+    var consulta = q.value.trim();
+    if(!consulta){ q.focus(); return; }
+    if(!token.value.trim()){ error('Necesitas un token de acceso para preguntar.'); return; }
+
+    ask.disabled = true;
+    out.innerHTML = '<div class="resp"><span class="spinner"></span>Buscando en la memoria…</div>';
+    try{
+      var r = await fetch('/preguntar', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Token':token.value.trim()},
+        body: JSON.stringify({consulta: consulta})
+      });
+      if(r.status === 401){ error('Token inválido o ausente (401). Revisa la clave.'); return; }
+      if(!r.ok){ error('La API respondió '+r.status+'. Inténtalo de nuevo.'); return; }
+      render(await r.json());
+    }catch(e){
+      error('No pude contactar con la API. ¿Está el servidor levantado?');
+    }finally{
+      ask.disabled = false;
+    }
+  }
+
+  ask.addEventListener('click', preguntar);
+  // Cmd/Ctrl + Enter envía
+  q.addEventListener('keydown', function(e){
+    if((e.metaKey||e.ctrlKey) && e.key==='Enter'){ preguntar(); }
+  });
+})();
+</script>
+</body></html>

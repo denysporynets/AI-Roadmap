@@ -1,0 +1,190 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Siguientes pasos · multi-vector A/B/C · Corpus DOBE</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --rojo:#c0392b; --verde:#3a7d44; --ambar:#b07d2b; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6;
+         max-width:880px; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:30px; margin:0 0 4px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:21px;
+        margin:34px 0 6px; padding-top:18px; border-top:2px solid var(--line); }
+  h3 { font-size:16px; margin:18px 0 4px; }
+  .sub { color:var(--dim); font-size:14px; margin-bottom:8px; }
+  .lead { font-size:15px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:16px 20px; margin:14px 0; }
+  .mono { font-family:'DM Mono',ui-monospace,monospace; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  .chip { display:inline-block; padding:2px 10px; border-radius:20px; color:#fff;
+          font-size:12px; font-weight:600; }
+  .done { color:var(--verde); font-weight:600; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  .pro { color:var(--verde); }
+  .con { color:var(--rojo); }
+  .gloss { display:grid; grid-template-columns:170px 1fr; gap:4px 16px;
+           font-size:13.5px; margin:8px 0; }
+  .gloss dt { font-family:'DM Mono',monospace; color:var(--azul); font-weight:600; }
+  .gloss dd { margin:0 0 6px; }
+  .pipe { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0; font-size:13px; }
+  .step { background:#fff; border:1px solid var(--line); border-radius:8px; padding:7px 12px; }
+  .step.now { border:2px solid var(--azul); background:#eaf1f9; }
+  .step.next { border:2px dashed var(--ambar); }
+  .arr { color:var(--dim); }
+  .note { background:#fbf6ea; border-left:4px solid var(--ambar); border-radius:0 8px 8px 0;
+          padding:12px 16px; font-size:13.5px; margin:12px 0; }
+  .rec { background:#eef5ef; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+         padding:14px 18px; margin:16px 0; }
+  .ex { background:#f4f1ea; border-radius:8px; padding:12px 16px; font-size:13.5px; margin:10px 0; }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:30px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  b { color:#1a1a1a; }
+</style></head><body>
+
+<h1>Siguientes pasos — y qué representan A, B y C</h1>
+<div class="sub mono">protocolo ds-nexus · artefacto 2 · corpus dobe · 28 jun 2026</div>
+<p class="lead">Documento de lectura para acompañar el trabajo en paralelo. Primero recoge
+<b>los conceptos que ya has construido</b> (para fijarlos), luego el <b>mapa de lo que queda</b>,
+y al final el <b>fondo real de las tres opciones</b> de multi-vector para que la decisión A/B/C
+la tomes con criterio, no a ciegas.</p>
+
+<h2>1 · Lo que ya construiste (glosario vivo)</h2>
+<p>No son palabras sueltas: es el aparato conceptual que monta tu RAG. Cada término lo
+has tocado con las manos esta semana.</p>
+<div class="card">
+<dl class="gloss">
+  <dt>embedding</dt><dd>Convertir un texto en un vector de 1536 números que codifica su
+     <i>significado</i>. Textos parecidos → vectores cercanos. Es la moneda de todo el sistema.</dd>
+  <dt>text-embedding-3-small</dt><dd>El modelo de OpenAI que usas para embeber. Barato
+     ($0.02/1M tokens) y suficiente para este corpus. Embeber los 169 costó ~$0.004.</dd>
+  <dt>segmento</dt><dd>Trozo de una respuesta de ~250 tokens, cortado <i>por frases enteras</i>
+     (sentence-aware), no a mitad de palabra. Es la unidad con la que mides geometría fina.</dd>
+  <dt>centroide</dt><dd>El "punto medio" de un grupo de vectores. Si una respuesta tiene 8
+     segmentos, su centroide es el promedio de esos 8 → representa el tema "medio" del turno.</dd>
+  <dt>distancia coseno</dt><dd>Cuánto se <i>separa en dirección</i> un vector de otro
+     (0 = misma dirección, idéntico significado; alto = apuntan a sitios distintos). No mide
+     tamaño, mide ángulo: por eso captura "tema" y no "longitud".</dd>
+  <dt>dispersion_interna</dt><dd><b>Tu métrica estrella.</b> Distancia coseno media de cada
+     segmento al centroide de su respuesta. Baja = monólogo coherente. Alta = el turno salta
+     entre subtemas. La calculaste para los 169 (techo observado 0.268).</dd>
+  <dt>multi-vector</dt><dd>Un mismo recuerdo (payload) indexado por <b>varias puertas de
+     entrada</b> (varios vectores). No partes el contenido: partes solo el índice, para que
+     el momento se pueda encontrar desde cualquiera de sus subtemas.</dd>
+  <dt>payload</dt><dd>Lo que el sistema <i>devuelve</i> cuando hay un acierto: aquí, el
+     intercambio completo (pregunta de Denys + respuesta de Deep). Siempre entero, nunca un trozo.</dd>
+  <dt>es_meta</dt><dd>Bandera para turnos que son <i>administración del chat</i> (resúmenes,
+     traspasos de contexto, meta-consultas), no momentos vividos. Se les baja peso o se sacan
+     del retrieval por defecto.</dd>
+</dl>
+</div>
+<div class="note"><b>La idea que lo unifica todo:</b> tu corpus no es una enciclopedia
+(buscar el dato correcto), es <b>memoria episódica</b> (revivir el momento correcto). Por eso
+el chunk no se devuelve troceado, y por eso un turno multi-tema no se parte en pedazos: se le
+dan varias llaves para abrir la misma puerta.</p></div>
+
+<h2>2 · El estado ahora <span class="done">✔ flags grabados</span></h2>
+<p>El script <code>19_aplicar_revision.py</code> ya escribió en el corpus tus 16 decisiones
+como metadato. Es reversible (solo dos booleanos) y no gastó API:</p>
+<div class="card mono" style="font-size:13px">
+  es_meta = True &nbsp;→&nbsp; 4 &nbsp;&nbsp;<span style="color:var(--rojo)">[7, 45, 124, 168]</span><br>
+  es_multivector = True &nbsp;→&nbsp; 12 &nbsp;<span style="color:var(--azul)">[2, 6, 18, 49, 66, 67, 77, 125, 154, 190, 252, 266]</span><br>
+  mono-vector normal &nbsp;→&nbsp; 153
+</div>
+<p>Importante el matiz que ya hablamos: <b>marcar</b> que un turno es multi-vector ya está hecho.
+<b>Generar</b> sus varias puertas todavía no — eso es la decisión A/B/C, y es el corazón de esta lectura.</p>
+
+<h2>3 · El mapa de lo que queda</h2>
+<div class="pipe">
+  <span class="step" style="opacity:.6">corpus limpio ✔</span><span class="arr">→</span>
+  <span class="step" style="opacity:.6">embeddings G1 ✔</span><span class="arr">→</span>
+  <span class="step" style="opacity:.6">dispersión + mapa ✔</span><span class="arr">→</span>
+  <span class="step" style="opacity:.6">revisión 16 ✔</span><span class="arr">→</span>
+  <span class="step now">A/B/C multi-vector ←ahora decides</span><span class="arr">→</span>
+  <span class="step next">construir índice</span><span class="arr">→</span>
+  <span class="step next">retrieval + pruebas</span><span class="arr">→</span>
+  <span class="step next">interfaz / API</span>
+</div>
+<p>Tras decidir A/B/C, los pasos siguientes son: <b>(1)</b> construir el índice vectorial
+definitivo (probablemente un único <code>.npy</code> + metadatos, o un vector store ligero
+tipo FAISS/Chroma si quieres escalar), donde cada vector apunta a su intercambio; <b>(2)</b>
+montar el <i>retrieval</i> (dada una consulta, embeberla y traer los k momentos más cercanos,
+aplicando el peso bajo a los <code>es_meta</code>); <b>(3)</b> probarlo con consultas reales
+tuyas y medir si recupera el momento esperado; <b>(4)</b> envolverlo en una interfaz.</p>
+
+<h2>4 · El fondo real de A, B y C</h2>
+<p>Las tres responden a la misma pregunta: <i>para un turno multi-tema, ¿de dónde salen las
+"varias puertas de entrada"?</i> Lo que cambia es <b>cuánto trabajo geométrico haces para que
+cada puerta sea limpia</b>. Lo ilustro con un caso tuyo real, el <b>#266</b> (5 segmentos):
+ahí conectaste el <i>efecto escáner del hotel</i> + el <i>sudoku</i> + la <i>mesa de mezclas</i>
++ el <i>código</i> como un mismo lenguaje mental.</p>
+
+<h3><span class="chip" style="background:var(--azul)">A</span> &nbsp;Segmento = puerta (reusar lo que ya tienes)</h3>
+<div class="card">
+<p>Cada uno de los segmentos de ~250 tokens que <b>ya embebiste</b> en <code>vectores_seg.npy</code>
+se convierte directamente en una puerta de entrada hacia el intercambio. El #266 tendría 5 puertas.</p>
+<div class="ex"><b>Qué representa:</b> "ya troceé la respuesta para medir dispersión; aprovecho
+esos mismos trozos como índices". El corte es <i>mecánico</i> (por tamaño), no por idea: una
+puerta puede caer a mitad entre el sudoku y la mesa de mezclas.</div>
+<span class="pro">+ Coste cero (vectores ya hechos), inmediato, cero líneas de API.</span><br>
+<span class="con">– Puertas "sucias": un segmento puede mezclar dos subtemas o cortar uno por la mitad.</span><br>
+<span class="con">– Nº de puertas = nº de segmentos (a veces demasiadas, ruido en el índice).</span>
+</div>
+
+<h3><span class="chip" style="background:var(--verde)">B</span> &nbsp;Clúster = puerta (agrupar segmentos por afinidad)</h3>
+<div class="card">
+<p>Agrupas los segmentos de cada turno en <i>k</i> grupos coherentes (clustering por su
+geometría) y tomas el <b>centroide de cada grupo</b> como puerta. El #266 quizá colapsa en
+2-3 puertas: {hotel+escáner}, {sudoku+lógica}, {mesa de mezclas+código}.</p>
+<div class="ex"><b>Qué representa:</b> "no me fío del corte por tamaño; dejo que la propia
+geometría me diga cuántos subtemas hay de verdad y dónde está el centro de cada uno". Es el
+punto medio: usa solo los datos que ya tienes, sin LLM, pero los <i>refina</i>.</div>
+<span class="pro">+ Puertas más limpias y en número razonable (k pequeño, automático).</span><br>
+<span class="pro">+ Sigue sin gastar API: trabaja sobre los vectores existentes.</span><br>
+<span class="con">– Más código (elegir k, algoritmo de clúster); el centroide es un punto
+"promedio", no una frase legible que puedas auditar de un vistazo.</span>
+</div>
+
+<h3><span class="chip" style="background:var(--ambar)">C</span> &nbsp;Subtema nombrado = puerta (el LLM las redacta)</h3>
+<div class="card">
+<p>Pides a un LLM que lea cada turno multi-tema y devuelva 2-4 <b>etiquetas/sub-preguntas</b>
+en lenguaje natural ("regulación sensorial por sonido blanco", "comparación con neurotípicos"…).
+Embebes <i>esas frases</i> y cada una es una puerta.</p>
+<div class="ex"><b>Qué representa:</b> "que la puerta sea una pregunta tal y como tú la
+formularías al volver a buscar ese momento". Es la más cercana a cómo de verdad consultarás
+tu memoria, y la única <b>auditable</b> (puedes leer las puertas y corregirlas).</div>
+<span class="pro">+ Puertas semánticas y legibles; alineadas con consultas reales.</span><br>
+<span class="pro">+ Solo 12 intercambios → coste en céntimos.</span><br>
+<span class="con">– Introduce un paso LLM (latencia + posible "alucinación" de un subtema
+que no estaba). Hay que revisar las etiquetas que genere.</span>
+</div>
+
+<h3>Comparativa</h3>
+<table>
+<tr><th>&nbsp;</th><th>A · Segmento</th><th>B · Clúster</th><th>C · Subtema LLM</th></tr>
+<tr><td><b>De dónde sale la puerta</b></td><td>Corte por tamaño</td><td>Centro de un grupo geométrico</td><td>Frase escrita por el LLM</td></tr>
+<tr><td><b>Limpieza de la puerta</b></td><td>Baja</td><td>Media-alta</td><td>Alta</td></tr>
+<tr><td><b>Coste API</b></td><td>Cero</td><td>Cero</td><td>Céntimos (12 turnos)</td></tr>
+<tr><td><b>Trabajo de código</b></td><td>Mínimo</td><td>Medio</td><td>Medio</td></tr>
+<tr><td><b>Auditable a ojo</b></td><td>No</td><td>No (centroides)</td><td>Sí (frases)</td></tr>
+<tr><td><b>Riesgo propio</b></td><td>Puertas ruidosas</td><td>Elegir k</td><td>Subtema inventado</td></tr>
+</table>
+
+<div class="rec"><b>Mi recomendación honesta:</b> empezar por <b>A como línea base medible</b>
+(coste cero, ya lo tienes) y, en cuanto el retrieval funcione de punta a punta, comparar contra
+<b>C</b> en esos 12 turnos, que es la que mejor encaja con la naturaleza <i>episódica</i> de tu
+corpus (la puerta = la pregunta con la que volverías al recuerdo). <b>B</b> es elegante pero
+resuelve un problema —corte sucio— que con solo 12 turnos quizá no necesitas pagar en complejidad.
+En una palabra: <b>A para arrancar ya, C como objetivo de calidad, B solo si A se queda corta.</b>
+No hace falta decidirlo entero hoy: basta con elegir con qué arrancamos.</div>
+
+<div class="note">Esto NO es validación espejo: si el retrieval base con A ya recupera bien tus
+momentos, montar C sería sobre-ingeniería. La prueba mandará. Por eso A primero: es la regla
+contra la que se mide si vale la pena lo demás.</div>
+
+<div class="foot">protocolo ds-nexus · generado para acompañar 19_aplicar_revision.py ·
+flags grabados: 4 es_meta / 12 es_multivector / 153 normales · ritmo pausado</div>
+</body></html>
