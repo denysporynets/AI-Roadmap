@@ -1,0 +1,42 @@
+# .gcloudignore — qué NO subir al build context de Cloud Build (deploy --source).
+# ================================================================================
+# IMPORTANTE: sin este fichero, gcloud se basa en .gitignore (que ignora el corpus
+# y el índice) y subiría una imagen SIN datos → RAG roto. Este fichero garantiza
+# que viaja EXACTAMENTE lo que el Dockerfile copia (whitelist), y nada sensible.
+#
+# Necesario en la imagen: requirements.txt, rag_core.py, api.py, static/,
+#   corpus_dobe_enriquecido.json, embeddings/indice_a.npy, embeddings/indice_a.json
+#
+# Nota: semántica gitignore (un patrón sin '/' aplica a cualquier nivel), por eso
+# NO usamos '*.html' genérico: borraría static/index.html. Excluimos por ruta.
+
+# ── Secretos: jamás salen del Mac ──
+.env
+.env.*
+
+# ── Entornos / cachés / control de versiones / basura ──
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.git/
+.gitignore
+
+# ── Material de trabajo no servible ──
+construccion_corpus/
+FASE2/
+conceptos/
+material-visual/
+
+# ── Datos pesados que la imagen NO usa (el servible es enriquecido + indice_a.*) ──
+corpus_dobe_final.json
+embeddings/vectores_*.npy
+embeddings/*.png
+embeddings/mapa_difusion.html
+embeddings/mapa_g1.html
+embeddings/meta_g1.json
+embeddings/meta_seg.json
+
+# ── Scripts de construcción ya consumidos (10..23; algunos con texto personal) ──
+# No los necesita la imagen (Dockerfile no los copia) y evitamos subir texto sensible.
+[0-9]*.py

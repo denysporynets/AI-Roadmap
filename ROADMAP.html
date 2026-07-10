@@ -643,11 +643,16 @@
         </div>
       </div>
       <div class="dod"><strong>Definición de "hecho"</strong><em>Cambias algo del RAG, corres el harness y obtienes un número que dice si mejoró o empeoró.</em> La evaluación a ojo no cuenta.</div>
+      <div class="warn"><strong>✓ Herramienta interna, no desplegable.</strong> Un harness de evaluación no se sirve como demo: se ejecuta en local y su valor es la disciplina (evaluar → comparar → puerta que bloquea regresiones). Aquí cazó un falso positivo real del umbral del RAG antes de que llegara a producción.</div>
+
+      <div style="padding: 0 12px 14px;">
+        <a href="artefacto-3/" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--green); text-decoration:none; border:1px solid var(--green-dim); border-radius:6px; padding:7px 13px; display:inline-block; transition:all .15s;" onmouseover="this.style.background='rgba(63,185,80,0.08)'" onmouseout="this.style.background='transparent'">▸ Ver artefacto →</a>
+      </div>
 
       <div class="item-list steps">
         <div class="item" data-id="s3-1">
           <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Dataset de eval: 20–30 pares pregunta / respuesta esperada del corpus</div>
+          <div class="item-text">Dataset de eval: <strong>7 casos golden</strong> etiquetados a mano (directas, síntesis, trampas, frontera) — arranca pequeño y crece</div>
         </div>
         <div class="item" data-id="s3-2">
           <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
@@ -837,13 +842,23 @@
 
 <script>
 (function() {
-  const STORAGE_KEY = 'ai-eng-roadmap-v2';
+  const STORAGE_KEY = 'ai-eng-roadmap-v3';
+
+  // Estado real "horneado": lo que ya está entregado y verificado, para que
+  // un visitante nuevo (sin localStorage) vea la progresión verdadera y no 0/6.
+  // Marca los 3 artefactos entregados + sus pasos de construcción + el material
+  // propio del harness. Los cursos externos de apoyo no se dan por hechos.
+  const BAKED = {
+    d1:true, 's1-1':true, 's1-2':true, 's1-3':true,
+    d2:true, 's2-1':true, 's2-2':true, 's2-3':true,
+    d3:true, 's3-1':true, 's3-2':true, 's3-3':true, 'c3-1':true
+  };
 
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch(e) { return {}; }
+      return raw ? JSON.parse(raw) : Object.assign({}, BAKED);
+    } catch(e) { return Object.assign({}, BAKED); }
   }
 
   function saveState(state) {
@@ -950,8 +965,8 @@
   updateThemeBtn();
 
   document.getElementById('resetBtn').addEventListener('click', () => {
-    if (confirm('¿Reiniciar todo el progreso? Esta acción no se puede deshacer.')) {
-      state = {};
+    if (confirm('¿Reiniciar el progreso al estado real entregado?')) {
+      state = Object.assign({}, BAKED);
       saveState(state);
       updateUI();
     }

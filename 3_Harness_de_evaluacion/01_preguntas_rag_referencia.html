@@ -1,0 +1,290 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Referencia · 35 preguntas RAG (entrevista + proyecto) · Artefacto 3</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; --rojo:#b0392b; }
+  html { transition: filter .35s ease; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:880px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:28px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:18px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px;
+        margin:30px 0 8px; padding-top:14px; border-top:2px solid var(--line); }
+  .lvl { font-family:'DM Mono',monospace; font-size:11.5px; color:var(--dim); text-transform:uppercase;
+         letter-spacing:.06em; margin-top:2px; }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:6px 0 4px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  .q { background:var(--card); border:1px solid var(--line); border-radius:11px;
+       padding:13px 17px; margin:11px 0; }
+  .q .n { font-family:'DM Mono',monospace; color:var(--azul); font-weight:600; font-size:13px; }
+  .q .t { font-weight:600; color:#1a1a1a; }
+  .q p { margin:6px 0 0; font-size:14px; }
+  .tag { display:inline-block; font-family:'DM Mono',monospace; font-size:10.5px; font-weight:600;
+         padding:2px 8px; border-radius:20px; margin-left:6px; vertical-align:middle; }
+  .tag.dobe { background:#e6f2e6; color:var(--verde); border:1px solid #bcdcbc; }
+  .tag.eval { background:#fdf3e3; color:var(--ambar); border:1px solid #ecd6a8; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:10px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  .crit { background:#fbf1ee; border-left:4px solid var(--rojo); border-radius:0 8px 8px 0;
+          padding:13px 18px; margin:10px 0; font-size:14px; }
+  .dobebox { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+          padding:13px 18px; margin:10px 0; font-size:14px; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  b { color:#1a1a1a; }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:30px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  #brillo { position:fixed; top:14px; right:14px; display:flex; align-items:center; gap:7px;
+            background:rgba(255,255,255,.82); border:1px solid var(--line); border-radius:20px;
+            padding:6px 12px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:50; }
+  #brillo input { width:90px; accent-color:var(--ambar); }
+</style></head><body>
+
+<div id="brillo" title="Brillo: día → noche cálida (filtra luz azul)">
+  ☀️<input id="lux" type="range" min="0" max="100" value="0">🌙
+</div>
+
+<div class="kicker">Artefacto 3 · material de apoyo · referencia</div>
+<h1>35 preguntas RAG — entrevista + proyecto</h1>
+<div class="sub mono">fuente: datacamp.com/es/blog/rag-interview-questions · resumen a nuestro estilo · 29 jun 2026 · protocolo ds-nexus</div>
+
+<div class="tldr"><b>Doble uso de este documento:</b> (1) <b>preparación de entrevista</b> de AI Engineer
+— son las preguntas que te harán; (2) <b>chequeo de tu propio proyecto</b> — muchas las has resuelto ya
+en el RAG DOBE. Lo titulan "30" pero contiene <b>35</b>. He marcado con
+<span class="tag dobe">DOBE</span> las que ya tocaste en tu proyecto y con
+<span class="tag eval">EVAL</span> las que alimentan directamente el Artefacto 3.</div>
+
+<div class="dobebox"><b>Atajo: lo que ya puedes responder con tu propio proyecto.</b> En una entrevista,
+la mejor respuesta no es teórica, es "esto lo implementé". Tu RAG DOBE ya cubre: <b>componentes
+retriever+generator</b> (Q1), <b>base de datos vectorial / embeddings</b> (Q8), <b>elección del retriever</b>
+(Q11), <b>técnicas de chunking</b> (Q18–19, lo diseñaste a fondo), <b>contexto/contextualización con umbral
+de confianza</b> (Q21), <b>evaluación</b> (Q9, Q28 → <i>esto es el Artefacto 3</i>), <b>coherencia con
+citas de fuentes</b> (Q34) y <b>privacidad de datos sensibles</b> (Q35, tu Fase 0). Esas ocho son tus
+"historias de guerra".</div>
+
+<h2>Nivel básico</h2>
+<div class="lvl">fundamentos · componentes · ventajas</div>
+
+<div class="q"><span class="n">Q1.</span> <span class="t">Partes principales de un RAG y cómo funcionan.</span><span class="tag dobe">DOBE</span>
+<p>Dos piezas: <b>retriever</b> (busca información relevante en fuentes externas) y <b>generador</b>
+(un LLM que redacta usando esa información). Juntos producen respuestas más exactas que el LLM solo.</p></div>
+
+<div class="q"><span class="n">Q2.</span> <span class="t">Ventajas de RAG frente a usar solo el conocimiento interno del LLM.</span>
+<p>Aporta información <b>actual y externa</b> → respuestas más exactas y al día; reduce
+<b>alucinaciones</b> al anclar las respuestas en datos reales; clave en dominios especializados
+(derecho, medicina, técnico).</p></div>
+
+<div class="q"><span class="n">Q3.</span> <span class="t">Aplicaciones comunes de RAG.</span>
+<p>Chatbots de atención al cliente sobre documentación; agentes conversacionales con respuestas basadas
+en evidencia; generación/resumen de contenido con fuentes verificadas; investigación de dominio
+(legal, médico).</p></div>
+
+<div class="q"><span class="n">Q4.</span> <span class="t">Tipos de fuentes externas que puede usar RAG.</span>
+<p><b>Estructuradas</b> (bases de datos, APIs, grafos de conocimiento) y <b>no estructuradas</b>
+(documentos, webs, archivos que requieren NLP). Esa flexibilidad permite adaptarlo a cada dominio.</p></div>
+
+<div class="q"><span class="n">Q5.</span> <span class="t">¿Importa el prompt engineering en RAG?</span>
+<p>Mucho. Técnicas: plantillas de sistema específicas ("responde <b>solo</b> con el contexto" → menos
+alucinación), <b>few-shot</b> con ejemplos, y <b>chain-of-thought</b> para descomponer preguntas
+complejas.</p></div>
+
+<div class="q"><span class="n">Q6.</span> <span class="t">¿Cómo funciona el retriever? Métodos más comunes.</span><span class="tag dobe">DOBE</span>
+<p><b>Sparse</b> (coincidencia de palabras: TF-IDF, BM25) — simple pero ciego al significado profundo.
+<b>Dense</b> (embeddings neuronales: BERT, DPR) — representa textos como vectores en un espacio común,
+más preciso semánticamente.</p></div>
+
+<div class="q"><span class="n">Q7.</span> <span class="t">Retos al combinar lo recuperado con la generación del LLM.</span>
+<p>Asegurar la <b>relevancia</b> de lo recuperado (lo irrelevante confunde); resolver <b>conflictos</b>
+entre lo recuperado y lo que "sabe" el modelo; y casar <b>estilo/formato</b> para una integración fluida.</p></div>
+
+<div class="q"><span class="n">Q8.</span> <span class="t">Función de una base de datos vectorial en RAG.</span><span class="tag dobe">DOBE</span>
+<p>Almacena <b>embeddings</b> (representaciones numéricas del significado). En la consulta, compara
+similitud entre embeddings para localizar documentos relevantes rápido y con precisión.</p></div>
+
+<div class="q"><span class="n">Q9.</span> <span class="t">Formas comunes de evaluar sistemas RAG.</span><span class="tag eval">EVAL</span>
+<p>Se evalúan retriever <b>y</b> generador por separado. Retriever: <b>precision</b> (relevantes
+recuperados) y <b>recall</b> (relevantes totales encontrados). Generador: BLEU, ROUGE frente a ejemplos
+humanos. Tarea final: F1, precision, recall.</p></div>
+
+<div class="q"><span class="n">Q10.</span> <span class="t">Gestión de consultas ambiguas o incompletas.</span>
+<p>Refinamiento de consulta (aclaraciones o reformulación automática); recuperar documentos
+<b>diversos</b> que cubran varias interpretaciones; modelos de NLU para inferir la intención.</p></div>
+
+<h2>Nivel intermedio</h2>
+<div class="lvl">elección de retriever · optimización · multi-turno</div>
+
+<div class="q"><span class="n">Q11.</span> <span class="t">Cómo elegir el retriever adecuado.</span><span class="tag dobe">DOBE</span>
+<p>Depende del tipo de datos, complejidad de la consulta y recursos. Consultas semánticas complejas →
+<b>dense</b> (BERT/DPR); tareas de keywords con recursos limitados → <b>sparse</b> (BM25/TF-IDF);
+<b>híbrido</b> para equilibrar.</p></div>
+
+<div class="q"><span class="n">Q12.</span> <span class="t">Qué es una búsqueda híbrida.</span>
+<p>Combina sparse + dense: BM25 identifica candidatos inicial, luego un modelo dense (BERT)
+<b>re-rankea</b> por significado. Velocidad de sparse + precisión de dense.</p></div>
+
+<div class="q"><span class="n">Q13.</span> <span class="t">¿Hace falta una BD vectorial? Alternativas.</span>
+<p>Es ideal pero no obligatoria. Alternativas: BD relacional/NoSQL (datos estructurados),
+Elasticsearch/MongoDB (texto completo sin semántica profunda), índices invertidos (keyword→documento),
+sistemas de ficheros organizados (capacidad limitada).</p></div>
+
+<div class="q"><span class="n">Q14.</span> <span class="t">Garantizar que lo recuperado sea relevante y preciso.</span>
+<p>Bases de conocimiento de calidad alineadas con la app; <b>fine-tuning</b> del retriever;
+<b>reranking</b>; bucles de feedback del usuario; evaluación periódica (precision, recall, F1).</p></div>
+
+<div class="q"><span class="n">Q15.</span> <span class="t">Técnicas para documentos largos / bases grandes.</span><span class="tag dobe">DOBE</span>
+<p><b>Chunking</b> (trocear), <b>resumen</b>, <b>recuperación jerárquica</b> (de categorías generales a
+lo específico), embeddings eficientes en memoria, y particionado/indexado para procesamiento paralelo.</p></div>
+
+<div class="q"><span class="n">Q16.</span> <span class="t">Optimizar precisión y eficiencia.</span>
+<p>Fine-tuning sobre datos de la tarea; indexado eficiente (índices invertidos/hashing); <b>caché</b>
+de lo más consultado; menos pasos de retrieval vía mayor precisión o reranking; búsqueda híbrida.</p></div>
+
+<div class="q"><span class="n">Q17.</span> <span class="t">Mantener el contexto en conversación multi-turno.</span>
+<p>Reescritura de la consulta con detalles de turnos previos, o incluir el <b>historial</b> de la
+conversación como contexto de entrada. Permite seguir "quién dijo qué".</p></div>
+
+<h2>Nivel avanzado</h2>
+<div class="lvl">chunking · contextualización · CAG · arquitecturas RAG avanzadas</div>
+
+<div class="q"><span class="n">Q18.</span> <span class="t">Técnicas de fragmentación (chunking): ventajas e inconvenientes.</span><span class="tag dobe">DOBE</span>
+<p><b>Fijo</b> (simple, puede romper la lógica); <b>por frase</b> (integridad pero fragmenta de más);
+<b>por párrafo</b> (contexto pero largo); <b>semántico</b> (por significado, claro pero complejo);
+<b>ventana deslizante</b> (solapado, no pierde info pero caro).</p></div>
+
+<div class="q"><span class="n">Q19.</span> <span class="t">Fragmentos grandes vs. pequeños.</span><span class="tag dobe">DOBE</span>
+<p><b>Pequeños:</b> evitan diluir el contexto pero pierden dependencias de largo alcance.
+<b>Grandes:</b> retienen riqueza contextual y referencias cruzadas pero sacrifican especificidad
+(diluyen el significado en un solo vector).</p></div>
+
+<div class="q"><span class="n">Q20.</span> <span class="t">Qué es el "late chunking" y en qué se diferencia.</span>
+<p>Aplica el transformer al <b>documento entero</b> primero (vectores token a token con contexto
+completo), y luego hace <b>mean pooling</b> por fragmento. A diferencia del chunking tradicional (que
+codifica trozos por separado), preserva las dependencias de largo alcance.</p></div>
+
+<div class="q"><span class="n">Q21.</span> <span class="t">"Contextualización" en RAG y su impacto.</span><span class="tag dobe">DOBE</span>
+<p>Asegura que lo recuperado encaja con la consulta. Se implementa con un LLM que <b>verifica
+relevancia</b> antes de generar (como en Corrective RAG/CRAG). Reduce resultados irrelevantes.</p></div>
+
+<div class="q"><span class="n">Q22.</span> <span class="t">Abordar sesgos en lo recuperado o generado.</span>
+<p>Filtrar contenido sesgado de la base; reentrenar el retrieval hacia fuentes equilibradas; agentes
+dedicados a chequear sesgo; monitoreo continuo de la objetividad.</p></div>
+
+<div class="q"><span class="n">Q23.</span> <span class="t">Retos de bases de conocimiento dinámicas / en evolución.</span>
+<p>Mantener el índice actualizado con mecanismos fiables; control de <b>versiones</b>; adaptación en
+tiempo real sin reentrenar constantemente; sostener exactitud según evoluciona la base.</p></div>
+
+<div class="q"><span class="n">Q24.</span> <span class="t">Qué es CAG y cuándo preferirlo a RAG.</span>
+<p>Según el artículo, <b>Cache-Augmented Generation</b> resume/comprime los documentos recuperados antes
+de pasarlos al LLM (mejora relevancia, ahorra tokens). Recomienda CAG para datos <b>estáticos</b>
+(pre-comprimibles, donde el coste de tokens importa) y RAG para datos dinámicos.
+<span class="tag eval" style="background:#fbeae6;color:#b0392b;border-color:#e6b8ac">verificar</span></p></div>
+
+<div class="crit"><b>Aquí el artículo patina (análisis crítico):</b> la definición habitual de <b>CAG</b> en la
+literatura <i>no</i> es "resumir documentos", sino <b>precargar toda la base de conocimiento en el contexto
+del modelo y cachear el estado KV</b>, eliminando el paso de retrieval en inferencia. Funciona cuando la
+base cabe en la ventana de contexto. Lo que describe el artículo suena más a un paso de
+<b>compresión/resumen de contexto</b>, que es otra técnica. <b>No tomes esta definición como buena en una
+entrevista</b> sin contrastarla — es justo el tipo de afirmación sin matizar que conviene verificar.</div>
+
+<div class="q"><span class="n">Q25.</span> <span class="t">Sistemas RAG avanzados.</span>
+<p><b>Adaptive RAG</b> (ajusta la estrategia por consulta: nada / una / iterativa); <b>Agentic RAG</b>
+(agentes que deciden si extraer info); <b>Corrective RAG (CRAG)</b> (valida relevancia antes de generar);
+<b>Self-RAG</b> (evalúa tanto los documentos como la respuesta final).</p></div>
+
+<div class="q"><span class="n">Q26.</span> <span class="t">Reducir latencia en tiempo real sin perder precisión.</span>
+<p>Precargar lo más consultado; optimizar indexado y algoritmos de consulta; reranking para que solo lo
+mejor llegue a generación; eliminar pasos innecesarios.</p></div>
+
+<div class="q"><span class="n">Q27.</span> <span class="t">Limitaciones y retos de los RAG.</span>
+<p>"Basura entra, basura sale" (dependes de la calidad del retrieval); más complejidad y latencia que un
+LLM solo; mantenimiento continuo de la base; dificultad de integrar/afinar varios componentes; puede ser
+innecesario en dominios estáticos (basta un modelo fine-tuneado).</p></div>
+
+<h2>Específicas de AI Engineer</h2>
+<div class="lvl">producción · fiabilidad · diseño · fine-tuning · privacidad</div>
+
+<div class="q"><span class="n">Q28.</span> <span class="t">Evaluar y mejorar un RAG en producción.</span><span class="tag eval">EVAL</span>
+<p>Seguimiento del feedback de usuarios, monitoreo de latencia, calidad de retrieval/generación.
+Métricas: exactitud, satisfacción, rendimiento. Mejoras: reentrenar con datos nuevos, fine-tuning,
+afinar el retrieval, actualizar fuentes, <b>A/B testing</b>.</p></div>
+
+<div class="q"><span class="n">Q29.</span> <span class="t">Fiabilidad y robustez ante fallos o entradas inesperadas.</span>
+<p>Redundancia/failover; manejo de errores y logging; <b>validación y saneamiento de entradas</b>
+(evitar inyección de comandos); monitoreo y alertas.</p></div>
+
+<div class="q"><span class="n">Q30.</span> <span class="t">Diseñar un RAG para una tarea concreta (Q&A, resumen).</span>
+<p>Q&A: retriever eficiente (keyword o dense) + generador de respuestas precisas. Resumen: retriever que
+recoja contenido amplio + generador que destile. El prompt engineering sigue siendo clave.</p></div>
+
+<div class="q"><span class="n">Q31.</span> <span class="t">Detalles técnicos de cómo afinar (fine-tune) un LLM para RAG.</span>
+<p>Preparar datos de la tarea (pares Q&A anotados, datasets de resumen). Técnicas: <b>REALM</b>
+(pretraining con recuperación) y <b>RAFT</b> (Retrieval-Augmented Fine-Tuning: combina ventajas de RAG
+con fine-tuning de dominio).</p></div>
+
+<div class="q"><span class="n">Q32.</span> <span class="t">Gestionar información obsoleta en dominios que cambian rápido.</span>
+<p>Actualizaciones periódicas del índice; flujos automatizados de ingesta; <b>metadatos</b> que marquen
+lo obsoleto; priorizar documentos recientes; bucles de feedback para corregir rápido.</p></div>
+
+<div class="q"><span class="n">Q33.</span> <span class="t">Equilibrar relevancia y diversidad en la recuperación.</span>
+<p>Reranking que priorice relevancia <b>y</b> diversidad; recuperar de secciones/fuentes diversas;
+clustering de resultados similares y seleccionar entre grupos; fine-tuning con ambos objetivos.</p></div>
+
+<div class="q"><span class="n">Q34.</span> <span class="t">Garantizar coherencia entre lo generado y lo recuperado.</span><span class="tag dobe">DOBE</span><span class="tag eval">EVAL</span>
+<p>Prompts que obliguen a <b>anclar</b> en los documentos; <b>generación de citas</b> (justificar la
+fuente); validación post-generación comparando salida vs. recuperado; refinamiento iterativo.
+<i>Esto es exactamente la faithfulness del Artefacto 3 — y tu motor ya cita fuentes.</i></p></div>
+
+<div class="q"><span class="n">Q35.</span> <span class="t">Privacidad y seguridad con información confidencial.</span><span class="tag dobe">DOBE</span>
+<p>Redacción/anonimización de PII antes de ingestar; almacenamiento <b>cifrado</b> (reposo y tránsito)
+con control de acceso; control basado en roles; filtrado de prompts y monitoreo de salida; cumplimiento
+(GDPR, HIPAA) con auditoría. <i>Tu Fase 0 (blindar el corpus con .gitignore + token) es la versión
+mínima de esto.</i></p></div>
+
+<h2>Cómo encaja con el Artefacto 3</h2>
+<div class="ana">De las 35, las que alimentan <b>directamente</b> el harness de evaluación son
+<b>Q9</b> (métricas retriever vs. generador), <b>Q14</b> (asegurar relevancia/precisión), <b>Q28</b>
+(evaluar en producción) y <b>Q34</b> (coherencia con lo recuperado = faithfulness). Léelas junto al
+resumen de LLM-as-a-judge (<code>00_resumen_llm_as_judge.html</code>): aquel te da el <b>método</b>
+(el juez con rúbrica), estas te dan el <b>vocabulario de entrevista</b> para defenderlo.</div>
+<div class="crit"><b>Matiz importante sobre Q9:</b> el artículo menciona BLEU/ROUGE para el generador.
+Son justo las métricas que el tutorial de LLM-as-a-judge llama "rápidas pero <b>superficiales</b>". En tu
+caso (corpus episódico, sin respuesta-oro única) BLEU/ROUGE valen poco — por eso vas con
+<b>juez-LLM de faithfulness y relevancia</b>, no con solapamiento de palabras. Si te lo preguntan en
+entrevista, esa distinción ("sé cuándo BLEU no sirve") es exactamente lo que demuestra criterio.</div>
+
+<h2>Para el CV / entrevista</h2>
+<div class="dobebox">No memorices las 35 respuestas. Memoriza las <b>8 que ya implementaste</b> y cuéntalas
+como experiencia propia: "construí un RAG con retriever denso sobre embeddings, diseñé el chunking según
+el caso de uso, añadí un <b>umbral de confianza</b> para no alucinar cuando no hay recuerdo claro, lo
+desplegué serverless con el corpus blindado, y monté un <b>harness de evaluación con LLM-as-a-judge</b>
+para faithfulness y relevancia". Eso responde, de golpe, a Q1, Q6, Q8, Q11, Q18, Q21, Q28, Q34 y Q35.
+Las demás son relleno teórico que solo necesitas <i>reconocer</i>, no recitar.</div>
+
+<div class="foot">referencia 35 preguntas rag · artefacto 3 (harness de evaluación) · material de apoyo ·
+fuente datacamp · compañero de 00_resumen_llm_as_judge.html · ritmo pausado · doble uso: proyecto + entrevista</div>
+
+<script>
+  // deslizador de brillo: día (0) → noche cálida (100). Filtra azul (sepia) + atenúa. localStorage.
+  (function () {
+    var lux = document.getElementById('lux');
+    function aplicar(v) {
+      var b = 1 - v * 0.0028;
+      var s = v * 0.0055;
+      document.documentElement.style.filter = 'brightness(' + b + ') sepia(' + s + ')';
+    }
+    var guardado = localStorage.getItem('ficha-brillo');
+    if (guardado !== null) { lux.value = guardado; }
+    aplicar(+lux.value);
+    lux.addEventListener('input', function () {
+      aplicar(+lux.value);
+      localStorage.setItem('ficha-brillo', lux.value);
+    });
+  })();
+</script>
+</body></html>

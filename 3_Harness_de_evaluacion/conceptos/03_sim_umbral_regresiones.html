@@ -1,0 +1,275 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha 03 · Similitud (sim), umbral y detección de regresiones</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; --rojo:#b0392b; }
+  * { box-sizing:border-box; }
+  html { transition: filter .35s ease; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:900px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:29px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:14px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:21px;
+        margin:34px 0 8px; padding-top:14px; border-top:2px solid var(--line); }
+  h3 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:16px; margin:14px 0 4px; }
+  p { font-size:14.5px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  b { color:#1a1a1a; }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:10px 0; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:12px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  .cv { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+        padding:13px 18px; margin:12px 0; font-size:14px; }
+  .lab { background:#161a21; color:#e6e1d6; border-radius:14px; padding:18px 22px; margin:14px 0; }
+  .lab h3 { color:#fff; margin-top:0; } .lab p { color:#c8ccd2; font-size:13.5px; }
+  .lab code { background:#2a2f38; color:#d8a657; }
+  .reveal { opacity:0; transform:translateY(20px); transition:opacity .6s ease, transform .6s ease; }
+  .reveal.visible { opacity:1; transform:none; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin:14px 0; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:32px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  #brillo { position:fixed; top:14px; right:14px; display:flex; align-items:center; gap:7px;
+            background:rgba(255,255,255,.82); border:1px solid var(--line); border-radius:20px;
+            padding:6px 12px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:50; }
+  #brillo input { width:90px; accent-color:var(--ambar); }
+
+  /* ── eje de similitud interactivo (técnica nueva: control en vivo) ── */
+  .simbox { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin:14px 0; }
+  .readout { display:flex; flex-wrap:wrap; gap:18px; align-items:center; margin-bottom:8px; }
+  .readout .big { font-family:'Fraunces',serif; font-weight:600; font-size:22px; }
+  .readout .lbl { font-family:'DM Mono',monospace; font-size:11px; color:var(--dim); text-transform:uppercase; }
+  .ctrl { display:flex; align-items:center; gap:12px; margin:10px 0 16px; font-size:13px; }
+  .ctrl input[type=range] { flex:1; accent-color:var(--azul); }
+  .track { position:relative; border-left:2px dashed #cfcabb; }
+  .lane { position:relative; height:34px; }
+  .lane .ln { position:absolute; left:0; right:0; top:17px; height:1px; background:#eee7da; }
+  .lane .tag { position:absolute; left:0; top:7px; font-family:'DM Mono',monospace; font-size:11px; color:#6b6b6b; }
+  .dot { position:absolute; top:8px; width:18px; height:18px; border-radius:50%; transform:translateX(-9px);
+         border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:background .25s, left .25s;
+         display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:bold; }
+  .dot.resp { background:var(--verde); } .dot.calla { background:#9a958a; }
+  .dot.wrong { background:var(--rojo); }
+  .thr { position:absolute; top:-6px; bottom:18px; width:3px; background:var(--azul); border-radius:2px; z-index:3; transition:left .1s; }
+  .thr .cap { position:absolute; top:-20px; left:50%; transform:translateX(-50%); white-space:nowrap;
+              font-family:'DM Mono',monospace; font-size:10px; color:#fff; background:var(--azul);
+              padding:1px 6px; border-radius:10px; }
+  .claroln { position:absolute; top:0; bottom:18px; width:2px; background:#d8c9a8; z-index:1; }
+  .claroln .cap { position:absolute; top:-20px; left:50%; transform:translateX(-50%); white-space:nowrap;
+                  font-family:'DM Mono',monospace; font-size:10px; color:var(--ambar); }
+  .axis { position:relative; height:18px; margin-top:2px; font-family:'DM Mono',monospace; font-size:10px; color:#9a958a; }
+  .axis span { position:absolute; transform:translateX(-50%); }
+  @media (prefers-reduced-motion: reduce){ .reveal{opacity:1;transform:none} .dot{transition:none} }
+</style></head><body>
+
+<div id="brillo" title="Brillo: día → noche cálida (filtra luz azul)">☀️<input id="lux" type="range" min="0" max="100" value="0">🌙</div>
+
+<div class="kicker">Ficha 03 · conceptos · harness de evaluación</div>
+<h1>Similitud, umbral y regresiones</h1>
+<div class="sub mono">las dos comparaciones del RAG · el coseno · juega con el umbral · 29 jun 2026 · protocolo ds-nexus</div>
+
+<div class="tldr reveal"><b>Tres conceptos que se enredan y aquí se separan:</b> (1) <b>sim</b> es una
+medida de <i>recuperación</i> (pregunta ↔ recuerdo), no de calidad de respuesta; (2) el <b>umbral</b> es
+la línea sobre <code>sim</code> que decide si el sistema responde o se calla; (3) la <b>detección de
+regresiones</b> es el detector de humos que avisa si un cambio empeora algo. Con un diagrama interactivo
+para que muevas el umbral tú mismo.</div>
+
+<h2>1 · Las dos comparaciones del RAG (aquí vivía la confusión)</h2>
+<p class="reveal">Un RAG hace <b>dos comparaciones distintas, en dos momentos distintos</b>. Es muy fácil
+fundirlas en una; separarlas lo aclara todo:</p>
+<div class="card reveal">
+<table>
+<tr><th></th><th>① RECUPERACIÓN</th><th>② EVALUACIÓN</th></tr>
+<tr><td><b>qué compara</b></td><td>tu <b>pregunta</b> ↔ cada <b>momento</b> guardado</td><td>la <b>respuesta</b> ↔ el contexto / la pregunta</td></tr>
+<tr><td><b>cuándo</b></td><td><b>antes</b> de generar nada</td><td><b>después</b> de generar la respuesta</td></tr>
+<tr><td><b>con qué</b></td><td><b>sim</b> (similitud del coseno)</td><td>los <b>jueces</b> (faithfulness, relevancia)</td></tr>
+<tr><td><b>decide</b></td><td>la banda 🟢🟡⚪ (¿tengo recuerdo?)</td><td>la nota 1–5 (¿respondió bien?)</td></tr>
+</table>
+</div>
+<div class="ana reveal"><b>Tu frase, reconducida:</b> <code>sim</code> no mide cuánto se acerca la
+<i>respuesta</i> a lo esperado — mide cuánto se parece, en significado, tu <b>pregunta</b> al recuerdo más
+cercano del corpus. La comparación respuesta↔esperado es la etapa ②, la de los jueces.</div>
+
+<h2>2 · Qué es la similitud del coseno</h2>
+<p class="reveal">Un <b>embedding</b> convierte un texto en una <b>flecha</b> dentro de un espacio de
+muchísimas dimensiones. Significados parecidos → flechas que apuntan parecido. El <b>coseno</b> mide el
+<b>ángulo</b> entre dos flechas: ángulo pequeño → coseno cercano a <b>1</b> (muy parecido); ángulo
+grande → coseno cercano a <b>0</b> (sin relación).</p>
+<div class="card reveal" style="display:flex; gap:24px; flex-wrap:wrap; justify-content:center">
+  <svg viewBox="0 0 200 160" width="240" role="img" aria-label="Ángulo pequeño, coseno alto">
+    <line x1="20" y1="140" x2="180" y2="60" stroke="#2c6eb5" stroke-width="3" marker-end="url(#a1)"/>
+    <line x1="20" y1="140" x2="175" y2="45" stroke="#3a7d44" stroke-width="3" marker-end="url(#a1)"/>
+    <path d="M120,100 A 55 55 0 0 1 128,88" fill="none" stroke="#b07d2b" stroke-width="2"/>
+    <text x="60" y="56" font-family="DM Mono,monospace" font-size="11" fill="#3a7d44">"un momento"</text>
+    <text x="70" y="128" font-family="DM Mono,monospace" font-size="11" fill="#2c6eb5">"tu pregunta"</text>
+    <text x="20" y="20" font-family="Fraunces,serif" font-size="14" fill="#1a1a1a">ángulo pequeño</text>
+    <text x="20" y="36" font-family="DM Mono,monospace" font-size="12" fill="#3a7d44">coseno ≈ 0.59 → 🟢</text>
+    <defs><marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#555"/></marker></defs>
+  </svg>
+  <svg viewBox="0 0 200 160" width="240" role="img" aria-label="Ángulo grande, coseno bajo">
+    <line x1="20" y1="140" x2="180" y2="120" stroke="#2c6eb5" stroke-width="3" marker-end="url(#a2)"/>
+    <line x1="20" y1="140" x2="90" y2="20" stroke="#b0392b" stroke-width="3" marker-end="url(#a2)"/>
+    <path d="M70,128 A 45 45 0 0 0 52,98" fill="none" stroke="#b07d2b" stroke-width="2"/>
+    <text x="92" y="22" font-family="DM Mono,monospace" font-size="11" fill="#b0392b">"bolsa"</text>
+    <text x="95" y="118" font-family="DM Mono,monospace" font-size="11" fill="#2c6eb5">"tu pregunta"</text>
+    <text x="20" y="20" font-family="Fraunces,serif" font-size="14" fill="#1a1a1a">ángulo grande</text>
+    <text x="20" y="36" font-family="DM Mono,monospace" font-size="12" fill="#b0392b">coseno ≈ 0.36 → ⚪</text>
+    <defs><marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#555"/></marker></defs>
+  </svg>
+</div>
+<div class="ana reveal"><b>En tu motor</b> los vectores están normalizados, así que el coseno se calcula
+con un simple producto escalar: <code>sims = self.vecs @ q</code>. Por eso "bolsa" (que no vive en tu
+corpus de TEA) sale con <code>sim</code> bajo: ningún momento apunta en esa dirección.</div>
+
+<h2>3 · El umbral como puerta · <span style="color:var(--azul)">juégalo tú</span></h2>
+<p class="reveal">El <b>umbral</b> es una línea vertical sobre el eje de <code>sim</code>: lo que cae a su
+<b>derecha</b> tiene recuerdo suficiente y el motor <b>responde</b>; lo que cae a la <b>izquierda</b> no, y
+el motor <b>se calla</b> (⚪). Abajo están los <b>7 casos reales</b> de tu golden set en su posición de
+<code>sim</code>. <b>Arrastra el control</b> y mira qué pasa — fíjate en <b>T1</b> ("irse de casa") cuando
+cruzas 0.43.</p>
+
+<div class="simbox reveal">
+  <div class="readout">
+    <div><span class="lbl">umbral_posible</span><br><span class="big" id="thrval" style="color:var(--azul)">0.43</span></div>
+    <div><span class="lbl">decisión correcta</span><br><span class="big" id="acc" style="color:var(--verde)">7/7</span></div>
+    <div style="font-size:12.5px; color:#6b6b6b" id="msg">🟢 responde · ⚪ se calla · 🔴 decisión equivocada</div>
+  </div>
+  <div class="ctrl">
+    <span class="mono">0.35</span>
+    <input id="thr" type="range" min="0.35" max="0.50" step="0.001" value="0.43">
+    <span class="mono">0.50</span>
+  </div>
+  <div class="track" id="track"><!-- lanes + threshold inyectados por JS --></div>
+  <div class="axis" id="axis"></div>
+</div>
+<div class="ana reveal"><b>Lo que verás:</b> en <b>0.40</b> (el valor antiguo) T1 queda a la derecha → el
+motor le respondía aunque "irse de casa" no está en el corpus → punto rojo, decisión equivocada (6/7). Al
+subir a <b>0.43</b>, T1 cruza a la izquierda → se calla → 7/7. Si sigues subiendo, en algún momento
+empezarías a silenciar casos <i>buenos</i> (F1 en 0.515): ahí el remedio sería peor que la enfermedad.
+Ese equilibrio es <b>calibrar un umbral</b>.</div>
+
+<h2>4 · Detección de regresiones (el detector de humos)</h2>
+<p class="reveal">Una <b>regresión</b> es cuando algo que iba bien empieza a ir <b>peor</b> tras un cambio.
+La <b>detección</b> es tener un mecanismo que compara el comportamiento nuevo contra una <b>línea base</b>
+guardada y te avisa si algo empeoró.</p>
+<div class="ana reveal"><b>La regresión es mala; detectarla es buenísimo.</b> Como el humo y el detector:
+el humo es el problema, pero que el detector pite es lo mejor que te puede pasar — te enteras tú, antes que
+el usuario. El desastre no es tener una regresión, es <b>desplegarla sin saberlo</b>.</div>
+<div class="card reveal">
+<h3>Lo que hiciste hoy ya fue esto (a mano)</h3>
+<table>
+<tr><th>Paso</th><th>Acción</th></tr>
+<tr><td>1. Línea base</td><td>evaluación con umbral 0.40 → <b>86%</b> decisión correcta</td></tr>
+<tr><td>2. Cambio</td><td>subir el corte a 0.43</td></tr>
+<tr><td>3. Comparar</td><td>re-evaluar y mirar caso por caso vs. la base</td></tr>
+<tr><td>4. Veredicto</td><td><b>100%</b>, solo cambió T1, <span style="color:var(--verde)">cero regresiones</span> → seguro de aplicar</td></tr>
+</table>
+<p style="margin-bottom:0">La <b>Fase 3</b> convertirá estos 4 pasos en un <code>comparar.py</code> que lo
+haga automático. Hoy fue el ensayo manual.</p>
+</div>
+
+<h2>5 · Lo que pasó de verdad (de la detección al despliegue)</h2>
+<div class="card reveal">
+<table>
+<tr><th>Momento</th><th>Qué</th></tr>
+<tr><td>🔎 detección</td><td>El harness marcó T1 como falso positivo (contenido ausente colándose en 🟡 a sim 0.421).</td></tr>
+<tr><td>🧪 diagnóstico</td><td>El sistema <b>no alucinó</b> (el prompt lo cubrió). Síntoma: umbral un pelín blando. Daño real: cero.</td></tr>
+<tr><td>⚗️ experimento</td><td>Probamos 0.43 <b>solo en el harness</b> (reversible). Mejora a 100%, ninguna otra regresión.</td></tr>
+<tr><td>🔧 aplicado</td><td>Llevamos 0.43 a <code>rag_core.py</code> con la evidencia detrás.</td></tr>
+<tr><td>🚀 desplegado</td><td>Deploy a Cloud Run (revisión <code>00002</code>). De paso, creamos el <code>.gcloudignore</code> que faltaba (evita subir una imagen sin corpus).</td></tr>
+<tr><td>✅ verificado</td><td>En producción, T1 ahora responde <code>banda: lejano</code> · sim 0.421 · <code>respuesta: None</code>.</td></tr>
+</table>
+</div>
+
+<h2>6 · Para el CV</h2>
+<div class="cv reveal">Diagnostiqué una <b>miscalibración del umbral de recuperación</b> de un RAG mediante un
+harness de evaluación, distinguiendo el síntoma (corte de similitud demasiado permisivo) del impacto real
+(nulo, gracias a una segunda línea de defensa en el prompt). Validé el ajuste con un <b>experimento
+controlado y reversible</b> (override del umbral solo en evaluación), confirmé <b>cero regresiones</b> en
+el golden set, lo apliqué al motor y lo <b>desplegué a Cloud Run</b>, verificándolo de punta a punta en
+producción. Endurecí además el pipeline de despliegue (<code>.gcloudignore</code>) para garantizar que la
+imagen siempre incluye los datos servibles.</div>
+
+<div class="lab reveal">
+  <h3>Técnica nueva de esta página · control en vivo</h3>
+  <p>El eje de similitud de arriba es <b>interactivo</b>: un <code>&lt;input type="range"&gt;</code> cuyo
+  valor, en cada movimiento, recalcula en JavaScript qué casos quedan a cada lado de la línea y los
+  recolorea. Es el patrón de los "explorables" (<i>explorable explanations</i>): en vez de leer qué hace
+  un parámetro, lo <b>mueves y lo ves</b>. Para tu portfolio es oro en cualquier cosa con un umbral, un
+  peso o un filtro ajustable.</p>
+</div>
+
+<div class="foot">ficha 03 · conceptos harness · sim = recuperación (coseno) · umbral = puerta sobre sim ·
+regresión = empeorar tras un cambio · cierra la fase 2 (incl. deploy a producción) · técnicas: SVG · range interactivo · scroll-reveal · próxima: fase 3 (comparar.py)</div>
+
+<script>
+  // brillo
+  (function(){var l=document.getElementById('lux');function a(v){document.documentElement.style.filter='brightness('+(1-v*0.0028)+') sepia('+(v*0.0055)+')';}
+    var g=localStorage.getItem('ficha-brillo'); if(g!==null)l.value=g; a(+l.value);
+    l.addEventListener('input',function(){a(+l.value);localStorage.setItem('ficha-brillo',l.value);});})();
+
+  // scroll-reveal
+  (function(){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target);}});},{threshold:0.1});
+    document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});})();
+
+  // ── eje de similitud interactivo ──
+  (function(){
+    var MIN=0.34, MAX=0.66, CLARO=0.45;
+    var casos=[ {id:'S1',sim:0.625,debe:true,t:'motivación info'},
+                {id:'F2',sim:0.605,debe:true,t:'conciencia cognitiva'},
+                {id:'D1',sim:0.594,debe:true,t:'tests TEA'},
+                {id:'D2',sim:0.574,debe:true,t:'relaciones'},
+                {id:'F1',sim:0.515,debe:true,t:'emociones'},
+                {id:'T1',sim:0.421,debe:false,t:'irse de casa · AUSENTE'},
+                {id:'T2',sim:0.361,debe:false,t:'bolsa · AUSENTE'} ];
+    function pct(s){ return Math.max(0,Math.min(100,(s-MIN)/(MAX-MIN)*100)); }
+    var track=document.getElementById('track'), axis=document.getElementById('axis');
+
+    // claro line + threshold line
+    var claro=document.createElement('div'); claro.className='claroln'; claro.style.left=pct(CLARO)+'%';
+    claro.innerHTML='<span class="cap">claro 0.45</span>'; track.appendChild(claro);
+    var thrEl=document.createElement('div'); thrEl.className='thr'; thrEl.innerHTML='<span class="cap" id="thrcap">0.43</span>';
+    track.appendChild(thrEl);
+
+    // lanes
+    casos.forEach(function(c){
+      var lane=document.createElement('div'); lane.className='lane';
+      lane.innerHTML='<div class="ln"></div><span class="tag">'+c.id+' · '+c.sim.toFixed(3)+' · '+c.t+'</span>';
+      var dot=document.createElement('div'); dot.className='dot'; dot.id='dot-'+c.id; dot.style.left=pct(c.sim)+'%';
+      dot.textContent=c.id; lane.appendChild(dot); track.appendChild(lane); c._dot=dot;
+    });
+    // axis ticks
+    [0.35,0.40,0.45,0.50,0.55,0.60,0.65].forEach(function(v){
+      var s=document.createElement('span'); s.style.left=pct(v)+'%'; s.textContent=v.toFixed(2); axis.appendChild(s);
+    });
+
+    var slider=document.getElementById('thr');
+    function render(){
+      var thr=parseFloat(slider.value);
+      thrEl.style.left=pct(thr)+'%';
+      document.getElementById('thrcap').textContent=thr.toFixed(3);
+      document.getElementById('thrval').textContent=thr.toFixed(3);
+      var ok=0;
+      casos.forEach(function(c){
+        var responde = c.sim>=thr;
+        var correcto = (responde===c.debe);
+        if(correcto) ok++;
+        var d=c._dot;
+        d.className='dot '+(!correcto?'wrong':(responde?'resp':'calla'));
+      });
+      var accEl=document.getElementById('acc');
+      accEl.textContent=ok+'/'+casos.length;
+      accEl.style.color = ok===casos.length ? 'var(--verde)' : 'var(--rojo)';
+    }
+    slider.addEventListener('input',render);
+    render();
+  })();
+</script>
+</body></html>

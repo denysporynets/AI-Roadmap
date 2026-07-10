@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artefacto 3 — Harness de evaluación del RAG · Ruta AI Engineering</title>
+<meta name="description" content="Un harness que puntúa el RAG contra un dataset golden con jueces LLM, compara versiones y bloquea las regresiones con una puerta de calidad (pytest). El RAG deja de calificarse a ojo. Tercer artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d1117;
+    --bg-card:   #151b23;
+    --bg-card-h: #1a2230;
+    --ink:       #e6edf3;
+    --muted:     #7d8590;
+    --border:    #2a3340;
+    --amber:     #f0a500;
+    --amber-dim: #5c4419;
+    --green:     #3fb950;
+    --green-dim: #1d3a23;
+    --yellow:    #d9a520;
+    --blue:      #4a8cff;
+    --red:       #f85149;
+    --red-dim:   #3a1d1d;
+  }
+
+  html, body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 24px 80px; }
+
+  /* ── NAV ── */
+  .topnav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 44px; flex-wrap: wrap; gap: 12px;
+  }
+  .topnav a {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--muted); text-decoration: none;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 12px; transition: all 0.15s;
+  }
+  .topnav a:hover { color: var(--ink); border-color: var(--muted); }
+  .topnav .navgroup { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ── HERO ── */
+  .hero { margin-bottom: 40px; }
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .badge-done {
+    color: var(--green); background: var(--green-dim);
+    border-radius: 4px; padding: 2px 8px; letter-spacing: 1px;
+  }
+  .hero-title {
+    font-family: 'Fraunces', serif; font-weight: 300;
+    font-size: clamp(30px, 5vw, 44px); line-height: 1.07;
+    letter-spacing: -0.5px; margin-bottom: 16px;
+  }
+  .hero-title strong { font-weight: 600; color: var(--amber); }
+  .hero-sub { font-size: 15px; color: var(--muted); max-width: 640px; }
+  .hero-sub strong { color: var(--ink); font-weight: 600; }
+
+  /* ── SECTION ── */
+  .section { margin-top: 44px; }
+  .sec-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
+  }
+  .sec-title {
+    font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .sec-p { font-size: 14.5px; color: var(--muted); margin-bottom: 14px; }
+  .sec-p strong { color: var(--ink); font-weight: 600; }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 8px; margin: 18px 0;
+  }
+  .pipe-step { flex: 1; min-width: 150px; padding: 16px; text-align: center; }
+  .pipe-step .pe {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  }
+  .pipe-step .pt { font-size: 14px; color: var(--ink); font-weight: 500; }
+  .pipe-step .pd { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .pipe-step .pcost {
+    display: inline-block; font-family: 'DM Mono', monospace; font-size: 9.5px;
+    letter-spacing: 0.5px; border-radius: 20px; padding: 1px 8px; margin-top: 8px;
+  }
+  .pcost.caro { color: var(--red); background: var(--red-dim); }
+  .pcost.free { color: var(--green); background: var(--green-dim); }
+  .pipe-arrow { display: flex; align-items: center; color: var(--amber); font-size: 18px; }
+  @media (max-width: 620px) { .pipe-arrow { transform: rotate(90deg); margin: 0 auto; } }
+
+  /* ── CODE ── */
+  .codecard {
+    background: #0a0e14; border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; margin: 16px 0;
+  }
+  .code-head {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    padding: 9px 14px; border-bottom: 1px solid var(--border);
+    background: var(--bg-card); display: flex; justify-content: space-between;
+  }
+  .code-head .tag { color: var(--amber); }
+  pre { padding: 14px 16px; overflow-x: auto; }
+  code {
+    font-family: 'DM Mono', monospace; font-size: 12.5px; line-height: 1.7;
+    color: var(--ink); white-space: pre;
+  }
+  .c-key { color: var(--blue); }
+  .c-str { color: var(--green); }
+  .c-com { color: var(--muted); font-style: italic; }
+  .c-num { color: var(--amber); }
+  .c-grn { color: var(--green); }
+  .c-yel { color: var(--yellow); }
+  .c-red { color: var(--red); }
+  .c-gry { color: var(--muted); }
+
+  /* ── CHECKS ── */
+  .checks { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .check {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--bg-card); border: 1px solid var(--green-dim);
+    border-radius: 8px; padding: 14px 16px;
+  }
+  .check .mark {
+    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
+    background: var(--green); display: flex; align-items: center; justify-content: center;
+    margin-top: 1px;
+  }
+  .check .mark svg { width: 13px; height: 13px; }
+  .check .ctitle { font-weight: 600; font-size: 14.5px; }
+  .check .cdesc { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  /* ── DOD ── */
+  .dod {
+    margin: 20px 0; padding: 14px 18px;
+    border-left: 3px solid var(--green); background: rgba(63,185,80,0.06);
+    border-radius: 0 8px 8px 0;
+  }
+  .dod-label {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--green); margin-bottom: 5px;
+  }
+  .dod-text { font-size: 14px; color: var(--ink); }
+
+  /* ── NOTE ── */
+  .note {
+    margin: 18px 0; padding: 14px 18px;
+    border-left: 3px solid var(--amber); background: rgba(240,165,0,0.06);
+    border-radius: 0 8px 8px 0; font-size: 13.5px; color: var(--ink);
+  }
+  .note strong { color: var(--amber); }
+
+  /* ── STACK chips ── */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .chip {
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 11px; color: var(--muted);
+  }
+  .chip strong { color: var(--amber); font-weight: 500; }
+
+  /* ── CTA ── */
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+  .cta {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    text-decoration: none; border-radius: 8px; padding: 11px 20px;
+    transition: all 0.18s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .cta-primary { background: var(--amber); color: #0d1117; }
+  .cta-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,165,0,0.25); }
+  .cta-ghost { border: 1px solid var(--border); color: var(--muted); }
+  .cta-ghost:hover { color: var(--ink); border-color: var(--muted); }
+
+  /* ── ARCH layers ── */
+  .layers { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
+  .layer {
+    display: flex; gap: 14px; align-items: baseline;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 13px 16px;
+  }
+  .layer .lnum {
+    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--amber);
+    flex-shrink: 0; width: 118px;
+  }
+  .layer .lbody { font-size: 13.5px; }
+  .layer .lbody b { color: var(--ink); }
+  .layer .lbody span { color: var(--muted); }
+
+  /* ── PRINCIPLE ── */
+  .principle {
+    margin-top: 44px;
+    background: linear-gradient(135deg, #1a1410 0%, var(--bg-card) 60%);
+    border: 1px solid var(--amber-dim); border-radius: 12px;
+    padding: 26px 28px; position: relative; overflow: hidden;
+  }
+  .principle::before {
+    content: ''; position: absolute; top: -40%; right: -10%;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(240,165,0,0.08), transparent 70%);
+  }
+  .principle-eyebrow {
+    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
+  }
+  .principle-text {
+    font-family: 'Fraunces', serif; font-size: 19px; font-weight: 300;
+    line-height: 1.45; color: var(--ink); max-width: 660px;
+  }
+  .principle-text strong { font-weight: 600; color: var(--amber); }
+
+  .footer {
+    margin-top: 44px; text-align: center;
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--border);
+  }
+  .footer span { color: var(--amber); opacity: 0.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topnav">
+    <a href="../ROADMAP.html">← Bitácora del roadmap</a>
+    <div class="navgroup">
+      <a href="../artefacto-2/index.html">← Artefacto 2 (RAG)</a>
+      <a href="https://github.com/denysporynets/AI-Roadmap/tree/main/3_Harness_de_evaluacion" target="_blank">Ver código en GitHub ↗</a>
+      <a href="https://denysporynets.github.io">Portfolio ↗</a>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <span>Artefacto 3 · Mes 2–3</span>
+      <span class="badge-done">✓ Completo · herramienta interna</span>
+    </div>
+    <h1 class="hero-title">Harness de evaluación<br><strong>el RAG deja de calificarse a ojo</strong></h1>
+    <p class="hero-sub">
+      Un banco de pruebas que <strong>puntúa el RAG</strong> contra un dataset de casos "verdad de campo",
+      usa <strong>jueces LLM</strong> para medir fidelidad y relevancia, compara cada versión con la anterior
+      y <strong>bloquea las regresiones con una puerta de calidad</strong>. Cuando tocas algo del RAG,
+      obtienes un número que dice si mejoró o empeoró — no una opinión. Tercer artefacto de la ruta
+      <strong>Data Science → AI Engineering</strong>.
+    </p>
+  </div>
+
+  <!-- QUÉ HACE -->
+  <div class="section">
+    <div class="sec-eyebrow">Qué hace</div>
+    <div class="sec-title">Medir el RAG, no opinar sobre él</div>
+    <p class="sec-p">
+      Construir un RAG es fácil; saber <strong>si funciona</strong> y detectar <strong>cuándo una versión
+      nueva empeora</strong> es lo que separa un portfolio de un prototipo. El harness convierte esa pregunta
+      en un pipeline con dos velocidades de coste: se <strong>evalúa una vez (caro)</strong> y se
+      <strong>testea mil veces (gratis)</strong>.
+    </p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pe">Evaluar</div>
+        <div class="pt">RAG + jueces LLM</div>
+        <div class="pd">fidelidad · relevancia · citas</div>
+        <div class="pcost caro">● cuesta API</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Comparar</div>
+        <div class="pt">diff vs línea base</div>
+        <div class="pd">tolerancias · marca regresiones</div>
+        <div class="pcost free">○ gratis</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Puerta</div>
+        <div class="pt">pytest</div>
+        <div class="pd">🟢 pasa · 🔴 bloquea</div>
+        <div class="pcost free">○ gratis</div>
+      </div>
+    </div>
+    <p class="sec-p">
+      Solo el primer paso gasta dinero. Los otros dos leen su salida ya guardada, así que la puerta puede
+      correr en <strong>cada cambio</strong> sin coste — lista para un pipeline de CI.
+    </p>
+  </div>
+
+  <!-- LA DECISIÓN CLAVE -->
+  <div class="section">
+    <div class="sec-eyebrow">La decisión de diseño</div>
+    <div class="sec-title">Una sola definición de "regresión"</div>
+    <p class="sec-p">
+      El informe que se lee y la puerta que bloquea <strong>comparten la misma lógica</strong>: el test de
+      calidad <strong>importa y reutiliza</strong> el comparador, no reimplementa su propio criterio. Así es
+      imposible que el informe diga "todo bien" mientras el test dice "roto". Una definición, dos caras: un
+      informe legible y un <code style="color:var(--amber)">exit code</code> que un pipeline entiende.
+    </p>
+
+    <div class="codecard">
+      <div class="code-head"><span>test_calidad.py · el corazón de la puerta</span><span class="tag">reutiliza comparar.py</span></div>
+<pre><code><span class="c-key">import</span> comparar   <span class="c-com"># la MISMA lógica que produce el informe</span>
+
+<span class="c-key">def</span> <span class="c-grn">test_ninguna_alucinacion_nueva</span>(diff):
+    <span class="c-com"># responder algo AUSENTE del corpus = alucinación.</span>
+    <span class="c-com"># es la métrica que distingue a este RAG (sabe callarse),</span>
+    <span class="c-com"># por eso tiene su propio assert dedicado.</span>
+    alucinaciones = [r <span class="c-key">for</span> r <span class="c-key">in</span> diff[<span class="c-str">"regresiones"</span>] <span class="c-key">if</span> <span class="c-str">"FALSO POSITIVO"</span> <span class="c-key">in</span> r]
+    <span class="c-key">assert</span> <span class="c-key">not</span> alucinaciones</code></pre>
+    </div>
+  </div>
+
+  <!-- EL HALLAZGO -->
+  <div class="section">
+    <div class="sec-eyebrow">Por qué un harness gana su sueldo</div>
+    <div class="sec-title">Cazó una alucinación real y la arregló</div>
+    <p class="sec-p">
+      No es una demo de juguete: al correr el harness sobre el RAG en producción, <strong>detectó un falso
+      positivo</strong>. La pregunta <em>"irse de casa"</em> —ausente del corpus— se colaba como respondida
+      porque el umbral de confianza estaba <strong>blando</strong> (0.40). El prompt no llegó a alucinar,
+      pero la puerta avisó de que el umbral dejaba pasar lo que no debía.
+    </p>
+
+    <div class="codecard">
+      <div class="code-head"><span>experimento reversible · candidato con umbral 0.40</span><span class="tag">la puerta se pone roja</span></div>
+<pre><code><span class="c-gry">$ HARNESS_CAND=resultados_u040.json pytest -v</span>
+
+<span class="c-red">test_ninguna_alucinacion_nueva ........... FAILED</span>
+<span class="c-yel">E   AssertionError: Alucinación nueva:</span>
+<span class="c-yel">E     · T1 FALSO POSITIVO — "irse de casa" (AUSENTE) a sim 0.421</span>
+
+<span class="c-com"># subir el umbral 0.40 → 0.43: decisión 86% → 100%, cero regresiones</span>
+<span class="c-grn">===== 6 passed in 0.12s =====</span>   <span class="c-com"># puerta verde, desplegado a Cloud Run</span></code></pre>
+    </div>
+    <p class="sec-p">
+      El cambio se probó como <strong>experimento reversible</strong> (subir el umbral a 0.43 sin tocar el
+      motor), la puerta pasó a verde, se verificó que no rompía nada más y se <strong>desplegó a producción</strong>.
+      El harness no solo mide: <strong>encontró un fallo y guió su corrección</strong>.
+    </p>
+  </div>
+
+  <!-- CÓMO ESTÁ CONSTRUIDO -->
+  <div class="section">
+    <div class="sec-eyebrow">Cómo está construido</div>
+    <div class="sec-title">Cinco piezas, una red de seguridad</div>
+    <div class="layers">
+      <div class="layer">
+        <div class="lnum">dataset</div>
+        <div class="lbody"><b>dataset_eval.json</b> — <span>casos "golden" etiquetados a mano: preguntas directas, de síntesis, trampas (ausentes) y de frontera. Arranca pequeño y crece.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">jueces</div>
+        <div class="lbody"><b>eval_jueces.py</b> — <span>dos jueces LLM (<code>gpt-4o</code>, superior al generador para evitar auto-preferencia) puntúan <i>faithfulness</i> y <i>relevancia</i>, temperatura 0, salida JSON forzada.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">evaluación</div>
+        <div class="lbody"><b>evaluar.py</b> — <span>corre el RAG sobre el dataset, mide decisión-umbral + fidelidad + relevancia + citas y emite un informe JSON+HTML. <i>Es el paso que cuesta API.</i></span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">comparación</div>
+        <div class="lbody"><b>comparar.py</b> — <span>fija una <b>línea base</b> y detecta regresiones contra ella con tolerancias. Prioriza la <i>decisión rota</i> sobre las medias: caza la alucinación aunque los promedios suban.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">puerta</div>
+        <div class="lbody"><b>test_calidad.py</b> — <span>envuelve el comparador en asserts de <code>pytest</code>. Verde si nada empeoró, rojo si algo cayó. No gasta API: solo lee dos JSON.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LO QUE SE ENTREGÓ -->
+  <div class="section">
+    <div class="sec-eyebrow">Lo que se entregó</div>
+    <div class="sec-title">Los criterios, cumplidos</div>
+    <div class="checks">
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">Dataset de evaluación etiquetado a mano</div>
+          <div class="cdesc">Casos golden con respuesta esperada: directas, síntesis, trampas ausentes y frontera. Empieza pequeño, ampliable.</div>
+        </div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">LLM-as-judge para fidelidad y relevancia</div>
+          <div class="cdesc">Juez más fuerte que el generador para evitar auto-preferencia; temperatura 0 y JSON forzado para que la nota sea estable.</div>
+        </div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">Reporte que compara versiones y marca regresiones</div>
+          <div class="cdesc">Línea base + detección de regresiones con tolerancias; prioriza la decisión rota por encima de las medias.</div>
+        </div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div>
+          <div class="ctitle">Puerta de calidad con pytest (extra)</div>
+          <div class="cdesc">Quality gate que reutiliza el comparador y se pone roja ante una alucinación nueva. Verificado con la regresión reintroducida a propósito.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dod">
+      <div class="dod-label">Definición de "hecho" — cumplida</div>
+      <div class="dod-text">Cambias algo del RAG, corres el harness y obtienes un número que dice si mejoró o empeoró. La evaluación a ojo no cuenta — y aquí no cuenta.</div>
+    </div>
+
+    <div class="note">
+      <strong>Herramienta interna, no un servicio.</strong> El harness no se despliega: se <em>integra</em>.
+      Su valor es proteger a los otros artefactos — de hecho, ya guió una corrección del RAG del Artefacto 2
+      que sí está en producción. Por eso el contador de "desplegados" sigue en 2/6, pero esta pieza está
+      100% completa.
+    </div>
+
+    <div class="chips">
+      <span class="chip"><strong>Python</strong> · pytest</span>
+      <span class="chip"><strong>gpt-4o</strong> LLM-as-judge</span>
+      <span class="chip"><strong>faithfulness</strong> + relevancia</span>
+      <span class="chip"><strong>línea base</strong> + regresiones</span>
+      <span class="chip"><strong>quality gate</strong></span>
+      <span class="chip"><strong>informes</strong> JSON + HTML</span>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta cta-primary" href="https://github.com/denysporynets/AI-Roadmap/tree/main/3_Harness_de_evaluacion" target="_blank">Ver código en GitHub ↗</a>
+      <a class="cta cta-ghost" href="../ROADMAP.html">Ver el roadmap completo →</a>
+    </div>
+  </div>
+
+  <!-- PRINCIPIO -->
+  <div class="principle">
+    <div class="principle-eyebrow">Por qué este artefacto importa</div>
+    <p class="principle-text">
+      Prompt engineering sin evaluación es <strong>superstición</strong>. Un harness convierte "creo que
+      mejoró" en "mejoró un 14%, sin regresiones" — y es <strong>lo que más te distingue en el mercado</strong>:
+      no construir el RAG, sino <strong>saber demostrar que funciona</strong>.
+    </p>
+  </div>
+
+  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · artefacto 3 de 6</div>
+
+</div>
+</body>
+</html>

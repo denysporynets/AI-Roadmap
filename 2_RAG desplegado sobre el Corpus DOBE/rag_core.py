@@ -42,7 +42,11 @@ K_CONTEXTO = 4           # cuántos momentos (>=posible) se le pasan al LLM
 # Bandas de confianza (heurísticas, calibradas sobre 8 consultas — ver el CAVEAT
 # de 22_buscar.py: n=8, recalibrar con más pruebas antes de cualquier uso "en serio").
 UMBRAL_CLARO = 0.45      # >=  recuerdo claro
-UMBRAL_POSIBLE = 0.40    # 0.40–0.45 vecindario; <0.40 sin recuerdo claro
+UMBRAL_POSIBLE = 0.43    # 0.43–0.45 vecindario; <0.43 sin recuerdo claro
+                         # Subido de 0.40→0.43 el 29 jun (Artefacto 3, Fase 2): el harness
+                         # detecto un falso positivo (contenido AUSENTE colandose en 'posible'
+                         # a sim 0.421). Re-evaluacion con 0.43: decision 86%→100%, cero
+                         # regresiones en los 7 casos del golden set. Caveat: n=7, vigilar.
 
 
 def banda(sim: float) -> str:

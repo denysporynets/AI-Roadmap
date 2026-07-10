@@ -1,0 +1,210 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan · Harness de evaluación del RAG DOBE · Artefacto 3</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; --rojo:#b0392b; }
+  html { transition: filter .35s ease; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:860px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:28px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:18px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px;
+        margin:30px 0 6px; padding-top:14px; border-top:2px solid var(--line); }
+  h3 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:16px; margin:16px 0 4px; }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:6px 0 4px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  .fase { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:15px 19px; margin:14px 0; }
+  .fase .h { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:17px; color:#1a1a1a; }
+  .fase .meta { font-family:'DM Mono',monospace; font-size:11.5px; color:var(--dim); margin:2px 0 8px; }
+  .fase ul { margin:6px 0; padding-left:20px; } .fase li { margin:3px 0; font-size:14px; }
+  .chk { font-family:'DM Mono',monospace; font-size:12.5px; color:var(--verde);
+         background:#eef5ee; border-radius:7px; padding:7px 11px; margin-top:8px; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:10px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  .star { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+          padding:13px 18px; margin:10px 0; font-size:14px; }
+  .crit { background:#fbf1ee; border-left:4px solid var(--rojo); border-radius:0 8px 8px 0;
+          padding:13px 18px; margin:10px 0; font-size:14px; }
+  pre { background:#1e2128; color:#e6e1d6; border-radius:10px; padding:14px 16px; overflow-x:auto;
+        font-family:'DM Mono',ui-monospace,monospace; font-size:12.5px; line-height:1.5; }
+  pre .c { color:#8a8f98; } pre .k { color:#d8a657; } pre .s { color:#a9b665; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  b { color:#1a1a1a; }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:30px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  #brillo { position:fixed; top:14px; right:14px; display:flex; align-items:center; gap:7px;
+            background:rgba(255,255,255,.82); border:1px solid var(--line); border-radius:20px;
+            padding:6px 12px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:50; }
+  #brillo input { width:90px; accent-color:var(--ambar); }
+</style></head><body>
+
+<div id="brillo" title="Brillo: día → noche cálida (filtra luz azul)">
+  ☀️<input id="lux" type="range" min="0" max="100" value="0">🌙
+</div>
+
+<div class="kicker">Artefacto 3 · plan de construcción · 3/6</div>
+<h1>Harness de evaluación del RAG DOBE</h1>
+<div class="sub mono">plano antes de construir · fase a fase con verificación · material PROPIO · 29 jun 2026 · actualizado 9 jul 2026 · protocolo ds-nexus</div>
+
+<div class="tldr" style="background:#eef5ee;border-left-color:var(--verde)"><b>Estado (9 jul 2026):</b>
+  Fases <b>0 → 4 COMPLETADAS y verificadas</b>. El harness está entero y funcionando como puerta de
+  calidad local. Solo queda la <b>Fase 5 (lucirlo)</b> para cerrar el artefacto. Detalle fase a fase abajo.</div>
+
+<div class="tldr"><b>Objetivo:</b> montar un <b>banco de pruebas automático</b> que mida si tu RAG DOBE
+responde bien (sin alucinar, al grano) y que <b>avise si una versión nueva empeora</b> respecto a la
+anterior. Tres piezas del roadmap: <b>dataset de evaluación</b> + <b>juez-LLM</b> (faithfulness/relevancia)
++ <b>detección de regresiones</b>. Se construye contra el motor que ya tienes (<code>MotorRAG.preguntar()</code>),
+sin tocarlo.</div>
+
+<h2>El giro propio: tu sistema sabe callarse</h2>
+<div class="star"><b>Lo que te diferencia del tutorial.</b> El RAG de DataCamp siempre responde, así que
+solo mide faithfulness y relevancia. <b>El tuyo no:</b> si el mejor recuerdo cae en ⚪ (<code>banda="lejano"</code>),
+el motor <b>se calla y no llama al LLM</b>. Por tanto tu harness necesita una <b>tercera métrica que ellos
+no tienen</b>: ¿acertó al callarse? Una pregunta sobre algo ausente del corpus (ej. C6 "irse de casa",
+que verificamos AUSENTE) <b>debe</b> dar ⚪. Si responde, es un falso positivo. Si una pregunta con
+recuerdo claro da ⚪, es un falso negativo. Esto es ingeniería tuya, y es justo el concepto nuevo que
+explicaremos para el CV.</div>
+
+<h2>Las métricas que mediremos</h2>
+<table>
+<tr><th>Métrica</th><th>Qué mide</th><th>Cómo</th></tr>
+<tr><td><b>Acierto del umbral</b></td><td>¿Clasificó bien claro/posible/lejano?</td><td>Comparar <code>banda</code> devuelta vs. banda esperada del dataset (sin LLM, gratis)</td></tr>
+<tr><td><b>Faithfulness</b></td><td>¿La respuesta sale solo de los momentos? ¿No inventa recuerdos?</td><td>Juez-LLM con rúbrica, recibe contexto + respuesta</td></tr>
+<tr><td><b>Relevancia</b></td><td>¿Responde a lo que se preguntó?</td><td>Juez-LLM con rúbrica, recibe pregunta + respuesta</td></tr>
+<tr><td><b>Cita fuentes</b></td><td>¿Incluyó <code>[#num · pág]</code> como exige el sistema?</td><td>Check barato (regex), sin LLM</td></tr>
+</table>
+<div class="crit"><b>Decisión consciente (no espejo):</b> NO usaremos BLEU/ROUGE. Tu corpus es episódico,
+no hay "respuesta oro" única — comparar solapamiento de palabras no diría nada. Vamos con juez-LLM, que
+es justo lo que el tutorial recomienda para este caso.</div>
+
+<h2>Las fases</h2>
+
+<div class="fase">
+<div class="h">Fase 0 · El dataset de evaluación <span style="float:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--verde)">✅ hecho</span></div>
+<div class="meta">material PROPIO · sin coste · el cimiento de todo</div>
+<ul>
+<li>Un <code>dataset_eval.json</code>: ~12–15 consultas etiquetadas a mano por ti.</li>
+<li>Cada entrada: <code>pregunta</code>, <code>tipo</code>, <code>banda_esperada</code> y una nota de qué se espera.</li>
+<li><b>Tipos a propósito</b> (como el dataset-trampa del tutorial):
+  <b>directa</b> (recuerdo claro literal), <b>síntesis</b> (combina varios momentos),
+  <b>disparador de alucinación</b> (ausente del corpus → debe dar ⚪ o admitir "no encuentro"),
+  <b>frontera</b> (cerca del umbral).</li>
+</ul>
+<div class="chk">✓ Verificación: revisamos juntos las 12–15 preguntas y sus etiquetas antes de seguir.
+El dataset es lo más importante; si está mal, todo lo demás miente.</div>
+</div>
+
+<div class="fase">
+<div class="h">Fase 1 · Los jueces (faithfulness + relevancia) <span style="float:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--verde)">✅ hecho</span></div>
+<div class="meta">eval_jueces.py · juez = gpt-4o (más capaz que el generador gpt-4o-mini)</div>
+<ul>
+<li>Dos funciones de juez, con <b>rúbrica 1–5</b> adaptada a memoria episódica, <code>temperature=0</code>
+   y salida <b>JSON forzada</b> (<code>{"score", "reason"}</code>).</li>
+<li>Juez <b>más capaz</b> que el generador → evita el <i>self-preference bias</i> (que el modelo se apruebe a sí mismo).</li>
+<li>Faithfulness recibe contexto+respuesta; relevancia recibe solo pregunta+respuesta.</li>
+</ul>
+<div class="chk">✓ Verificación: pasamos los jueces a mano sobre 2–3 ejemplos (uno bueno, uno alucinado)
+y comprobamos que las notas tienen sentido y la "reason" explica bien.</div>
+</div>
+
+<div class="fase">
+<div class="h">Fase 2 · El bucle de evaluación <span style="float:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--verde)">✅ hecho</span></div>
+<div class="meta">evaluar.py · recorre el dataset → produce un informe</div>
+<ul>
+<li>Para cada pregunta: llama a <code>MotorRAG.preguntar()</code>, mide el <b>acierto del umbral</b>,
+   y <b>si respondió</b> pasa los dos jueces; <b>si se calló</b> evalúa si debía callarse.</li>
+<li>Agrega: faithfulness media, relevancia media, % de umbral correcto, % con citas.</li>
+<li>Salida doble: un <code>resultados.json</code> (máquina) + un informe <b>HTML legible</b> a nuestro estilo.</li>
+</ul>
+<div class="chk">✓ Verificación: corremos la evaluación completa y leemos el informe. Las preguntas-trampa
+deberían salir señaladas; las directas, con nota alta.</div>
+</div>
+
+<div class="fase">
+<div class="h">Fase 3 · Línea base + detección de regresiones <span style="float:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--verde)">✅ hecho</span></div>
+<div class="meta">comparar.py · el corazón del "harness"</div>
+<ul>
+<li>Guardar la primera evaluación buena como <b>línea base</b> (<code>baseline.json</code>).</li>
+<li>Un comparador: re-evalúa, compara con la base y <b>avisa si algo baja</b> más de una tolerancia
+   (p. ej. faithfulness media cae &gt; 0.3, o aparece un nuevo falso positivo del umbral).</li>
+</ul>
+<div class="chk">✓ Verificación: provocamos una regresión a propósito (p. ej. bajar el umbral) y comprobamos
+que el comparador la pilla y la reporta.</div>
+</div>
+
+<div class="fase">
+<div class="h">Fase 4 · pytest — puerta de calidad local <span style="float:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--verde)">✅ hecho · 9 jul</span></div>
+<div class="meta">test_calidad.py · 6 tests · reutiliza comparar.py · NO gasta API</div>
+<ul>
+<li><b>Alcance elegido:</b> pytest <b>LOCAL</b> (GitHub Actions se aparca como mejora futura — no meter
+   secretos ni gastar API por push; coherente con el ritmo pausado).</li>
+<li>Métricas envueltas como <b>asserts</b> que <b>reutilizan la lógica de <code>comparar.py</code></b>
+   (una sola definición de "regresión"): sin regresiones duras · ninguna alucinación nueva ·
+   decisión no empeora · faithfulness/relevancia no caen &gt; tolerancia · citas no bajan.</li>
+<li><b>Patrón <i>quality gate</i>:</b> el paso caro (<code>evaluar.py</code> con jueces LLM) corre UNA
+   vez y escribe <code>resultados.json</code>; <code>pytest</code> juzga esa salida gratis.
+   Evalúa una vez → testea cuantas quieras.</li>
+</ul>
+<div class="chk">✓ Verificado: <b>6 verdes</b> con la versión buena (umbral 0.43); <b>3 rojos</b> con la
+   regresión del umbral 0.40 (pilla el falso positivo de T1). En 0.02 s, sin API. Confirma el hallazgo
+   de la Fase 3: lo que se rompe es la <b>decisión</b>, no las medias.</div>
+</div>
+
+<div class="fase">
+<div class="h">Fase 5 · Lucirlo <span style="float:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--ambar)">⏳ próximo</span></div>
+<div class="meta">cierre del artefacto, como el 2</div>
+<ul>
+<li>Ficha de conceptos (LLM-as-judge aplicado), página <code>artefacto-3/</code> gemela de las anteriores,
+   enlace desde el ROADMAP, código publicable subido a GitHub Pages.</li>
+</ul>
+<div class="chk">✓ Verificación: artefacto 3 visible y enlazado en el portfolio. Pasamos a 3/6.</div>
+</div>
+
+<h2>Privacidad (no repetir el susto)</h2>
+<div class="crit"><b>El dataset de evaluación es material sensible.</b> Contiene preguntas y respuestas
+esperadas sobre tu corpus personal. Igual que en la Fase 0 del Artefacto 2 blindamos el corpus,
+<code>dataset_eval.json</code>, <code>baseline.json</code> y <code>resultados.json</code> van al
+<code>.gitignore</code> <b>antes</b> de cualquier commit. Lo publicable será el <b>código</b> de los
+jueces y el bucle, nunca los datos.</div>
+
+<h2>Coste</h2>
+<div class="ana">El juez usa <code>gpt-4o</code> (más caro que mini) pero solo sobre ~12–15 preguntas ×
+2 jueces = ~30 llamadas por evaluación completa. Céntimos por corrida. Las preguntas que dan ⚪ ni
+generan ni se juzgan con LLM → gratis. El muestreo al 10% del tutorial no hace falta a esta escala.</div>
+
+<h2>Qué decidir antes de empezar <span style="font-weight:400;font-size:14px;color:var(--verde)">— resuelto</span></h2>
+<div class="star">Las dos dudas quedaron resueltas: <b>(1) Fase 4 = pytest LOCAL</b> (el CI/CD con GitHub
+Actions se aparca como mejora futura, igual que la opción C del Artefacto 2). <b>(2) El dataset arrancó
+pequeño</b> con <b>7 casos golden</b> etiquetados a mano (2 directas, 1 síntesis, 2 trampas, 2 frontera),
+suficientes para calibrar el harness — se puede ampliar más adelante ("tengo toda una vida para afinar").</div>
+
+<div class="foot">plan harness · artefacto 3 (3/6) · contra MotorRAG.preguntar() sin tocarlo · fases 0–5 ·
+material propio · ritmo pausado, verificación por fase · compañero de 00_resumen y 01_preguntas</div>
+
+<script>
+  // deslizador de brillo: día (0) → noche cálida (100). Filtra azul (sepia) + atenúa. localStorage.
+  (function () {
+    var lux = document.getElementById('lux');
+    function aplicar(v) {
+      var b = 1 - v * 0.0028;
+      var s = v * 0.0055;
+      document.documentElement.style.filter = 'brightness(' + b + ') sepia(' + s + ')';
+    }
+    var guardado = localStorage.getItem('ficha-brillo');
+    if (guardado !== null) { lux.value = guardado; }
+    aplicar(+lux.value);
+    lux.addEventListener('input', function () {
+      aplicar(+lux.value);
+      localStorage.setItem('ficha-brillo', lux.value);
+    });
+  })();
+</script>
+</body></html>

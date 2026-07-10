@@ -1,0 +1,257 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resumen · LLM-as-a-Judge (tutorial DataCamp) · Artefacto 3</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; --rojo:#b0392b; }
+  html { transition: filter .35s ease; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:860px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:28px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:18px; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px;
+        margin:30px 0 6px; padding-top:14px; border-top:2px solid var(--line); }
+  h3 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:16px; margin:18px 0 4px; }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:6px 0 4px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:14px 18px; margin:12px 0; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:10px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  .crit { background:#fbf1ee; border-left:4px solid var(--rojo); border-radius:0 8px 8px 0;
+          padding:13px 18px; margin:10px 0; font-size:14px; }
+  .dobe { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+          padding:13px 18px; margin:10px 0; font-size:14px; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  .ok { color:var(--verde); font-weight:600; }
+  .no { color:var(--rojo); font-weight:600; }
+  .cv { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+        padding:13px 18px; margin:10px 0; font-size:14px; }
+  pre { background:#1e2128; color:#e6e1d6; border-radius:10px; padding:14px 16px; overflow-x:auto;
+        font-family:'DM Mono',ui-monospace,monospace; font-size:12.5px; line-height:1.5; }
+  pre .c { color:#8a8f98; } pre .k { color:#d8a657; } pre .s { color:#a9b665; }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:30px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  b { color:#1a1a1a; }
+  ul { margin:6px 0 6px 0; padding-left:22px; } li { margin:3px 0; }
+  #brillo { position:fixed; top:14px; right:14px; display:flex; align-items:center; gap:7px;
+            background:rgba(255,255,255,.82); border:1px solid var(--line); border-radius:20px;
+            padding:6px 12px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:50; }
+  #brillo input { width:90px; accent-color:var(--ambar); }
+</style></head><body>
+
+<div id="brillo" title="Brillo: día → noche cálida (filtra luz azul)">
+  ☀️<input id="lux" type="range" min="0" max="100" value="0">🌙
+</div>
+
+<div class="kicker">Artefacto 3 · harness de evaluación · lectura previa</div>
+<h1>LLM-as-a-Judge: resumen del tutorial</h1>
+<div class="sub mono">fuente: datacamp.com/tutorial/llm-as-a-judge-rag · resumen a nuestro estilo · 29 jun 2026 · protocolo ds-nexus</div>
+
+<div class="tldr"><b>En una frase:</b> usar <b>un LLM como evaluador</b> que lee una respuesta ya
+generada y le pone nota según una <b>rúbrica que tú escribes</b> — el punto medio entre las métricas
+automáticas (rápidas pero ciegas) y la revisión humana (fina pero cara y lenta). Este documento es la
+<b>lectura previa</b> del Artefacto 3: se concluye leyéndolo; <b>construir el harness sobre tu RAG DOBE
+es el trabajo que viene después</b>.</div>
+
+<h2>1 · Qué es y por qué funciona</h2>
+<p>Un juez-LLM es simplemente pedirle a un modelo que <b>evalúe</b> un texto contra unos criterios
+escritos en el prompt. La intuición clave del tutorial:</p>
+<div class="ana"><b>Evaluar es más fácil que generar.</b> Cuando un modelo <i>escribe</i> una respuesta
+malabarea a la vez exactitud, tono, instrucciones y fidelidad al contexto. Cuando solo tiene que
+<i>juzgar</i> una respuesta ya hecha, la tarea es mucho más estrecha → rinde de forma más consistente.
+Es la misma razón por la que corregir un examen es más fácil que aprobarlo.</div>
+<p>Hueco que llena: BLEU/ROUGE son baratas pero superficiales (cuentan solapamiento de palabras);
+el humano es profundo pero no escala a miles de consultas/día. El juez-LLM da <b>juicio matizado a
+escala</b>.</p>
+
+<h2>2 · Los cuatro enfoques de evaluación</h2>
+<table>
+<tr><th>Enfoque</th><th>Cómo</th><th>Bueno para</th><th>Punto débil</th></tr>
+<tr><td><b>Direct scoring</b><br>(nota directa)</td><td>Nota 1–5 / 1–10 a una sola respuesta + razón</td><td>Monitorizar calidad en el tiempo</td><td>El juez <b>deriva</b> en la calibración: sin rúbrica clara todo acaba en 3–4</td></tr>
+<tr><td><b>Pairwise</b><br>(comparar dos)</td><td>Dos respuestas lado a lado → elige la mejor</td><td>A/B de modelos o de prompts</td><td>Duplica llamadas; da ranking relativo, no calidad absoluta</td></tr>
+<tr><td><b>Reference-based</b><br>(vs. respuesta oro)</td><td>Compara contra una respuesta correcta etiquetada</td><td>Q&A factual con ground truth</td><td>Necesita datos etiquetados; penaliza parafraseos válidos</td></tr>
+<tr><td><b>Binary</b><br>(pasa/no pasa)</td><td>Veredicto sí/no sobre <i>una</i> propiedad</td><td>Seguridad, alucinación, PII, compliance</td><td>Pierde matiz en casos frontera</td></tr>
+</table>
+<div class="dobe"><b>Para DOBE:</b> empezaría con <b>direct scoring</b> sobre dos métricas
+(faithfulness + relevance) porque tu corpus es de <b>recuperación episódica</b>, no hay "respuesta oro"
+única que comparar (descartado el reference-based). Para el monitoreo en producción, el tutorial
+sugiere <b>colapsar la nota 1–5 a binario</b> (pasa/no pasa) porque es más estable entre ejecuciones.</div>
+
+<h2>3 · Las métricas RAG (las cuatro que importan)</h2>
+<p>Dos miran la <b>generación</b> (lo que escribe el modelo) y dos miran el <b>retrieval</b> (lo que
+recuperó tu índice). Separarlas es lo que convierte una nota en un <b>diagnóstico</b>.</p>
+
+<h3>Faithfulness — ¿se inventa cosas? (la más importante)</h3>
+<p>Cada afirmación de la respuesta debe poder <b>rastrearse hasta el contexto</b>. Es tu <b>detector
+de alucinaciones</b> y, según el autor, "la métrica más importante a vigilar de forma continua".</p>
+
+<h3>Answer relevancy — ¿responde a lo que se preguntó?</h3>
+<p>La respuesta aborda lo que se pidió, sin irse por las ramas (puede admitir que no sabe, eso no
+penaliza; irse de tema, sí).</p>
+
+<h3>Context precision — ¿lo relevante sale arriba?</h3>
+<p>Mide el <b>orden</b> del retrieval. Precisión baja = recuperas lo bueno pero mal rankeado, y el
+modelo presta más atención a lo que aparece primero.</p>
+
+<h3>Context recall — ¿recuperaste todo lo necesario?</h3>
+<p>Recall bajo = problema de <b>infraestructura de retrieval</b>; ningún prompt en la generación lo
+arregla (no estaba el dato).</p>
+
+<div class="ana"><b>El truco diagnóstico (cruce de métricas):</b>
+<ul>
+<li>Faithfulness <b>alta</b> + relevance <b>baja</b> → el contexto recuperado no venía a cuento de la pregunta.</li>
+<li>Faithfulness <b>baja</b> + relevance <b>alta</b> → entendió la pregunta pero se salió del contexto (inventó).</li>
+</ul>
+Aquí está el valor real: no es ponerse nota, es saber <b>dónde</b> está el fallo (índice vs. síntesis).</div>
+
+<h2>4 · El ejemplo práctico (la arquitectura del harness)</h2>
+<p>El tutorial monta un RAG de juguete (política de devoluciones de una tienda) y lo evalúa. La
+estructura es exactamente el esqueleto que replicaremos:</p>
+<div class="card">
+<b>1. Base de conocimiento</b> — 5 documentos.<br>
+<b>2. Pipeline RAG</b> — retriever (Chroma + <code>text-embedding-3-small</code>) + generador
+(<code>gpt-4o-mini</code>, temp 0.3). El system prompt obliga a responder <b>solo</b> con el contexto
+y a admitir si no hay datos.<br>
+<b>3. Dataset de prueba</b> — 8 preguntas <b>diseñadas a propósito</b> (ver abajo).<br>
+<b>4. Doble juez</b> — un evaluador para faithfulness y otro para relevance, ambos con
+<code>gpt-4o</code> (modelo <b>más capaz</b> que el generador) y temp 0.0.
+</div>
+<div class="ana"><b>Las 8 preguntas no son al azar — son una trampa diseñada:</b>
+<ul>
+<li><b>Directas:</b> "¿Cuál es la ventana de reembolso?" (la respuesta está literal).</li>
+<li><b>De síntesis:</b> "¿Opciones si recibí un portátil defectuoso hace 60 días?" (hay que combinar política general + excepción de electrónica).</li>
+<li><b>Disparadores de alucinación:</b> "¿Reembolsos para pedidos internacionales?" — <b>no está en los docs</b>: comprueba si el modelo admite el hueco o se lo inventa.</li>
+<li><b>Casos frontera:</b> cruces de varias políticas a la vez.</li>
+</ul>
+Que el dataset incluya <b>huecos a propósito</b> (cosas que el corpus NO cubre) es lo más inteligente
+del tutorial: así mides el comportamiento ante lo desconocido, que es donde alucinan los RAG.</div>
+
+<h2>5 · Las plantillas del juez (la pieza que se copia)</h2>
+<p>El corazón es la <b>rúbrica</b>: describir cada nivel de nota con palabras concretas, no "bien/mal".
+Esta es la del juez de faithfulness:</p>
+<pre><span class="c"># JUEZ DE FAITHFULNESS — temp 0.0, response_format=json_object</span>
+Eres un juez imparcial que evalúa si la respuesta es <span class="k">fiel al contexto</span>.
+Fidelidad = toda afirmación se puede rastrear hasta el contexto.
+
+Puntúa de 1 a 5:
+ 1 - varias afirmaciones <span class="s">no</span> respaldadas por el contexto
+ 2 - al menos una afirmación significativa sin respaldo
+ 3 - mayormente fiel, con detalles menores sin respaldo
+ 4 - fiel, con extrapolaciones triviales
+ 5 - <span class="s">toda</span> afirmación respaldada directamente por el contexto
+
+Context:  [CONTEXTO_COMPLETO]
+Question: [PREGUNTA]
+Answer:   [RESPUESTA_A_EVALUAR]
+
+Responde EXACTAMENTE en JSON: {"score": &lt;int 1-5&gt;, "reason": "&lt;explicación&gt;"}</pre>
+<p>El juez de <b>relevance</b> es idéntico en estructura pero (importante) <b>no recibe el contexto</b>:
+solo pregunta + respuesta, porque relevancia se juzga contra la <i>pregunta</i>, no contra los docs.</p>
+<div class="ana"><b>Por qué temp 0.0 y JSON forzado:</b> 0.0 = máxima consistencia (mismo input →
+misma nota); <code>response_format=json_object</code> garantiza que la salida se pueda parsear sin
+romperse. La nota viene siempre con su <b>razón escrita</b> → eso es lo que luego lees para entender
+los fallos, no el número.</div>
+
+<h2>6 · Buenas prácticas y trampas (lo que evita el ridículo)</h2>
+<table>
+<tr><th>Sesgo / riesgo</th><th>Qué pasa</th><th>Mitigación</th></tr>
+<tr><td><b>Verbosity bias</b></td><td>El juez puntúa más alto lo más largo, dé igual la calidad</td><td>Pedir concisión explícita en la rúbrica</td></tr>
+<tr><td><b>Position bias</b></td><td>En pairwise favorece la 1ª respuesta</td><td>Correr en ambos órdenes; contar solo si coincide</td></tr>
+<tr><td><b>Self-preference</b></td><td>Si juez = generador, se aprueba a sí mismo</td><td>Juez con modelo <b>más capaz</b> que el generador</td></tr>
+<tr><td><b>Calibration drift</b></td><td>Las notas numéricas derivan con el tiempo</td><td>Recalibrar contra humanos periódicamente</td></tr>
+</table>
+<div class="card"><b>Calibración contra humano (el paso que da credibilidad):</b> coge 50–100 ejemplos
+puntuados por una persona, pásalos por el juez, mide el <b>% de acuerdo</b>. Por debajo de ~<b>75%</b>
+→ la rúbrica necesita trabajo. Dato útil: ~<b>80% de acuerdo</b> es también lo que dos humanos
+acuerdan entre sí — o sea, el juez-LLM rinde a nivel de fiabilidad inter-humana.</div>
+<div class="card"><b>Coste a escala:</b> los prompts de evaluación son largos (pregunta + contexto +
+respuesta + rúbrica). Patrón recomendado: juez-LLM detallado sobre un <b>10% muestreado</b> + checks
+baratos (longitud, formato, keywords) sobre el 90% restante.</div>
+<div class="card"><b>Supervisión humana continua:</b> revisar cada semana una muestra de los juicios,
+prestando atención especial a los <b>5/5</b> — el fallo no detectado en un "perfecto" es el que genera
+más confianza mal puesta.</div>
+
+<h2>7 · Frameworks (no reinventar la rueda)</h2>
+<p>El tutorial compara herramientas que ya traen estos jueces hechos:</p>
+<table>
+<tr><th>Framework</th><th>Fuerte en</th><th>Métricas RAG</th></tr>
+<tr><td><b>RAGAS</b></td><td>Específico de RAG</td><td>faithfulness, answer relevance, context precision/recall</td></tr>
+<tr><td><b>DeepEval</b></td><td>Suite completa + CI/CD (pytest)</td><td>las cuatro + reintentos JSON + caché</td></tr>
+<tr><td><b>MLflow</b></td><td>Tracking de experimentos</td><td>vía evaluadores propios</td></tr>
+<tr><td><b>Evidently</b></td><td>Monitoreo / detección de drift</td><td>seguimiento continuo</td></tr>
+<tr><td><b>LangSmith</b></td><td>Nativo de LangChain</td><td>evaluadores propios</td></tr>
+</table>
+
+<h2>8 · Lectura crítica (qué tomar y de qué desconfiar)</h2>
+<div class="crit"><b>El tutorial es, en parte, material promocional.</b> El banner de "RAG with
+LangChain" y el empuje hacia <b>DeepEval</b> son marketing de DataCamp. El contenido conceptual es
+sólido y estándar en la industria, pero la elección de framework no tiene por qué ser la suya.</div>
+<div class="crit"><b>El "~80% de acuerdo humano" no viene con cita ni benchmark</b> en el texto. Es
+una cifra plausible y muy repetida en la literatura, pero tómala como <b>regla de pulgar</b>, no como
+dato medido. Cuando montemos tu calibración, el número que valga será <b>el tuyo</b>, medido sobre tus
+propios ejemplos.</div>
+<div class="crit"><b>Riesgo circular silencioso:</b> el juez de faithfulness solo puede evaluar contra
+el contexto que le das. Si tu retrieval falla y recupera el momento equivocado, el juez puede decir
+"5/5 fiel" a una respuesta fiel… <i>al documento equivocado</i>. Por eso faithfulness <b>no basta</b>:
+hay que mirarla junto a la relevancia y, en tu caso, junto a la <b>banda de confianza 🟢🟡⚪</b> que ya
+tienes.</div>
+
+<h2>9 · Puente al Artefacto 3 (tu motor DOBE)</h2>
+<p>Lo que cambia al aplicarlo a tu RAG real, ya desplegado:</p>
+<div class="dobe">
+<ul>
+<li><b>Tu generador ya es <code>gpt-4o-mini</code></b> → el juez debe ser <b>más capaz</b>
+(p. ej. <code>gpt-4o</code>) para esquivar el self-preference bias. Coste solo en evaluación, no en producción.</li>
+<li><b>Tu corpus es episódico</b> (recuerdos, no enciclopedia): faithfulness aquí = "no inventa
+recuerdos que no están en el corpus". El test de "irse de casa" (C6, que verificamos AUSENTE) es ya
+tu disparador de alucinación natural — debería puntuar bajo si el modelo se lo inventa.</li>
+<li><b>Ya tienes media arquitectura del tutorial:</b> tu motor devuelve <code>dict</code> con respuesta
++ citas + fuentes + banda de confianza. El harness añade <b>el dataset de evaluación + los dos jueces +
+el bucle que recorre las preguntas y agrega notas + la detección de regresiones</b>.</li>
+<li><b>El umbral ⚪ interactúa con la evaluación:</b> las consultas que ni llaman al LLM no se juzgan
+por faithfulness de síntesis — se juzgan por si <b>acertaron al callarse</b>. Es una métrica que el
+tutorial no cubre y que tu sistema sí necesita.</li>
+<li><b>Detección de regresiones</b> (lo que pide el roadmap): guardar las notas de hoy como línea base;
+cuando toques el corpus o el prompt, re-evaluar y avisar si la media baja. Eso es el "harness" como tal,
+no solo medir una vez.</li>
+</ul>
+</div>
+
+<h2>10 · Para el CV (cómo contarlo)</h2>
+<div class="cv">Diseñé un <b>harness de evaluación automatizado</b> para un sistema RAG en producción
+usando <b>LLM-as-a-judge</b>: jueces independientes de <b>faithfulness</b> (detección de alucinación) y
+<b>answer relevancy</b> con rúbricas calibradas (escala 1–5, temperatura 0.0, salida JSON forzada).
+Construí un dataset de evaluación con casos de síntesis y <b>disparadores de alucinación</b> deliberados,
+calibré el juez contra anotación humana (% de acuerdo) y monté <b>detección de regresiones</b> contra una
+línea base. Mitigué sesgos conocidos (verbosity, position, self-preference usando un modelo juez más
+capaz que el generador) y optimicé coste con muestreo del tráfico.</div>
+
+<div class="foot">resumen llm-as-a-judge · artefacto 3 (harness de evaluación) · lectura previa al diseño ·
+fuente datacamp · relacionado: artefacto 2 (rag dobe desplegado) · ritmo pausado · próximo paso = diseñar el harness sobre el motor real</div>
+
+<script>
+  // deslizador de brillo: día (0) → noche cálida (100). Filtra azul (sepia) + atenúa. localStorage.
+  (function () {
+    var lux = document.getElementById('lux');
+    function aplicar(v) {
+      var b = 1 - v * 0.0028;
+      var s = v * 0.0055;
+      document.documentElement.style.filter = 'brightness(' + b + ') sepia(' + s + ')';
+    }
+    var guardado = localStorage.getItem('ficha-brillo');
+    if (guardado !== null) { lux.value = guardado; }
+    aplicar(+lux.value);
+    lux.addEventListener('input', function () {
+      aplicar(+lux.value);
+      localStorage.setItem('ficha-brillo', lux.value);
+    });
+  })();
+</script>
+</body></html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha 04 · La puerta de calidad (quality gate) · caro una vez / barato mil veces</title>
+<style>
+  :root { --bg:#f5f3ee; --card:#fff; --txt:#24292f; --dim:#6b6b6b; --line:#e2e0d9;
+          --azul:#2c6eb5; --verde:#3a7d44; --ambar:#b07d2b; --rojo:#b0392b; }
+  * { box-sizing:border-box; }
+  html { transition: filter .35s ease; }
+  body { background:var(--bg); color:var(--txt); margin:0 auto; padding:32px; max-width:900px;
+         font-family:'DM Sans',-apple-system,system-ui,sans-serif; line-height:1.6; }
+  .kicker { font-family:'DM Mono',monospace; font-size:12px; color:var(--azul);
+            text-transform:uppercase; letter-spacing:.08em; }
+  h1 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:29px; margin:2px 0 4px; }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:14px; }
+  .mono { font-family:'DM Mono',monospace; }
+  h2 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:21px;
+        margin:34px 0 8px; padding-top:14px; border-top:2px solid var(--line); }
+  h3 { font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:16px; margin:14px 0 4px; }
+  p { font-size:14.5px; }
+  code { font-family:'DM Mono',ui-monospace,monospace; background:#ece9e1;
+         padding:1px 6px; border-radius:5px; font-size:.9em; }
+  b { color:#1a1a1a; }
+  .tldr { background:#eef3f9; border-left:4px solid var(--azul); border-radius:0 8px 8px 0;
+          padding:14px 18px; font-size:14.5px; margin:10px 0; }
+  .ana { background:#f4f1ea; border-radius:8px; padding:13px 17px; margin:12px 0; font-size:14px; }
+  .ana b { color:#1a1a1a; }
+  .cv { background:#f3f8f3; border-left:4px solid var(--verde); border-radius:0 8px 8px 0;
+        padding:13px 18px; margin:12px 0; font-size:14px; }
+  .lab { background:#161a21; color:#e6e1d6; border-radius:14px; padding:18px 22px; margin:14px 0; }
+  .lab h3 { color:#fff; margin-top:0; } .lab p { color:#c8ccd2; font-size:13.5px; }
+  .lab code { background:#2a2f38; color:#d8a657; }
+  .reveal { opacity:0; transform:translateY(20px); transition:opacity .6s ease, transform .6s ease; }
+  .reveal.visible { opacity:1; transform:none; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin:14px 0; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0; }
+  th,td { border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top; }
+  th { background:#ece9e1; font-weight:600; }
+  .foot { color:var(--dim); font-size:11.5px; margin-top:32px; font-family:'DM Mono',monospace;
+          border-top:1px solid var(--line); padding-top:12px; }
+  #brillo { position:fixed; top:14px; right:14px; display:flex; align-items:center; gap:7px;
+            background:rgba(255,255,255,.82); border:1px solid var(--line); border-radius:20px;
+            padding:6px 12px; font-size:13px; box-shadow:0 1px 4px rgba(0,0,0,.08); z-index:50; }
+  #brillo input { width:90px; accent-color:var(--ambar); }
+
+  /* ── flujo caro/barato ── */
+  .flow { display:flex; flex-wrap:wrap; align-items:stretch; gap:0; margin:14px 0; }
+  .fstep { flex:1; min-width:180px; background:var(--card); border:1px solid var(--line);
+           border-radius:12px; padding:14px 16px; margin:6px; position:relative; }
+  .fstep .fname { font-family:'DM Mono',monospace; font-size:13px; font-weight:600; color:var(--txt); }
+  .fstep .fcost { display:inline-block; font-family:'DM Mono',monospace; font-size:10.5px;
+                  border-radius:20px; padding:2px 9px; margin:6px 0; letter-spacing:.04em; }
+  .fstep .caro { background:#f7e9e6; color:var(--rojo); border:1px solid #e5c3bd; }
+  .fstep .barato { background:#e9f2ea; color:var(--verde); border:1px solid #bcd8bf; }
+  .fstep .fdesc { font-size:12.5px; color:var(--dim); margin-top:2px; }
+  .fstep .fout { font-family:'DM Mono',monospace; font-size:11px; color:var(--azul); margin-top:8px; }
+
+  /* ── puerta interactiva ── */
+  .gate { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin:16px 0; }
+  .gate-ctrl { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; }
+  .gate-ctrl .lbl { font-family:'DM Mono',monospace; font-size:12px; color:var(--dim); }
+  .gbtn { font-family:'DM Mono',monospace; font-size:13px; cursor:pointer; border:1px solid var(--line);
+          background:#efece4; color:var(--txt); border-radius:8px; padding:8px 14px; transition:all .15s; }
+  .gbtn:hover { border-color:var(--azul); }
+  .gbtn.on { background:var(--azul); color:#fff; border-color:var(--azul); }
+  .term { background:#0f1419; color:#c8ccd2; border-radius:10px; padding:14px 16px; overflow-x:auto;
+          font-family:'DM Mono',ui-monospace,monospace; font-size:12.5px; line-height:1.65; }
+  .term .cmd { color:#8ab4f8; } .term .g { color:#5dd18b; } .term .r { color:#ff7b6b; }
+  .term .d { color:#7d8590; } .term .y { color:#d8a657; }
+  .verdict { font-family:'Fraunces',serif; font-weight:600; font-size:18px; margin-top:12px; }
+  .verdict.pass { color:var(--verde); } .verdict.fail { color:var(--rojo); }
+  @media (prefers-reduced-motion: reduce){ .reveal{opacity:1;transform:none} }
+</style></head><body>
+
+<div id="brillo" title="Brillo: día → noche cálida (filtra luz azul)">☀️<input id="lux" type="range" min="0" max="100" value="0">🌙</div>
+
+<div class="kicker">Ficha 04 · conceptos · harness de evaluación</div>
+<h1>La puerta de calidad</h1>
+<div class="sub mono">quality gate · separar lo caro de lo barato · una sola fuente de verdad · 9 jul 2026 · protocolo ds-nexus</div>
+
+<div class="tldr reveal"><b>Una puerta de calidad convierte el harness en una red de seguridad automática.</b>
+El truco de ingeniería es <b>separar el paso caro del barato</b>: interrogar al RAG y llamar a los jueces
+LLM <b>cuesta dinero</b> y se hace <b>una vez</b>; comprobar si ese resultado empeoró respecto a la versión
+anterior es <b>gratis</b> y se hace <b>tantas veces como quieras</b>. Al final la puerta es un simple
+<code>pytest</code> que se pone <span style="color:var(--verde)"><b>verde</b></span> o
+<span style="color:var(--rojo)"><b>rojo</b></span> — y un pipeline entiende ese color.</div>
+
+<h2>1 · El problema: "mejoré el RAG"… ¿seguro?</h2>
+<p class="reveal">Tocas un umbral, cambias un prompt, subes el modelo. ¿Mejoró o empeoró? Sin una medida,
+la única respuesta es <b>"a ojo, parece que va mejor"</b> — y a ojo no se ve lo peor que puede pasar:
+que una versión nueva empiece a <b>alucinar</b> justo en las preguntas que antes contestaba callándose.
+La puerta de calidad existe para que ese "parece que va mejor" se convierta en un <b>número que no admite
+autoengaño</b>.</p>
+
+<div class="ana reveal"><b>Analogía — el detector de humos cableado a la alarma.</b> Evaluar es
+<i>oler el humo</i> (mides fidelidad, relevancia, aciertos). La puerta es el <i>cable que conecta ese olor
+con la sirena</i>: si el humo supera un límite, salta sola, sin que nadie tenga que estar mirando. Un
+harness sin puerta es un detector sin cablear: mide, pero no te avisa.</div>
+
+<h2>2 · La idea clave: caro una vez, barato mil veces</h2>
+<p class="reveal">El coste no está repartido por igual. <b>Solo el primer paso gasta API.</b> Separarlo del
+resto es lo que hace que la puerta se pueda correr en cada <i>commit</i> sin arruinarte:</p>
+
+<div class="flow reveal">
+  <div class="fstep">
+    <div class="fname">evaluar.py</div>
+    <span class="fcost caro">● CUESTA API</span>
+    <div class="fdesc">Interroga al RAG con el dataset golden + jueces LLM (fidelidad, relevancia).</div>
+    <div class="fout">→ resultados.json</div>
+  </div>
+  <div class="fstep">
+    <div class="fname">comparar.py</div>
+    <span class="fcost barato">○ gratis</span>
+    <div class="fdesc">Diff del resultado contra la línea base. Aplica tolerancias y marca regresiones.</div>
+    <div class="fout">→ veredicto + exit code</div>
+  </div>
+  <div class="fstep">
+    <div class="fname">test_calidad.py</div>
+    <span class="fcost barato">○ gratis</span>
+    <div class="fdesc">Asserts de <code>pytest</code> sobre ese diff. Verde si nada empeoró, rojo si algo cayó.</div>
+    <div class="fout">→ 🟢 / 🔴</div>
+  </div>
+</div>
+<p class="reveal"><b><code>pytest</code> no toca la API:</b> solo lee dos JSON ya producidos (la línea base y el
+candidato). Por eso el flujo es <i>«evalúa una vez, testea cuantas veces quieras»</i>. El paso caro corre
+cuando cambias algo de verdad; la puerta se ejecuta sola sobre su salida, gratis, en cada push.</p>
+
+<h2>3 · Una sola fuente de verdad</h2>
+<p class="reveal">Un error clásico sería que <code>test_calidad.py</code> reimplementara su propia idea de "qué
+es una regresión". Entonces tendrías <b>dos definiciones que pueden contradecirse</b>: el informe dice
+"todo bien" y el test dice "roto", o al revés. Aquí el test <b>importa y reutiliza</b> <code>comparar.py</code>
+—las mismas tolerancias, el mismo criterio— y solo lo envuelve en asserts legibles:</p>
+
+<div class="card reveal mono" style="font-size:12.5px; line-height:1.7;">
+<span style="color:var(--verde)">import</span> comparar   <span style="color:var(--dim)"># la MISMA lógica que el informe</span><br><br>
+<span style="color:var(--verde)">def</span> test_sin_regresiones_duras(diff):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--dim)"># si comparar.py marcó una regresión, esto es ROJO</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--azul)">assert</span> diff[<span style="color:var(--ambar)">"regresiones"</span>] == []
+</div>
+<p class="reveal">Es el mismo <code>exit code 0/1</code> de <code>comparar.py</code>, pero expresado como tests que
+un humano lee de un vistazo y un pipeline de CI entiende sin ambigüedad. <b>Una definición, dos caras.</b></p>
+
+<h2>4 · La puerta en acción (pruébala)</h2>
+<p class="reveal">Esta es la historia real del harness. Con el umbral en <code>0.43</code> todo pasa. Pero cuando
+existía la regresión del umbral <b>blando</b> a <code>0.40</code>, la pregunta <b>T1 "irse de casa"</b>
+—<i>ausente del corpus</i>— se colaba como respondida: una <b>alucinación</b>. Cambia el candidato y mira
+cómo la puerta se pone roja <b>sola</b>:</p>
+
+<div class="gate reveal">
+  <div class="gate-ctrl">
+    <span class="lbl">candidato a testear:</span>
+    <button class="gbtn on" id="b043" onclick="setGate('043')">umbral 0.43 (bueno)</button>
+    <button class="gbtn" id="b040" onclick="setGate('040')">umbral 0.40 (regresión)</button>
+  </div>
+  <div class="term" id="term"></div>
+  <div class="verdict" id="verdict"></div>
+</div>
+<p class="reveal mono" style="font-size:12px; color:var(--dim)">HARNESS_CAND=resultados_u040.json pytest -v
+&nbsp;·&nbsp; apuntar la puerta a otro candidato sin tocar el motor</p>
+
+<div class="cv reveal"><b>Para tu CV / entrevista.</b> «Envolví las métricas de calidad del RAG en una
+<b>puerta de calidad con pytest</b>: separé el paso caro (evaluación con jueces LLM, que gasta API y corre
+una vez) del barato (comparación contra una línea base, gratis, en cada cambio). El test <b>reutiliza</b>
+la lógica de comparación para no tener dos definiciones de regresión, y tiene un assert dedicado a
+<b>detectar alucinaciones nuevas</b>. Verificado: con la regresión reintroducida a propósito, la puerta se
+pone roja y caza el falso positivo.» → esto es <b>MLOps aplicado</b>, no teoría.</div>
+
+<div class="lab reveal">
+  <h3>El patrón, en una frase</h3>
+  <p>Un <b>quality gate</b> es lo que separa "tengo un harness" de "tengo un harness que <i>me protege</i>".
+  Evaluar es medir; la puerta es <b>actuar sobre la medida sin que yo esté delante</b>. El día que este
+  proyecto tenga CI en GitHub Actions, esta misma puerta es la que dice "no fusiones: acabas de introducir
+  una alucinación". Hoy corre en local; el diseño ya está listo para el pipeline.</p>
+</div>
+
+<div class="foot">ficha 04 · harness de evaluación · artefacto 3 · ruta data science → ai engineering · denys porynets</div>
+
+<script>
+  // brillo
+  (function(){var l=document.getElementById('lux');function a(v){document.documentElement.style.filter='brightness('+(1-v*0.0028)+') sepia('+(v*0.0055)+')';}
+    var g=localStorage.getItem('ficha-brillo'); if(g!==null)l.value=g; a(+l.value);
+    l.addEventListener('input',function(){a(+l.value);localStorage.setItem('ficha-brillo',l.value);});})();
+
+  // scroll-reveal
+  (function(){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target);}});},{threshold:0.1});
+    document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});})();
+
+  // ── puerta de calidad interactiva ──
+  var GATE = {
+    '043': { pass:true, lines:[
+      ['cmd','$ pytest -v'],
+      ['d',  ''],
+      ['g','test_sin_regresiones_duras ............... PASSED'],
+      ['g','test_ninguna_alucinacion_nueva ........... PASSED'],
+      ['g','test_decision_no_empeora ................. PASSED'],
+      ['g','test_calidad_media_no_cae[faithfulness] .. PASSED'],
+      ['g','test_calidad_media_no_cae[relevancia] .... PASSED'],
+      ['g','test_citas_no_caen ....................... PASSED'],
+      ['d',  ''],
+      ['g','===== 6 passed in 0.12s ====='] ],
+      verdict:'🟢 Puerta ABIERTA — ninguna regresión. Se puede fusionar.' },
+    '040': { pass:false, lines:[
+      ['cmd','$ HARNESS_CAND=resultados_u040.json pytest -v'],
+      ['d',  ''],
+      ['r','test_sin_regresiones_duras ............... FAILED'],
+      ['r','test_ninguna_alucinacion_nueva ........... FAILED'],
+      ['g','test_decision_no_empeora ................. PASSED'],
+      ['g','test_calidad_media_no_cae[faithfulness] .. PASSED'],
+      ['g','test_calidad_media_no_cae[relevancia] .... PASSED'],
+      ['g','test_citas_no_caen ....................... PASSED'],
+      ['d',  ''],
+      ['y','E   AssertionError: Alucinación nueva:'],
+      ['y','E     · T1 FALSO POSITIVO — "irse de casa" (AUSENTE) respondida a sim 0.421'],
+      ['d',  ''],
+      ['r','===== 2 failed, 4 passed in 0.11s ====='] ],
+      verdict:'🔴 Puerta CERRADA — alucinación detectada. NO fusionar.' }
+  };
+  function setGate(k){
+    document.getElementById('b043').classList.toggle('on', k==='043');
+    document.getElementById('b040').classList.toggle('on', k==='040');
+    var g=GATE[k], t=document.getElementById('term');
+    t.innerHTML = g.lines.map(function(l){ return '<span class="'+l[0]+'">'+(l[1]||'&nbsp;')+'</span>'; }).join('<br>');
+    var v=document.getElementById('verdict');
+    v.textContent=g.verdict; v.className='verdict '+(g.pass?'pass':'fail');
+  }
+  setGate('043');
+</script>
+</body></html>

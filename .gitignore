@@ -50,3 +50,14 @@ chroma_db/
 # Material visual de trabajo (mapa vectorial de demo): local, no se publica de momento
 material-visual/
 **/material-visual/
+
+# ── Artefacto 3 · BLINDAJE DEL HARNESS DE EVALUACION ──
+# El dataset de evaluacion y sus resultados citan/derivan del corpus personal.
+# (El codigo de los jueces y el bucle SI puede subir: es la logica, no el dato.)
+**/dataset_eval.json
+**/baseline.json
+**/resultados*.json
+**/resultados*.html
+**/informe_eval*.html
+**/comparacion*.json
+**/comparacion*.html
