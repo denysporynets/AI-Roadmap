@@ -842,7 +842,7 @@
 
 <script>
 (function() {
-  const STORAGE_KEY = 'ai-eng-roadmap-v3';
+  const STORAGE_KEY = 'ai-eng-roadmap-v4';
 
   // Estado real "horneado": lo que ya está entregado y verificado, para que
   // un visitante nuevo (sin localStorage) vea la progresión verdadera y no 0/6.
@@ -851,7 +851,8 @@
   const BAKED = {
     d1:true, 's1-1':true, 's1-2':true, 's1-3':true,
     d2:true, 's2-1':true, 's2-2':true, 's2-3':true,
-    d3:true, 's3-1':true, 's3-2':true, 's3-3':true, 'c3-1':true
+    d3:true, 's3-1':true, 's3-2':true, 's3-3':true, 'c3-1':true,
+    'c4-1':true  // curso "Building AI Agents with LangChain/LangGraph" (DataCamp) hecho 10/07
   };
 
   function loadState() {
