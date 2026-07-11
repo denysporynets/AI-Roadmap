@@ -1,0 +1,6 @@
+# Dependencias de la imagen del agente (Fase 5) — versiones pineadas.
+# Mismas que el venv local, para que la nube reproduzca lo que probaste.
+openai==2.45.0
+python-dotenv==1.2.2
+fastapi==0.139.0
+uvicorn[standard]==0.51.0

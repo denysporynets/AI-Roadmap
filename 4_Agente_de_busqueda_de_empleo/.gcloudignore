@@ -1,0 +1,31 @@
+# .gcloudignore — qué NO subir al build context de Cloud Build (deploy --source).
+# ================================================================================
+# CRÍTICO: sin este fichero, gcloud se basa en el .gitignore raíz (que esconde
+# datos_personales/) y subiría una imagen SIN el CV → agente roto. Este fichero
+# gobierna el upload y garantiza que cv_denys.md SÍ viaja, y nada sensible más.
+#
+# Necesario en la imagen: requirements.txt, herramientas.py, agente.py, api.py,
+#   datos_personales/cv_denys.md, static/, Dockerfile
+#
+# Semántica gitignore: un patrón sin '/' aplica a cualquier nivel. Excluimos por
+# ruta para no barrer de más (p.ej. static/index.html debe sobrevivir).
+
+# ── Secretos: jamás salen del Mac ──
+.env
+.env.*
+
+# ── Entornos / cachés / control de versiones / basura ──
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.git/
+.gitignore
+
+# ── Material metodológico y no servible ──
+conceptos/
+00_diseno_agente.html
+cli.py
+
+# ── La copia HTML del CV fuera; el .md (que el agente lee) se queda ──
+datos_personales/cv_denys.html

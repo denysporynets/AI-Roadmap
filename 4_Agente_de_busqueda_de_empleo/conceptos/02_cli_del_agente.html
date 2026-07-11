@@ -1,0 +1,270 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artefacto 4 · La interfaz CLI: darle una boca al agente (Fase 3)</title>
+<style>
+  :root{
+    --warmth: 0;
+    --bg: hsl(40 30% calc(98% - var(--warmth) * 12%));
+    --panel: hsl(40 33% calc(100% - var(--warmth) * 14%));
+    --ink: hsl(30 15% calc(18% + var(--warmth) * 4%));
+    --soft: hsl(30 10% calc(42% + var(--warmth) * 6%));
+    --amber: hsl(38 92% calc(45% - var(--warmth) * 6%));
+    --line: hsl(38 25% calc(86% - var(--warmth) * 12%));
+    --code-bg: hsl(40 25% calc(95% - var(--warmth) * 13%));
+    --accent-soft: hsl(38 60% calc(92% - var(--warmth) * 12%));
+    --green: hsl(150 45% calc(38% - var(--warmth) * 4%));
+    --green-soft: hsl(150 40% calc(93% - var(--warmth) * 12%));
+    --term-bg: hsl(220 18% calc(16% + var(--warmth) * 3%));
+    --term-ink: hsl(150 30% 82%);
+    --blue-filter: sepia(calc(var(--warmth) * 0.35)) brightness(calc(1 - var(--warmth) * 0.04));
+  }
+  *{box-sizing:border-box}
+  html{filter:var(--blue-filter);transition:filter .3s}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.65;font-size:18px;
+    padding:0 20px 120px;
+    transition:background .3s,color .3s;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{padding:54px 0 20px;border-bottom:2px solid var(--line);margin-bottom:36px}
+  .kicker{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);font-weight:600}
+  h1{font-size:34px;line-height:1.15;margin:.35em 0 .15em;font-weight:600}
+  .sub{color:var(--soft);font-size:16px;font-style:italic}
+  h2{font-size:24px;margin:2.2em 0 .5em;font-weight:600;display:flex;align-items:baseline;gap:.5em}
+  h2 .n{font-family:"DM Mono",ui-monospace,monospace;font-size:14px;color:var(--amber);font-weight:600}
+  h3{font-size:18px;margin:1.6em 0 .4em;font-weight:600;font-family:system-ui,sans-serif}
+  p,li{font-size:18px}
+  strong{color:var(--ink);font-weight:600}
+  em.hl{font-style:normal;background:var(--accent-soft);padding:.05em .3em;border-radius:5px}
+  .lead{font-size:20px;line-height:1.6}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin:20px 0}
+  .panel.amber{border-left:4px solid var(--amber);background:var(--accent-soft)}
+  .panel.green{border-left:4px solid var(--green);background:var(--green-soft)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;overflow-x:auto;font-family:"DM Mono",ui-monospace,Menlo,monospace;
+    font-size:13.5px;line-height:1.6;color:var(--ink)}
+  code{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+    background:var(--code-bg);padding:.1em .35em;border-radius:5px}
+  pre code{background:none;padding:0}
+  .term{background:var(--term-bg);color:var(--term-ink);border-radius:10px;padding:16px 18px;
+    font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:13.5px;line-height:1.6;
+    overflow-x:auto;white-space:pre;border:1px solid hsl(220 18% 26%)}
+  .term .u{color:hsl(45 80% 70%)}
+  .term .a{color:hsl(150 45% 65%)}
+  .term .d{color:hsl(220 15% 55%)}
+  .cap{font-family:system-ui,sans-serif;font-size:13px;color:var(--soft);margin:-8px 0 20px;font-style:italic}
+  table{width:100%;border-collapse:collapse;margin:18px 0;font-family:system-ui,sans-serif;font-size:15px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft)}
+  .tag{display:inline-block;font-family:"DM Mono",monospace;font-size:12px;padding:.15em .5em;
+    border-radius:6px;background:var(--accent-soft);color:var(--amber);border:1px solid var(--line)}
+  ul{padding-left:1.2em}
+  li{margin:.35em 0}
+  .flow{font-family:"DM Mono",ui-monospace,monospace;font-size:13.5px;white-space:pre;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:18px;overflow-x:auto;line-height:1.5}
+  .toc{font-family:system-ui,sans-serif;font-size:15px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;padding:16px 22px;margin:24px 0}
+  .toc a{color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--soft)}
+  .toc ol{margin:.4em 0;padding-left:1.4em}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--soft);font-size:14px;font-family:"DM Mono",monospace}
+  .dial{position:fixed;top:14px;right:14px;z-index:99;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:8px 14px;display:flex;
+    align-items:center;gap:10px;box-shadow:0 2px 14px hsl(30 20% 20% / .12);
+    font-family:system-ui,sans-serif;font-size:13px;color:var(--soft)}
+  .dial input{width:110px;accent-color:var(--amber)}
+  .ok{color:var(--green);font-weight:600}
+</style>
+
+<div class="dial">
+  <span>☀️</span>
+  <input id="warmth" type="range" min="0" max="100" value="0" aria-label="Brillo día/noche">
+  <span>🌙</span>
+</div>
+
+<div class="wrap">
+<header>
+  <div class="kicker">Artefacto 4 · AI Engineering · Concepto 02 (Fase 3)</div>
+  <h1>Darle una boca al agente</h1>
+  <div class="sub">La interfaz CLI: de un script que se ejecuta y muere a un chat de terminal donde conversas con la máquina.</div>
+</header>
+
+<p class="lead">La Fase 2 dejó el agente funcionando, pero solo se le puede hablar editando el código y
+volviendo a lanzar el script. Eso no es usable. La Fase 3 le pone una <strong>boca y unos oídos</strong>:
+un bucle de terminal donde pegas ofertas, una tras otra, sin reejecutar nada. Poca lógica nueva,
+mucha usabilidad — y una idea de arquitectura que vale oro para tu CV.</p>
+
+<div class="toc">
+<strong>Lo que hay dentro</strong>
+<ol>
+  <li><a href="#s1">De "ejecutar y morir" a conversar (el REPL)</a></li>
+  <li><a href="#s2">Dos bucles anidados (el truco mental de la fase)</a></li>
+  <li><a href="#s3">Leer una oferta que ocupa muchas líneas</a></li>
+  <li><a href="#s4">Motor vs interfaz: la separación que lo cambia todo</a></li>
+  <li><a href="#s5">¿"Streaming"? Para un agente, mejor mostrar los pasos</a></li>
+  <li><a href="#s6">UX mínima: comandos y salidas limpias</a></li>
+  <li><a href="#s7">Diccionario del mundo real (para tu CV)</a></li>
+</ol>
+</div>
+
+<h2 id="s1"><span class="n">01</span> De "ejecutar y morir" a conversar</h2>
+<p>Hasta ahora, cada prueba era: editas el <code>if __name__ == "__main__"</code>, lanzas
+<code>python agente.py</code>, imprime una vez y <em class="hl">muere</em>. Para probar otra oferta, repites todo.</p>
+<p>Un <strong>REPL</strong> (<em>Read–Eval–Print Loop</em>: leer–evaluar–imprimir–repetir) le da vida continua.
+Es el patrón de la consola de Python, de <code>psql</code>, de cualquier chat de terminal: un bucle que
+<em>espera tu entrada, la procesa, muestra el resultado y vuelve a esperar</em>.</p>
+<div class="flow">script de un solo uso        REPL (chat de terminal)
+─────────────────────        ───────────────────────
+ lanzar                        lanzar
+   │                             │
+ procesar 1 vez          ┌──▶ leer lo que escribes
+   │                     │       │
+ morir                   │    procesar (el agente gira)
+                         │       │
+                         │    imprimir resultado
+                         └────── volver a esperar   (hasta /salir)</div>
+
+<h2 id="s2"><span class="n">02</span> Dos bucles anidados</h2>
+<p>Este es el clic mental de la fase. Ahora hay <strong>dos</strong> bucles, uno dentro del otro, y no son lo mismo:</p>
+<div class="flow">┌─ BUCLE EXTERNO · el CLI (turnos HUMANOS) ────────────────┐
+│   esperas → pegas una oferta → ves la respuesta → repites │
+│                                                           │
+│     ┌─ BUCLE INTERNO · el agente (turnos del MODELO) ──┐  │
+│     │   analizar_oferta → match_cv → redactar → fin    │  │
+│     │   (esto es la Fase 2, gira solo por dentro)      │  │
+│     └───────────────────────────────────────────────── ┘  │
+│                                                           │
+└───────────────────────────────────────────────────────────┘</div>
+<div class="panel amber">
+<p style="margin:0"><strong>La frase para una entrevista:</strong> «El bucle del <em>agente</em> decide qué herramienta usar;
+el bucle del <em>CLI</em> decide cuándo volver a escuchar al humano. Son dos responsabilidades distintas — por eso viven en dos ficheros distintos.»</p>
+</div>
+
+<h2 id="s3"><span class="n">03</span> Leer una oferta multilínea</h2>
+<p>Un detalle práctico que muerde: <code>input()</code> lee <strong>una sola línea</strong>. Pero una oferta de
+LinkedIn son 20 líneas. Si no lo resolvemos, solo capturaríamos el primer renglón. La solución clásica:
+seguir leyendo líneas hasta una <em class="hl">línea en blanco</em> (o un comando), y unirlas.</p>
+<pre><code>def leer_oferta() -> str:
+    """Lee texto de varias líneas hasta una línea vacía (o /salir)."""
+    print("\nPega la oferta y deja una línea en blanco para enviar "
+          "(/salir para terminar):")
+    lineas = []
+    while True:
+        try:
+            linea = input()
+        except EOFError:            # Ctrl-D → tratar como salir
+            return "/salir"
+        if linea.strip() == "/salir":
+            return "/salir"
+        if linea.strip() == "":     # línea en blanco...
+            if lineas:              #   ...y ya hay contenido → enviar
+                break
+            continue                #   ...al principio → ignorar
+        lineas.append(linea)
+    return "\n".join(lineas)</code></pre>
+<p class="cap">Leemos el bloque entero, no un renglón. La línea en blanco es el "Enter grande" que dice «ya está, procésalo».</p>
+
+<h2 id="s4"><span class="n">04</span> Motor vs interfaz</h2>
+<p>Aquí está la idea de arquitectura, la misma que aplicaste en el <strong>Artefacto 2</strong> (allí separaste
+<code>rag_core.py</code> del <code>api.py</code>). El <strong>agente es el motor</strong>; el <strong>CLI es solo una interfaz</strong>
+que lo alimenta con texto y muestra su salida. No mete lógica de negocio: solo habla con el humano.</p>
+<pre><code># cli.py — la interfaz NO sabe nada de herramientas ni de tool calls.
+from agente import agente          # ← importa el motor entero, ya montado
+
+def main():
+    print(BIENVENIDA)
+    while True:                                   # bucle EXTERNO (humano)
+        entrada = leer_oferta()
+        if entrada.strip() == "/salir":
+            print("¡Hasta luego! 👋"); break
+        respuesta = agente(                        # ← delega TODO al motor
+            f"Analiza esta oferta y prepárame la candidatura:\n{entrada}"
+        )
+        print(respuesta)</code></pre>
+<div class="panel green">
+<p style="margin:0 0 .5em"><strong>Por qué esto es oro:</strong></p>
+<p style="margin:0">El mismo <code>agente()</code> que llama este CLI lo llamará la <strong>API web</strong> en la Fase 4,
+sin tocar una línea del motor. <em class="hl">Un motor, muchas interfaces</em>: terminal hoy, HTTP mañana.
+Es exactamente lo que hiciste en el Art.2 (<code>rag_core</code> servía al CLI y a FastAPI). Reutilizas el patrón que ya dominas.</p>
+</div>
+
+<h2 id="s5"><span class="n">05</span> ¿"Streaming"?</h2>
+<p>En un chat normal (una sola llamada al LLM) mola ver la respuesta aparecer palabra a palabra:
+eso es <strong>streaming</strong> — pides <code>stream=True</code> e imprimes los trocitos según llegan.
+Pero un <em>agente</em> es distinto: por dentro hace <strong>varias</strong> llamadas y la mayoría no son texto,
+son peticiones de herramienta. Hacer streaming de eso es enredado (los <code>tool_calls</code> llegan a cachos).</p>
+<div class="panel">
+<p style="margin:0"><strong>Decisión honesta para v1:</strong> en vez de streamear tokens, mostramos <em class="hl">los pasos</em>.
+El modo verboso que ya escribimos en la Fase 2 imprime <code>turno 1: analizar_oferta ✓</code>… — y para un agente
+eso es <em>mejor</em> señal de vida que el texto goteando: ves <strong>qué está haciendo</strong>, no solo que está escribiendo.
+El streaming de tokens del texto final queda como mejora futura documentada.</p>
+</div>
+<div class="term"><span class="d">$ python cli.py</span>
+<span class="a">Pega la oferta y deja una línea en blanco para enviar…</span>
+<span class="u">Buscamos AI Engineer (Mid) en Madrid…</span>
+<span class="u">Imprescindible: Python, RAG, Docker…</span>
+<span class="u">⏎</span>
+<span class="d">── turno 1: el modelo pide → analizar_oferta
+     ✓ analizar_oferta → {"puesto":"AI Engineer",…}
+── turno 2: el modelo pide → match_cv
+     ✓ match_cv → {"encaje_global":"medio",…}
+── turno 3: el modelo pide → redactar_borrador
+     ✓ redactar_borrador → {"asunto":"Candidatura…",…}
+── turno 4: respuesta final</span>
+<span class="a">Encajas bien: cumples los imprescindibles. Aquí tu borrador…</span></div>
+<p class="cap">Los pasos hacen de barra de progreso. Sabes que analizó, comparó y redactó — no un spinner mudo.</p>
+
+<h2 id="s6"><span class="n">06</span> UX mínima</h2>
+<p>Un CLI amable no necesita mucho, pero sí lo básico para no frustrar:</p>
+<ul>
+  <li><strong>Un saludo</strong> que explique qué hacer (pegar oferta + línea en blanco).</li>
+  <li><strong><code>/salir</code></strong> para terminar con elegancia, y <strong>Ctrl-D / Ctrl-C</strong> capturados
+  para que cerrar no escupa un traceback feo.</li>
+  <li><strong>Separadores visuales</strong> entre tu entrada y la respuesta, para que no se mezclen.</li>
+  <li><strong>Mensajes honestos</strong>: si algo falla o se agota <code>max_turnos</code>, decirlo claro (no fingir éxito).</li>
+</ul>
+<div class="panel amber">
+<p style="margin:0"><strong>Alcance de v1 (decisión deliberada, ritmo pausado):</strong> cada oferta es una consulta
+<em>independiente</em> — el agente arranca fresco cada vez. No mantenemos conversación entre ofertas.
+Los <em>follow-ups</em> tipo «hazme la carta más corta» exigirían conservar la memoria entre turnos humanos;
+queda anotado como la evolución natural, para no meter dos conceptos nuevos a la vez.</p>
+</div>
+
+<h2 id="s7"><span class="n">07</span> Diccionario del mundo real</h2>
+<table>
+  <tr><th>Concepto</th><th>Qué es aquí</th><th>Dónde vive fuera</th></tr>
+  <tr><td><strong>REPL</strong></td><td>el bucle leer→procesar→imprimir del CLI</td><td>la consola de Python, <code>psql</code>, <code>node</code>, toda shell interactiva</td></tr>
+  <tr><td><strong>stdin / input()</strong></td><td>leer lo que teclea el usuario</td><td>toda app de terminal; base de los pipes de Unix</td></tr>
+  <tr><td><strong>Separación motor/interfaz</strong></td><td><code>agente.py</code> vs <code>cli.py</code></td><td>el principio que permite reusar el motor en API, web, bots…</td></tr>
+  <tr><td><strong>Streaming</strong></td><td>texto token a token (aquí: pasos)</td><td>ChatGPT, Claude; por debajo suele ir sobre SSE</td></tr>
+  <tr><td><strong>Statefulness</strong></td><td>¿recuerda entre ofertas? (v1: no)</td><td>sesiones de chat, carritos, cualquier app con "contexto"</td></tr>
+  <tr><td><strong>Graceful exit</strong></td><td>capturar Ctrl-C/Ctrl-D sin traceback</td><td>higiene básica de cualquier CLI de producción</td></tr>
+</table>
+
+<div class="panel green">
+<p style="margin:0"><strong>Para tu CV, en una frase:</strong> «Envolví el motor del agente en un REPL de terminal manteniendo
+la <em>separación motor/interfaz</em>, de forma que el mismo núcleo alimenta el CLI y —sin cambios— la API web
+del despliegue.» Eso demuestra criterio de arquitectura, no solo saber imprimir en pantalla.</p>
+</div>
+
+<h2><span class="n">→</span> Y ahora, la Fase 3</h2>
+<p>Con el plano claro, implementar es casi transcribir: un fichero <code>cli.py</code> que importe
+<code>agente</code>, con <code>leer_oferta()</code> para el texto multilínea y un <code>main()</code> con el bucle
+externo, los comandos y las salidas limpias. Lo probamos pegando una oferta real en la terminal. Una pieza a la vez.</p>
+
+<footer>
+  protocolo ds-nexus · Artefacto 4 de 6 · concepto 02 · Fase 3 · 11/07/2026 · un motor, muchas interfaces
+</footer>
+</div>
+
+<script>
+  const dial = document.getElementById('warmth');
+  const apply = v => document.documentElement.style.setProperty('--warmth', v/100);
+  const saved = localStorage.getItem('a4-warmth');
+  if(saved !== null){ dial.value = saved; apply(saved); }
+  dial.addEventListener('input', e => { apply(e.target.value); localStorage.setItem('a4-warmth', e.target.value); });
+</script>

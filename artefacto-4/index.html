@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artefacto 4 — Agente de búsqueda de empleo · Ruta AI Engineering</title>
+<meta name="description" content="Un agente con tool use real, escrito a mano sobre el SDK de OpenAI (sin LangGraph): lee una oferta, la contrasta con el CV y redacta un borrador de candidatura, orquestando tres herramientas en un bucle. Desplegado en Cloud Run tras un token. Cuarto artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0d1117; --bg-card:#151b23; --bg-card-h:#1a2230; --ink:#e6edf3; --muted:#7d8590;
+    --border:#2a3340; --amber:#f0a500; --amber-dim:#5c4419; --green:#3fb950; --green-dim:#1d3a23;
+    --yellow:#d9a520; --blue:#4a8cff; --red:#f85149; --red-dim:#3a1d1d;
+  }
+  html, body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; line-height:1.6; }
+  .wrap { max-width:880px; margin:0 auto; padding:28px 24px 80px; }
+  .topnav { display:flex; justify-content:space-between; align-items:center; margin-bottom:44px; flex-wrap:wrap; gap:12px; }
+  .topnav a { font-family:'DM Mono',monospace; font-size:12px; color:var(--muted); text-decoration:none;
+    border:1px solid var(--border); border-radius:6px; padding:6px 12px; transition:all 0.15s; }
+  .topnav a:hover { color:var(--ink); border-color:var(--muted); }
+  .topnav .navgroup { display:flex; gap:8px; flex-wrap:wrap; }
+  .hero { margin-bottom:40px; }
+  .hero-eyebrow { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--amber); margin-bottom:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .badge-done { color:var(--green); background:var(--green-dim); border-radius:4px; padding:2px 8px; letter-spacing:1px; }
+  .hero-title { font-family:'Fraunces',serif; font-weight:300; font-size:clamp(30px,5vw,44px); line-height:1.07;
+    letter-spacing:-0.5px; margin-bottom:16px; }
+  .hero-title strong { font-weight:600; color:var(--amber); }
+  .hero-sub { font-size:15px; color:var(--muted); max-width:640px; }
+  .hero-sub strong { color:var(--ink); font-weight:600; }
+  .section { margin-top:44px; }
+  .sec-eyebrow { font-family:'DM Mono',monospace; font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--amber); margin-bottom:12px; }
+  .sec-title { font-family:'Fraunces',serif; font-size:24px; font-weight:600; margin-bottom:14px; }
+  .sec-p { font-size:14.5px; color:var(--muted); margin-bottom:14px; }
+  .sec-p strong { color:var(--ink); font-weight:600; }
+  .pipeline { display:flex; align-items:stretch; gap:0; flex-wrap:wrap; background:var(--bg-card);
+    border:1px solid var(--border); border-radius:12px; padding:8px; margin:18px 0; }
+  .pipe-step { flex:1; min-width:150px; padding:16px; text-align:center; }
+  .pipe-step .pe { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:6px; }
+  .pipe-step .pt { font-size:14px; color:var(--ink); font-weight:500; }
+  .pipe-step .pd { font-size:12px; color:var(--muted); margin-top:4px; }
+  .pipe-arrow { display:flex; align-items:center; color:var(--amber); font-size:18px; }
+  @media (max-width:620px){ .pipe-arrow{ transform:rotate(90deg); margin:0 auto; } }
+  .codecard { background:#0a0e14; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:16px 0; }
+  .code-head { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); padding:9px 14px;
+    border-bottom:1px solid var(--border); background:var(--bg-card); display:flex; justify-content:space-between; }
+  .code-head .tag { color:var(--amber); }
+  pre { padding:14px 16px; overflow-x:auto; }
+  code { font-family:'DM Mono',monospace; font-size:12.5px; line-height:1.7; color:var(--ink); white-space:pre; }
+  .c-key{color:var(--blue)} .c-str{color:var(--green)} .c-com{color:var(--muted);font-style:italic}
+  .c-num{color:var(--amber)} .c-grn{color:var(--green)} .c-yel{color:var(--yellow)} .c-red{color:var(--red)} .c-gry{color:var(--muted)}
+  .checks { display:flex; flex-direction:column; gap:10px; margin:16px 0; }
+  .check { display:flex; gap:12px; align-items:flex-start; background:var(--bg-card); border:1px solid var(--green-dim);
+    border-radius:8px; padding:14px 16px; }
+  .check .mark { width:22px; height:22px; flex-shrink:0; border-radius:6px; background:var(--green);
+    display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .check .mark svg { width:13px; height:13px; }
+  .check .ctitle { font-weight:600; font-size:14.5px; }
+  .check .cdesc { font-size:13px; color:var(--muted); margin-top:2px; }
+  .dod { margin:20px 0; padding:14px 18px; border-left:3px solid var(--green); background:rgba(63,185,80,0.06);
+    border-radius:0 8px 8px 0; }
+  .dod-label { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--green); margin-bottom:5px; }
+  .dod-text { font-size:14px; color:var(--ink); }
+  .note { margin:18px 0; padding:14px 18px; border-left:3px solid var(--amber); background:rgba(240,165,0,0.06);
+    border-radius:0 8px 8px 0; font-size:13.5px; color:var(--ink); }
+  .note strong { color:var(--amber); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .chip { font-family:'DM Mono',monospace; font-size:12px; border:1px solid var(--border); border-radius:6px;
+    padding:5px 11px; color:var(--muted); }
+  .chip strong { color:var(--amber); font-weight:500; }
+  .cta-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
+  .cta { font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; text-decoration:none; border-radius:8px;
+    padding:11px 20px; transition:all 0.18s; display:inline-flex; align-items:center; gap:8px; }
+  .cta-primary { background:var(--amber); color:#0d1117; }
+  .cta-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(240,165,0,0.25); }
+  .cta-ghost { border:1px solid var(--border); color:var(--muted); }
+  .cta-ghost:hover { color:var(--ink); border-color:var(--muted); }
+  .layers { display:flex; flex-direction:column; gap:10px; margin:18px 0; }
+  .layer { display:flex; gap:14px; align-items:baseline; background:var(--bg-card); border:1px solid var(--border);
+    border-radius:8px; padding:13px 16px; }
+  .layer .lnum { font-family:'DM Mono',monospace; font-size:12px; color:var(--amber); flex-shrink:0; width:128px; }
+  .layer .lbody { font-size:13.5px; }
+  .layer .lbody b { color:var(--ink); }
+  .layer .lbody span { color:var(--muted); }
+  .principle { margin-top:44px; background:linear-gradient(135deg,#1a1410 0%,var(--bg-card) 60%);
+    border:1px solid var(--amber-dim); border-radius:12px; padding:26px 28px; position:relative; overflow:hidden; }
+  .principle::before { content:''; position:absolute; top:-40%; right:-10%; width:220px; height:220px;
+    background:radial-gradient(circle,rgba(240,165,0,0.08),transparent 70%); }
+  .principle-eyebrow { font-family:'DM Mono',monospace; font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--amber); margin-bottom:10px; }
+  .principle-text { font-family:'Fraunces',serif; font-size:19px; font-weight:300; line-height:1.45; color:var(--ink); max-width:660px; }
+  .principle-text strong { font-weight:600; color:var(--amber); }
+  .footer { margin-top:44px; text-align:center; font-family:'DM Mono',monospace; font-size:11px; color:var(--border); }
+  .footer span { color:var(--amber); opacity:0.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topnav">
+    <a href="../ROADMAP.html">← Bitácora del roadmap</a>
+    <div class="navgroup">
+      <a href="../artefacto-3/index.html">← Artefacto 3 (Harness)</a>
+      <a href="https://github.com/denysporynets/AI-Roadmap/tree/main/4_Agente_de_busqueda_de_empleo" target="_blank">Ver código en GitHub ↗</a>
+      <a href="https://denysporynets.github.io">Portfolio ↗</a>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <span>Artefacto 4 · Mes 3–4</span>
+      <span class="badge-done">✓ Desplegado · demo con token</span>
+    </div>
+    <h1 class="hero-title">Agente de búsqueda de empleo<br><strong>tool use real, escrito a mano</strong></h1>
+    <p class="hero-sub">
+      Un agente que <strong>lee una oferta</strong>, la <strong>contrasta con mi CV</strong> y
+      <strong>redacta un borrador de candidatura</strong> — orquestando tres herramientas en un bucle de
+      <em>function calling</em> que escribí a mano sobre el SDK de OpenAI, <strong>sin LangGraph</strong>.
+      Desplegado en Cloud Run, protegido por token. Cuarto artefacto de la ruta
+      <strong>Data Science → AI Engineering</strong>.
+    </p>
+  </div>
+
+  <!-- QUÉ HACE -->
+  <div class="section">
+    <div class="sec-eyebrow">Qué hace</div>
+    <div class="sec-title">Del RAG de un paso al agente de un bucle</div>
+    <p class="sec-p">
+      El RAG del Artefacto 2 es de <strong>un solo salto</strong>: pregunta → recupera → responde. Un agente es
+      distinto: tiene varias herramientas y un <strong>bucle</strong> que <em>decide</em> cuál usar, en qué orden y
+      cuándo ha terminado. El camino no está fijado en el código — lo traza el modelo, leyendo el resultado de cada paso.
+    </p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pe">Paso 1</div>
+        <div class="pt">analizar_oferta</div>
+        <div class="pd">texto crudo → requisitos</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Paso 2</div>
+        <div class="pt">match_cv</div>
+        <div class="pd">requisitos vs CV → encaje</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Paso 3</div>
+        <div class="pt">redactar_borrador</div>
+        <div class="pd">encaje → carta de candidatura</div>
+      </div>
+    </div>
+    <p class="sec-p">
+      El modelo elige ese orden solo. Tú solo pegas la oferta; el bucle piensa, actúa (llama una herramienta),
+      observa el resultado y repite hasta entregar la respuesta.
+    </p>
+  </div>
+
+  <!-- LA DECISIÓN CLAVE -->
+  <div class="section">
+    <div class="sec-eyebrow">La decisión de diseño</div>
+    <div class="sec-title">El bucle, a mano — no una caja opaca</div>
+    <p class="sec-p">
+      Podría haber usado LangGraph. Elegí <strong>escribir el agent loop yo mismo</strong> sobre el SDK de OpenAI:
+      esquemas de herramientas, despachador y guardarraíles. El motivo es de criterio, no de nostalgia —
+      <strong>quiero entender la mecánica que los frameworks abstraen</strong>, y el bucle entero cabe en una pantalla.
+    </p>
+
+    <div class="codecard">
+      <div class="code-head"><span>agente.py · el corazón del agente</span><span class="tag">function calling puro</span></div>
+<pre><code><span class="c-key">for</span> turno <span class="c-key">in</span> <span class="c-grn">range</span>(<span class="c-num">1</span>, max_turnos + <span class="c-num">1</span>):   <span class="c-com"># guardarraíl: nunca infinito</span>
+    resp = cliente.chat.completions.create(
+        model=MODELO, messages=mensajes, tools=TOOLS)   <span class="c-com"># PIENSA</span>
+    msg = resp.choices[<span class="c-num">0</span>].message
+    mensajes.append(msg)
+
+    <span class="c-key">if</span> <span class="c-key">not</span> msg.tool_calls:        <span class="c-com"># ¿no pide herramientas? → terminó</span>
+        <span class="c-key">return</span> msg.content
+
+    <span class="c-key">for</span> tc <span class="c-key">in</span> msg.tool_calls:      <span class="c-com"># ACTÚA + OBSERVA</span>
+        mensajes.append(ejecutar_herramienta(tc))</code></pre>
+    </div>
+  </div>
+
+  <!-- EL HALLAZGO -->
+  <div class="section">
+    <div class="sec-eyebrow">Por qué probar en serio importa</div>
+    <div class="sec-title">La interfaz cazó un error de criterio</div>
+    <p class="sec-p">
+      Al probar el CLI con una oferta <strong>nueva</strong> (no la de ejemplo), el agente marcó
+      <em>"Inglés B2"</em> como requisito <strong>que faltaba</strong>… teniendo el CV un <strong>C1</strong>.
+      Comparaba los niveles de forma literal, sin entender que el marco europeo está <strong>ordenado</strong>
+      (A1 &lt; A2 &lt; B1 &lt; B2 &lt; C1 &lt; C2) y que un nivel superior cumple uno inferior.
+    </p>
+
+    <div class="codecard">
+      <div class="code-head"><span>la regla, horneada en la herramienta match_cv</span><span class="tag">fix de una frase</span></div>
+<pre><code><span class="c-com"># IDIOMAS — marco CEFR, niveles ORDENADOS A1&lt;A2&lt;B1&lt;B2&lt;C1&lt;C2.</span>
+<span class="c-com"># Un nivel IGUAL O SUPERIOR cumple el requisito</span>
+<span class="c-com"># (un CV con C1 CUMPLE una oferta que pide B2). nativo/bilingüe = C2.</span>
+
+<span class="c-gry"># antes:  encaje "medio", "Inglés B2" → BLOQUEANTE  ✗</span>
+<span class="c-grn"># después: encaje "alto",  "Inglés B2" → cumplido    ✓</span></code></pre>
+    </div>
+    <p class="sec-p">
+      Un agente que dice "no cumples" cuando sí cumples te haría descartar buenas ofertas. Se detectó, se corrigió
+      con una regla en el prompt y se <strong>verificó re-corriendo el mismo caso</strong> — antes de desplegar.
+    </p>
+  </div>
+
+  <!-- CÓMO ESTÁ CONSTRUIDO -->
+  <div class="section">
+    <div class="sec-eyebrow">Cómo está construido</div>
+    <div class="sec-title">Un motor, varias interfaces</div>
+    <div class="layers">
+      <div class="layer">
+        <div class="lnum">herramientas</div>
+        <div class="lbody"><b>herramientas.py</b> — <span>tres funciones (<code>analizar_oferta</code>, <code>match_cv</code>, <code>redactar_borrador</code>); extracción y juicio a temperatura 0, redacción a 0.7. El CV es <i>conocimiento</i>, cargado por context stuffing (cabe entero, sin RAG).</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">agente</div>
+        <div class="lbody"><b>agente.py</b> — <span>el bucle de <i>function calling</i>: menú de herramientas (JSON Schema), despachador nombre→función y guardarraíl de turnos. Devuelve la traza de pasos, no solo texto.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">interfaces</div>
+        <div class="lbody"><b>cli.py + api.py</b> — <span>el mismo motor servido por dos bocas: un chat de terminal (REPL) y una API REST con FastAPI. Una lógica, dos puertas.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">portero</div>
+        <div class="lbody"><b>token</b> — <span>cada consulta son ~4 llamadas al LLM; sin token válido → <code>401</code> y el agente <i>ni se ejecuta</i> (<i>fail-closed</i>). Protege la API key.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">despliegue</div>
+        <div class="lbody"><b>Docker + Cloud Run</b> — <span>imagen con lista blanca de ficheros, secretos en Secret Manager, escala a cero. Verificado antes de subir que el CV viaja pero el <code>.env</code> no.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LO QUE SE ENTREGÓ -->
+  <div class="section">
+    <div class="sec-eyebrow">Lo que se entregó</div>
+    <div class="sec-title">Los criterios, cumplidos</div>
+    <div class="checks">
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div><div class="ctitle">Agente con tool use real, escrito a mano</div>
+          <div class="cdesc">Bucle de function calling sobre el SDK de OpenAI: esquemas, despachador y guardarraíles, sin framework que lo esconda.</div></div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div><div class="ctitle">Tres herramientas orquestadas por el modelo</div>
+          <div class="cdesc">Analiza, contrasta con el CV y redacta; el modelo elige el orden. Reglas de estilo horneadas en la redacción.</div></div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div><div class="ctitle">Dos interfaces sobre un mismo motor</div>
+          <div class="cdesc">CLI de terminal y API REST con FastAPI; separación motor/interfaz que permitió desplegar sin tocar la lógica.</div></div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div><div class="ctitle">Desplegado en Cloud Run tras un token</div>
+          <div class="cdesc">Contenerizado con Docker, secretos en Secret Manager, escala a cero. Demo pública protegida para no exponer la API key.</div></div>
+      </div>
+    </div>
+
+    <div class="dod">
+      <div class="dod-label">Definición de "hecho" — cumplida</div>
+      <div class="dod-text">Pegas una oferta y el agente decide solo qué herramientas usar, la contrasta con el CV y te entrega un borrador — vivo en internet, detrás de tu token.</div>
+    </div>
+
+    <div class="note">
+      <strong>Demo protegida por token.</strong> La página carga para cualquiera (prueba de que es real), pero
+      ejecutar el agente requiere un token de acceso: cada consulta gasta llamadas al LLM y el portero evita el
+      uso indebido de la API key. Es una decisión de coste y seguridad, no un adorno.
+    </div>
+
+    <div class="chips">
+      <span class="chip"><strong>OpenAI</strong> function calling</span>
+      <span class="chip"><strong>agent loop</strong> a mano</span>
+      <span class="chip"><strong>FastAPI</strong> + token</span>
+      <span class="chip"><strong>Docker</strong> + Cloud Run</span>
+      <span class="chip"><strong>Secret Manager</strong></span>
+      <span class="chip"><strong>context stuffing</strong> (CV)</span>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta cta-primary" href="https://dobe-agente-1015586629315.europe-southwest1.run.app" target="_blank">Ver el agente en vivo ↗</a>
+      <a class="cta cta-ghost" href="https://github.com/denysporynets/AI-Roadmap/tree/main/4_Agente_de_busqueda_de_empleo" target="_blank">Ver código en GitHub ↗</a>
+      <a class="cta cta-ghost" href="../ROADMAP.html">Ver el roadmap →</a>
+    </div>
+  </div>
+
+  <!-- PRINCIPIO -->
+  <div class="principle">
+    <div class="principle-eyebrow">Por qué este artefacto importa</div>
+    <p class="principle-text">
+      Cualquiera importa un framework de agentes. Lo que distingue es <strong>haber escrito el bucle</strong>:
+      saber qué hace por debajo el <em>tool use</em>, dónde poner los guardarraíles y cómo protegerlo en producción.
+      No usar un agente — <strong>entenderlo</strong>.
+    </p>
+  </div>
+
+  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · artefacto 4 de 6</div>
+
+</div>
+</body>
+</html>

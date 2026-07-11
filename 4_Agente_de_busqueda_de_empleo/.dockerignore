@@ -1,0 +1,27 @@
+# .dockerignore — qué NO enviar al constructor (build context)
+# ============================================================
+# Doble red: aunque el Dockerfile ya copia solo lo nombrado (lista blanca),
+# aquí recortamos el contexto para que sea ligero y NUNCA viaje el .env.
+
+# ── Secretos: jamás salen del Mac ──
+.env
+.env.*
+
+# ── Entornos, cachés y basura local ──
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.git/
+.gitignore
+
+# ── Material metodológico y no servible ──
+conceptos/
+00_diseno_agente.html
+cli.py
+
+# ── La copia HTML del CV NO va (la imagen usa el .md); el .md SÍ entra ──
+datos_personales/cv_denys.html
+
+# Nota: static/index.html SÍ entra (está en static/, el Dockerfile lo copia).
+# Nota: datos_personales/cv_denys.md SÍ entra (el agente lo lee).
