@@ -12,6 +12,8 @@ Plano conceptual completo en conceptos/01_bucle_del_agente.html.
 
 import json
 
+import prompts  # los prompts viven versionados ahí, no aquí
+
 # Reutilizamos el mismo cliente, modelo y las 3 herramientas de la Fase 1.
 # No hay stack nuevo: el agente ORQUESTA lo que ya construimos y probamos.
 from herramientas import (
@@ -134,17 +136,7 @@ def ejecutar_herramienta(tc) -> dict:
 # ─────────────────────────────────────────────────────────────
 # 3) LAS INSTRUCCIONES · quién es el agente y cómo orquesta
 # ─────────────────────────────────────────────────────────────
-SYSTEM = (
-    "Eres el asistente de búsqueda de empleo de Denys Porynets. Cuando te pegue "
-    "el texto de una oferta, tu trabajo tiene tres pasos, en este orden:\n"
-    "  1. analizar_oferta sobre el texto crudo.\n"
-    "  2. match_cv con los requisitos que salgan del paso 1.\n"
-    "  3. redactar_borrador con la oferta analizada y el encaje del paso 2.\n"
-    "Cada paso toma la salida del anterior. No inventes datos del CV: básate solo "
-    "en lo que devuelvan las herramientas. Cuando tengas el borrador, cierra con un "
-    "resumen breve para Denys: nivel de encaje, qué imprescindibles le faltan (si "
-    "hay), y entrégale el borrador listo para revisar."
-)
+SYSTEM = prompts.obtener("agente_system")
 
 
 # ─────────────────────────────────────────────────────────────

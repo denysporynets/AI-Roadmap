@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Artefacto 5 — Endurecimiento de prompts + structured outputs · Ruta AI Engineering</title>
+<meta name="description" content="No una app nueva: el mismo agente en producción, pero con disciplina. Prompts versionados, un eval-set de bugs reales con casos de control, una báscula que mide cada cambio, un juez-LLM para lo cualitativo y structured outputs con Pydantic. Ningún cambio de prompt entra en producción sin un número que lo respalde. Quinto artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0d1117; --bg-card:#151b23; --bg-card-h:#1a2230; --ink:#e6edf3; --muted:#7d8590;
+    --border:#2a3340; --amber:#f0a500; --amber-dim:#5c4419; --green:#3fb950; --green-dim:#1d3a23;
+    --yellow:#d9a520; --blue:#4a8cff; --red:#f85149; --red-dim:#3a1d1d;
+  }
+  html, body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; line-height:1.6; }
+  .wrap { max-width:880px; margin:0 auto; padding:28px 24px 80px; }
+  .topnav { display:flex; justify-content:space-between; align-items:center; margin-bottom:44px; flex-wrap:wrap; gap:12px; }
+  .topnav a { font-family:'DM Mono',monospace; font-size:12px; color:var(--muted); text-decoration:none;
+    border:1px solid var(--border); border-radius:6px; padding:6px 12px; transition:all 0.15s; }
+  .topnav a:hover { color:var(--ink); border-color:var(--muted); }
+  .topnav .navgroup { display:flex; gap:8px; flex-wrap:wrap; }
+  .hero { margin-bottom:40px; }
+  .hero-eyebrow { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--amber); margin-bottom:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .badge-done { color:var(--green); background:var(--green-dim); border-radius:4px; padding:2px 8px; letter-spacing:1px; }
+  .hero-title { font-family:'Fraunces',serif; font-weight:300; font-size:clamp(30px,5vw,44px); line-height:1.07;
+    letter-spacing:-0.5px; margin-bottom:16px; }
+  .hero-title strong { font-weight:600; color:var(--amber); }
+  .hero-sub { font-size:15px; color:var(--muted); max-width:640px; }
+  .hero-sub strong { color:var(--ink); font-weight:600; }
+  .section { margin-top:44px; }
+  .sec-eyebrow { font-family:'DM Mono',monospace; font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--amber); margin-bottom:12px; }
+  .sec-title { font-family:'Fraunces',serif; font-size:24px; font-weight:600; margin-bottom:14px; }
+  .sec-p { font-size:14.5px; color:var(--muted); margin-bottom:14px; }
+  .sec-p strong { color:var(--ink); font-weight:600; }
+  .pipeline { display:flex; align-items:stretch; gap:0; flex-wrap:wrap; background:var(--bg-card);
+    border:1px solid var(--border); border-radius:12px; padding:8px; margin:18px 0; }
+  .pipe-step { flex:1; min-width:150px; padding:16px; text-align:center; }
+  .pipe-step .pe { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--muted); margin-bottom:6px; }
+  .pipe-step .pt { font-size:14px; color:var(--ink); font-weight:500; }
+  .pipe-step .pd { font-size:12px; color:var(--muted); margin-top:4px; }
+  .pipe-arrow { display:flex; align-items:center; color:var(--amber); font-size:18px; }
+  @media (max-width:620px){ .pipe-arrow{ transform:rotate(90deg); margin:0 auto; } }
+  .codecard { background:#0a0e14; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin:16px 0; }
+  .code-head { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); padding:9px 14px;
+    border-bottom:1px solid var(--border); background:var(--bg-card); display:flex; justify-content:space-between; }
+  .code-head .tag { color:var(--amber); }
+  pre { padding:14px 16px; overflow-x:auto; }
+  code { font-family:'DM Mono',monospace; font-size:12.5px; line-height:1.7; color:var(--ink); white-space:pre; }
+  .c-key{color:var(--blue)} .c-str{color:var(--green)} .c-com{color:var(--muted);font-style:italic}
+  .c-num{color:var(--amber)} .c-grn{color:var(--green)} .c-yel{color:var(--yellow)} .c-red{color:var(--red)} .c-gry{color:var(--muted)}
+  .checks { display:flex; flex-direction:column; gap:10px; margin:16px 0; }
+  .check { display:flex; gap:12px; align-items:flex-start; background:var(--bg-card); border:1px solid var(--green-dim);
+    border-radius:8px; padding:14px 16px; }
+  .check .mark { width:22px; height:22px; flex-shrink:0; border-radius:6px; background:var(--green);
+    display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .check .mark svg { width:13px; height:13px; }
+  .check .ctitle { font-weight:600; font-size:14.5px; }
+  .check .cdesc { font-size:13px; color:var(--muted); margin-top:2px; }
+  .dod { margin:20px 0; padding:14px 18px; border-left:3px solid var(--green); background:rgba(63,185,80,0.06);
+    border-radius:0 8px 8px 0; }
+  .dod-label { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--green); margin-bottom:5px; }
+  .dod-text { font-size:14px; color:var(--ink); }
+  .note { margin:18px 0; padding:14px 18px; border-left:3px solid var(--amber); background:rgba(240,165,0,0.06);
+    border-radius:0 8px 8px 0; font-size:13.5px; color:var(--ink); }
+  .note strong { color:var(--amber); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .chip { font-family:'DM Mono',monospace; font-size:12px; border:1px solid var(--border); border-radius:6px;
+    padding:5px 11px; color:var(--muted); }
+  .chip strong { color:var(--amber); font-weight:500; }
+  .cta-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:24px; }
+  .cta { font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; text-decoration:none; border-radius:8px;
+    padding:11px 20px; transition:all 0.18s; display:inline-flex; align-items:center; gap:8px; }
+  .cta-primary { background:var(--amber); color:#0d1117; }
+  .cta-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(240,165,0,0.25); }
+  .cta-ghost { border:1px solid var(--border); color:var(--muted); }
+  .cta-ghost:hover { color:var(--ink); border-color:var(--muted); }
+  .layers { display:flex; flex-direction:column; gap:10px; margin:18px 0; }
+  .layer { display:flex; gap:14px; align-items:baseline; background:var(--bg-card); border:1px solid var(--border);
+    border-radius:8px; padding:13px 16px; }
+  .layer .lnum { font-family:'DM Mono',monospace; font-size:12px; color:var(--amber); flex-shrink:0; width:128px; }
+  .layer .lbody { font-size:13.5px; }
+  .layer .lbody b { color:var(--ink); }
+  .layer .lbody span { color:var(--muted); }
+  .metrics { display:flex; flex-wrap:wrap; gap:12px; margin:18px 0; }
+  .metric { flex:1; min-width:150px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:16px 18px; }
+  .metric .mv { font-family:'Fraunces',serif; font-size:26px; font-weight:600; color:var(--amber); }
+  .metric .ml { font-size:12.5px; color:var(--muted); margin-top:4px; }
+  .principle { margin-top:44px; background:linear-gradient(135deg,#1a1410 0%,var(--bg-card) 60%);
+    border:1px solid var(--amber-dim); border-radius:12px; padding:26px 28px; position:relative; overflow:hidden; }
+  .principle::before { content:''; position:absolute; top:-40%; right:-10%; width:220px; height:220px;
+    background:radial-gradient(circle,rgba(240,165,0,0.08),transparent 70%); }
+  .principle-eyebrow { font-family:'DM Mono',monospace; font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--amber); margin-bottom:10px; }
+  .principle-text { font-family:'Fraunces',serif; font-size:19px; font-weight:300; line-height:1.45; color:var(--ink); max-width:660px; }
+  .principle-text strong { font-weight:600; color:var(--amber); }
+  .footer { margin-top:44px; text-align:center; font-family:'DM Mono',monospace; font-size:11px; color:var(--border); }
+  .footer span { color:var(--amber); opacity:0.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topnav">
+    <a href="../ROADMAP.html">← Bitácora del roadmap</a>
+    <div class="navgroup">
+      <a href="../artefacto-4/index.html">← Artefacto 4 (Agente)</a>
+      <a href="https://github.com/denysporynets/AI-Roadmap/tree/main/4_Agente_de_busqueda_de_empleo" target="_blank">Ver código en GitHub ↗</a>
+      <a href="https://denysporynets.github.io">Portfolio ↗</a>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">
+      <span>Artefacto 5 · Mes 3–4</span>
+      <span class="badge-done">✓ Desplegado · endurecido</span>
+    </div>
+    <h1 class="hero-title">Endurecimiento de prompts<br><strong>cada cambio, un número que lo respalda</strong></h1>
+    <p class="hero-sub">
+      No es una app nueva: es el <strong>mismo agente</strong> del Artefacto 4, pero con <strong>disciplina</strong>.
+      Prompts <strong>versionados</strong>, un eval-set de <strong>bugs reales</strong> con casos de control, una
+      <strong>báscula</strong> que puntúa cada cambio, un <strong>juez-LLM</strong> para lo que ningún <code>if</code>
+      mide, y <strong>structured outputs</strong> con Pydantic. Ningún prompt entra en producción a ojo.
+    </p>
+  </div>
+
+  <!-- LA IDEA -->
+  <div class="section">
+    <div class="sec-eyebrow">La idea</div>
+    <div class="sec-title">De «a ojo» a disciplina medida</div>
+    <p class="sec-p">
+      El Artefacto 4 funcionaba, pero sus prompts se afinaron <strong>a ojo</strong>: los escribí, probé una vez, y si
+      colaba, a producción. Durante su construcción cacé <strong>tres bugs de prompt reales</strong> y los parcheé sobre
+      la marcha metiendo frases. Funcionaban… pero <strong>nunca medí si funcionaban siempre</strong>. Este artefacto
+      convierte ese «a ojo» en un proceso: esos tres bugs se vuelven el <strong>eval-set perfecto</strong>, porque son reales.
+    </p>
+    <div class="note">
+      <strong>La regla del artefacto.</strong> Es la misma filosofía del harness del Artefacto 3, mudada a prompts:
+      <em>prompt engineering sin evaluación es superstición</em>. Se toca un prompt, se mide, y solo el número decide.
+    </div>
+  </div>
+
+  <!-- LA BÁSCULA -->
+  <div class="section">
+    <div class="sec-eyebrow">El instrumento</div>
+    <div class="sec-title">Una báscula que mide las dos caras</div>
+    <p class="sec-p">
+      El eval-set va en <strong>parejas</strong>: cada <em>bug</em> (un fallo real) tiene su <em>control</em> (el daño
+      de pasarse de frenada al arreglarlo). El bug mide si <strong>mejoras</strong>; el control, si <strong>rompes</strong>.
+      Sin el control, la tabla te miente con buena cara.
+    </p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pe">Versiona</div>
+        <div class="pt">prompts.py</div>
+        <div class="pd">v1, v2, v3… con hash</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Mide</div>
+        <div class="pt">la báscula</div>
+        <div class="pd">bugs + controles</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="pe">Registra</div>
+        <div class="pt">historial.json</div>
+        <div class="pd">append-only, con cerrojo</div>
+      </div>
+    </div>
+    <p class="sec-p">
+      Cada fila guarda el <strong>hash del prompt</strong> que se usó de verdad: si alguien edita una versión publicada
+      en vez de crear otra, el hash cambia y las corridas viejas dejan de cuadrar. La regla «una versión no se edita»
+      pasa de comentario a <strong>comprobable</strong>.
+    </p>
+  </div>
+
+  <!-- EL HALLAZGO -->
+  <div class="section">
+    <div class="sec-eyebrow">Por qué medir bien importa</div>
+    <div class="sec-title">La muestra pequeña casi invierte la verdad</div>
+    <p class="sec-p">
+      Al comparar la carta <code>v1</code> contra la nueva <code>v3</code> con un <strong>juez-LLM</strong> (un
+      <code>gpt-4o</code> puntuando lo que un <code>if</code> no ve: si la carta suena a persona o a plantilla), con
+      <strong>3 cartas</strong> el juez dijo que <code>v3</code> era <em>peor</em>. Con <strong>15</strong>, la
+      conclusión <strong>se dio la vuelta entera</strong>.
+    </p>
+
+    <div class="codecard">
+      <div class="code-head"><span>juez de estilo · v1 vs v3</span><span class="tag">N pequeño engaña</span></div>
+<pre><code><span class="c-gry"># N = 3   → v3 parece PEOR en todo   (arranque 2.33 vs 3.33)  ✗ falso</span>
+<span class="c-grn"># N = 15  → v3 claramente MEJOR       (arranque 4.20 vs 2.80)  ✓</span>
+<span class="c-com">#          y v1 abre con plantilla 7 de 15 veces; v3, 0 de 15.</span></code></pre>
+    </div>
+    <p class="sec-p">
+      Aquellas 3 cartas pillaron por azar un <code>1</code> y un <code>2</code> que en 15 tiradas ni asoman. La muestra
+      pequeña no fue solo imprecisa: <strong>invirtió el signo</strong> de la respuesta. Casi desplegamos la conclusión
+      contraria a la verdad — la lección más cara del artefacto.
+    </p>
+  </div>
+
+  <!-- STRUCTURED OUTPUTS -->
+  <div class="section">
+    <div class="sec-eyebrow">La forma, garantizada</div>
+    <div class="sec-title">Structured outputs: se acabó el <code>json.loads</code> a ciegas</div>
+    <p class="sec-p">
+      Pedirle al modelo «devuelve JSON, por favor» no garantiza <em>qué</em> hay dentro: si falta una clave, el fallo
+      aparece tres funciones más abajo como un <code>None</code> que nadie pidió. La última pieza cambia la súplica por
+      un <strong>molde Pydantic</strong> que el decodificador está obligado a rellenar.
+    </p>
+
+    <div class="codecard">
+      <div class="code-head"><span>herramientas.py · el contrato de forma</span><span class="tag">constriñe + valida</span></div>
+<pre><code><span class="c-key">class</span> <span class="c-yel">Oferta</span>(BaseModel):
+    puesto: <span class="c-grn">str</span>
+    empresa: <span class="c-grn">str</span> | <span class="c-key">None</span>          <span class="c-com"># null explícito, no ausencia muda</span>
+    imprescindibles: <span class="c-grn">list</span>[<span class="c-grn">str</span>]
+    ...
+
+oferta = cliente.chat.completions.parse(
+    response_format=<span class="c-yel">Oferta</span>).choices[<span class="c-num">0</span>].message.parsed   <span class="c-com"># ya validado</span></code></pre>
+    </div>
+    <p class="sec-p">
+      Y lo bonito del cierre: cambiamos <strong>toda</strong> la fontanería de salida y re-corrimos la báscula. Como los
+      prompts no se tocaron, la calidad tenía que aguantar — y <strong>el número lo demostró</strong>. Cambiar el
+      <em>cómo</em> no cambió el <em>qué</em>.
+    </p>
+
+    <div class="metrics">
+      <div class="metric"><div class="mv">0.25 → 1.0</div><div class="ml">numerología: bug domado (few-shot + chain-of-thought)</div></div>
+      <div class="metric"><div class="mv">0 regresión</div><div class="ml">structured outputs: la calidad no se movió del ruido</div></div>
+      <div class="metric"><div class="mv">13</div><div class="ml">corridas registradas, cada una con su hash y su nota</div></div>
+    </div>
+  </div>
+
+  <!-- CÓMO ESTÁ CONSTRUIDO -->
+  <div class="section">
+    <div class="sec-eyebrow">Cómo está construido</div>
+    <div class="sec-title">Las capas de la disciplina</div>
+    <div class="layers">
+      <div class="layer">
+        <div class="lnum">prompts</div>
+        <div class="lbody"><b>prompts.py</b> — <span>los prompts salen de estar horneados en cada función a un módulo <i>versionado</i>: un catálogo de versiones (v1, v2, v3) y cuál está activa. Cambiar una línea de aquí = desplegar un prompt nuevo.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">eval-set</div>
+        <div class="lbody"><b>evaluacion/casos.json</b> — <span>los tres bugs reales del Artefacto 4, cada uno emparejado con su control. Las comprobaciones son código (asserts baratos y deterministas), no reglas en un JSON.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">báscula</div>
+        <div class="lbody"><b>evaluar_prompts.py</b> — <span>corre el eval-set N veces por caso (temp 0 <i>no</i> es determinista), guarda hash + salida de cada fila y añade la corrida al historial con un cerrojo (append-only, sin carreras).</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">juez</div>
+        <div class="lbody"><b>juez_estilo.py</b> — <span>un LLM-as-judge (<code>gpt-4o</code>, más capaz que el generador para evitar el <i>self-preference bias</i>) que puntúa lo cualitativo: arranque, voz, enganche. Opt-in, porque cuesta.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">forma</div>
+        <div class="lbody"><b>moldes Pydantic</b> — <span>structured outputs vía <code>parse()</code>: la salida queda constreñida al esquema y validada. Fail-closed si el modelo rehúsa: error claro, no un <code>None</code> mudo.</span></div>
+      </div>
+      <div class="layer">
+        <div class="lnum">despliegue</div>
+        <div class="lbody"><b>Cloud Run</b> — <span>el agente endurecido re-desplegado sobre la misma imagen con lista blanca. Antes de subir, <code>/code-review</code> cazó una captura de token que iba a colarse al build.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LO QUE SE ENTREGÓ -->
+  <div class="section">
+    <div class="sec-eyebrow">Lo que se entregó</div>
+    <div class="sec-title">Los criterios, cumplidos</div>
+    <div class="checks">
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div><div class="ctitle">Prompts versionados y activables</div>
+          <div class="cdesc">Un catálogo (v1/v2/v3) con la versión activa como una línea. Cada fila del historial guarda el hash: una versión publicada no se edita, y es comprobable.</div></div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div><div class="ctitle">Eval-set de bugs reales con controles</div>
+          <div class="cdesc">Casos en parejas bug/control; el bug mide si mejoras, el control si rompes. Comprobaciones en Python, deterministas, con repeticiones porque temperatura 0 no lo es.</div></div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div><div class="ctitle">Mejora medida, no opinada</div>
+          <div class="cdesc">Numerología de 0.25 a 1.0 con few-shot + chain-of-thought; el juez-LLM confirmó el estilo. Cada versión ganó contra la anterior con un número, no con un «parece mejor».</div></div>
+      </div>
+      <div class="check">
+        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div><div class="ctitle">Structured outputs con validación de esquema</div>
+          <div class="cdesc">Las tres herramientas devuelven moldes Pydantic constreñidos y validados; la báscula demostró que el cambio de fontanería no regresó la calidad.</div></div>
+      </div>
+    </div>
+
+    <div class="dod">
+      <div class="dod-label">Definición de "hecho" — cumplida</div>
+      <div class="dod-text">El mismo agente, vivo en producción, pero ahora cada cambio de prompt pasa por una báscula y ninguno entra sin un número que lo respalde. La forma de cada salida está garantizada por un esquema.</div>
+    </div>
+
+    <div class="chips">
+      <span class="chip"><strong>prompt versioning</strong></span>
+      <span class="chip"><strong>eval-set</strong> bug/control</span>
+      <span class="chip"><strong>LLM-as-judge</strong> (gpt-4o)</span>
+      <span class="chip"><strong>few-shot + CoT</strong></span>
+      <span class="chip"><strong>structured outputs</strong> (Pydantic)</span>
+      <span class="chip"><strong>regresión</strong> medida</span>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta cta-primary" href="https://dobe-agente-1015586629315.europe-southwest1.run.app" target="_blank">Ver el agente en vivo ↗</a>
+      <a class="cta cta-ghost" href="https://github.com/denysporynets/AI-Roadmap/tree/main/4_Agente_de_busqueda_de_empleo" target="_blank">Ver código en GitHub ↗</a>
+      <a class="cta cta-ghost" href="../ROADMAP.html">Ver el roadmap →</a>
+    </div>
+  </div>
+
+  <!-- PRINCIPIO -->
+  <div class="principle">
+    <div class="principle-eyebrow">Por qué este artefacto importa</div>
+    <p class="principle-text">
+      Escribir buenos prompts lo intenta cualquiera. Lo que distingue es <strong>versionarlos y medir cada cambio</strong>
+      contra un eval-set — cazar la regresión que arregla un caso y rompe otro <em>antes</em> de que llegue a producción.
+      No «tocar y rezar»: <strong>tocar y demostrar</strong>.
+    </p>
+  </div>
+
+  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · artefacto 5 de 6</div>
+
+</div>
+</body>
+</html>

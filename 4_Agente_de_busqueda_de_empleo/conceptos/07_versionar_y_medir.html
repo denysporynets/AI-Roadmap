@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concepto 07 · Versionar y medir</title>
+<style>
+  :root{
+    --warmth: 0;
+    --h-bg: 40;  --s-bg: 30%;  --s-panel: 33%;
+    --h-ink: 30; --s-ink: 15%;
+    --h-acc: 38; --s-acc: 92%;
+
+    --bg: hsl(var(--h-bg) var(--s-bg) calc(98% - var(--warmth) * 12%));
+    --panel: hsl(var(--h-bg) var(--s-panel) calc(100% - var(--warmth) * 14%));
+    --ink: hsl(var(--h-ink) var(--s-ink) calc(18% + var(--warmth) * 4%));
+    --soft: hsl(var(--h-ink) 10% calc(42% + var(--warmth) * 6%));
+    --amber: hsl(var(--h-acc) var(--s-acc) calc(45% - var(--warmth) * 6%));
+    --line: hsl(var(--h-acc) 25% calc(86% - var(--warmth) * 12%));
+    --code-bg: hsl(var(--h-bg) 25% calc(95% - var(--warmth) * 13%));
+    --accent-soft: hsl(var(--h-acc) 60% calc(92% - var(--warmth) * 12%));
+    --blue-filter: sepia(calc(var(--warmth) * 0.35)) brightness(calc(1 - var(--warmth) * 0.04));
+  }
+  :root[data-paleta="azul"]{
+    --h-bg: 208; --s-bg: 26%; --s-panel: 30%;
+    --h-ink: 215; --s-ink: 16%;
+    --h-acc: 205; --s-acc: 72%;
+  }
+  :root[data-paleta="neutra"]{
+    --h-bg: 220; --s-bg: 6%; --s-panel: 7%;
+    --h-ink: 220; --s-ink: 9%;
+    --h-acc: 250; --s-acc: 38%;
+  }
+  *{box-sizing:border-box}
+  html{filter:var(--blue-filter);transition:filter .3s}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.65;font-size:18px;
+    padding:0 20px 120px;
+    transition:background .3s,color .3s;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{padding:54px 0 20px;border-bottom:2px solid var(--line);margin-bottom:36px}
+  .kicker{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);font-weight:600}
+  h1{font-size:34px;line-height:1.15;margin:.35em 0 .15em;font-weight:600}
+  .sub{color:var(--soft);font-size:16px;font-style:italic}
+  h2{font-size:24px;margin:2.2em 0 .5em;font-weight:600;display:flex;align-items:baseline;gap:.5em}
+  h2 .n{font-family:"DM Mono",ui-monospace,monospace;font-size:14px;color:var(--amber);font-weight:600}
+  h3{font-size:18px;margin:1.6em 0 .4em;font-weight:600;font-family:system-ui,sans-serif}
+  p,li{font-size:18px}
+  strong{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 24px;margin:20px 0}
+  .panel.amber{border-left:4px solid var(--amber);background:var(--accent-soft)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;overflow-x:auto;font-family:"DM Mono",ui-monospace,Menlo,monospace;
+    font-size:14px;line-height:1.6;color:var(--ink)}
+  code{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+    background:var(--code-bg);padding:.1em .35em;border-radius:5px}
+  pre code{background:none;padding:0}
+  .tabla-wrap{overflow-x:auto;margin:18px 0}
+  table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:15px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft)}
+  ul{padding-left:1.2em}
+  li{margin:.35em 0}
+  .flow{font-family:"DM Mono",ui-monospace,monospace;font-size:13.5px;white-space:pre;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:18px;overflow-x:auto;line-height:1.5}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--soft);font-size:14px;font-family:"DM Mono",monospace}
+  .dial{position:fixed;top:14px;right:14px;z-index:99;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:8px 14px;display:flex;
+    align-items:center;gap:10px;box-shadow:0 2px 14px hsl(30 20% 20% / .12);
+    font-family:system-ui,sans-serif;font-size:13px;color:var(--soft)}
+  .dial input[type=range]{width:110px;accent-color:var(--amber)}
+  .sep{width:1px;height:18px;background:var(--line)}
+  .pal{width:15px;height:15px;border-radius:50%;border:1px solid hsl(30 15% 45% / .5);
+    padding:0;cursor:pointer;transition:transform .15s}
+  .pal:hover{transform:scale(1.18)}
+  .pal[data-p="calida"]{background:hsl(38 92% 52%)}
+  .pal[data-p="azul"]{background:hsl(205 72% 52%)}
+  .pal[data-p="neutra"]{background:hsl(250 38% 58%)}
+  .pal[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+  @media print{.dial{display:none}}
+  .si{color:hsl(150 45% calc(32% - var(--warmth) * 4%));font-weight:600}
+  .no{color:hsl(5 60% calc(45% - var(--warmth) * 4%));font-weight:600}
+  .pend{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--amber);
+    border-radius:12px;padding:4px 24px 14px;margin:16px 0}
+  .pend h3{margin-top:1.1em}
+  .pend .quien{font-family:"DM Mono",monospace;font-size:12px;color:var(--amber);
+    text-transform:uppercase;letter-spacing:.1em}
+</style>
+</head>
+<body>
+
+<div class="dial">
+  <span>☀️</span>
+  <input type="range" id="warmth" min="0" max="100" value="0" aria-label="Hora: día a noche">
+  <span>🌙</span>
+  <span class="sep"></span>
+  <button class="pal" data-p="calida" aria-pressed="true" title="Paleta cálida"></button>
+  <button class="pal" data-p="azul" aria-pressed="false" title="Paleta azul"></button>
+  <button class="pal" data-p="neutra" aria-pressed="false" title="Paleta neutra"></button>
+</div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">Artefacto 5 · AI Engineering · Concepto 07</div>
+  <h1>Versionar y medir</h1>
+  <div class="sub">Fases 1 y 2 del endurecimiento: el prompt deja de ser texto suelto y empieza a tener nota. Con las tres sorpresas que salieron por el camino.</div>
+</header>
+
+<p>Estas dos fases no añaden ninguna función al agente. Hace exactamente lo mismo que el 11 de julio. Lo que cambia es que <strong>ahora se puede discutir con él</strong>: hay un sitio donde vive cada prompt, un número que dice cómo va, y un fichero que guarda de dónde salió ese número.</p>
+
+<h2><span class="n">01</span> Fase 1 · El prompt como dato</h2>
+
+<p>Los prompts vivían dentro de las funciones que los usaban, como una variable <code>instruccion</code>. Eso significa que el texto y la lógica eran la misma cosa: no puedes tener dos versiones a la vez, ni pedirle a nadie «dame la v2», ni decir qué versión produjo un resultado.</p>
+
+<p>Ahora viven en <code>prompts.py</code>, que es <strong>texto puro</strong>: no importa OpenAI, no lee el <code>.env</code>, no llama a nada. Esa propiedad no es cosmética — es lo que permite verificarlo sin gastar un céntimo, y lo que permitirá que el evaluador cargue v1 y v2 a la vez sin levantar el agente entero.</p>
+
+<pre><code>CATALOGO         → todas las versiones que existen, vivas o jubiladas
+VERSIONES_ACTIVAS → cuál corre hoy. Cambiar una línea = desplegar un prompt
+obtener(herr, v)  → dártelo, o fallar con KeyError si no existe</code></pre>
+
+<h3>Eran cuatro, no tres</h3>
+<p>El plano hablaba de tres porque miraba <code>herramientas.py</code>. Al abrirlo apareció un cuarto horneado en <code>agente.py</code>: el <code>SYSTEM</code> que gobierna el bucle. Los tres primeros mandan sobre <em>una herramienta cada uno</em>; el cuarto manda sobre <em>el orden en que se llaman</em>. Son dos niveles distintos, y ahora se ven juntos.</p>
+
+<h3>La disciplina: un refactor que no hace nada</h3>
+<p>La v1 se copió <strong>carácter a carácter</strong>, con sus bugs dentro. Ni una coma «de paso». Si mueves y mejoras a la vez y algo cambia, no sabes cuál de las dos cosas lo cambió. Y la prueba no fue «parece que va»:</p>
+
+<div class="flow">1. AST      → se extrae el literal del código SIN ejecutarlo  → hash del original
+2. hash     → el mismo texto desde prompts.py                   → ¿coinciden?
+3. espía    → se sustituye la llamada a OpenAI por un impostor
+              que captura el mensaje y corta                    → ¿sale lo mismo hacia la API?
+
+resultado: no-op DEMOSTRADO, no supuesto.   coste: 0 €</div>
+
+<h3>El susto: la lista blanca</h3>
+<p><code>prompts.py</code> era un fichero nuevo y el Dockerfile copia por lista blanca, así que no viajaba a la imagen. Construcción verde, muerte al arrancar. Está contado entero en <code>06_la_lista_blanca_de_la_imagen.html</code>.</p>
+
+<h2><span class="n">02</span> Fase 2 · La báscula</h2>
+
+<p>Tres decisiones de diseño, y las tres se pagaron solas el mismo día.</p>
+
+<h3>Se mide herramienta a herramienta</h3>
+<p>No se lanza el agente entero por caso. Una llamada en vez de cuatro, y sobre todo: si un caso se pone rojo, sabes <em>qué prompt</em> lo rompió y no si fue el orquestador pasando mal los datos. El precio, dicho en voz alta: <strong>los bugs de integración quedan ciegos</strong>. Se asume porque los bugs reales que tenemos son de prompt, y perseguir bugs que no has visto nunca es inventarse trabajo.</p>
+
+<h3>Los casos van en parejas</h3>
+<p>Aquí está la idea que sostiene todo. Un eval-set hecho solo de bugs conocidos se sobreajusta solo: metes una frase que arregla el CEFR, subes a 3/3, celebras… y no sabes qué rompiste en las ofertas que ya iban bien. Así que <strong>cada bug tiene su espejo: el daño exacto que causaría pasarse de frenada al arreglarlo</strong>.</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Bug · ¿mejoras?</th><th>Control · ¿rompes?</th><th>La regresión que caza</th></tr>
+  <tr>
+    <td>«GCP <strong>o</strong> AWS» debe salir como <strong>un</strong> requisito</td>
+    <td>«APIs de LLMs <strong>y</strong> RAG» debe salir como <strong>dos</strong></td>
+    <td>Si aprietas el «no separes con <em>o</em>», puede dejar de separar los <em>y</em></td>
+  </tr>
+  <tr>
+    <td>Pide inglés B2, el CV es C1 → <strong>no</strong> es faltante</td>
+    <td>Pide Kubernetes, que no está en el CV → <strong>sí</strong> es faltante</td>
+    <td>Si le enseñas indulgencia con idiomas, se vuelve optimista y calla bloqueantes reales</td>
+  </tr>
+  <tr>
+    <td>Cero números en la carta, salvo el GPA</td>
+    <td>Sigue siendo una carta: 130-180 palabras, 2-3 notas, asunto</td>
+    <td>Si le prohíbes los números a lo bruto, el texto sale mutilado</td>
+  </tr>
+</table>
+</div>
+
+<h3>Lo estocástico se mide varias veces</h3>
+<p><code>redactar_borrador</code> corre a temperatura 0.7: <strong>no da la misma respuesta dos veces</strong>. Medir eso una sola vez es tirar una moneda y llamarlo dato. Por eso ese caso corre cinco veces y su nota es la fracción que pasa. En la primera corrida ya salvó la sesión: pasó 2 de 5. Con una sola pasada había un 40% de verlo verde y salir de aquí creyendo que el parche funcionaba.</p>
+
+<div class="panel">
+  <p style="margin:0"><strong>Y una pieza que cierra un cabo de la Fase 1.</strong> Cada fila guarda el <em>hash</em> del prompt que se usó de verdad, y la respuesta entera del modelo. Lo primero convierte la regla «una versión publicada no se edita nunca» de comentario en <strong>comprobable</strong>: si alguien edita la v1 en vez de crear una v2, el hash cambia y las corridas viejas dejan de cuadrar. Lo segundo es la columna «respuesta obtenida»: un veredicto sin la respuesta que lo provocó no es trazabilidad, es una nota al pie.</p>
+</div>
+
+<h2><span class="n">03</span> Lo que dijo la báscula</h2>
+
+<p><strong>Baseline v1 — bugs 0.667 · controles 1.0 · global 0.833.</strong></p>
+
+<p>Dos de los tres parches «a ojo» del Artefacto 4 <span class="si">funcionan de verdad</span>: la alternativa con «o» queda entera y el CEFR ya no marca el B2. Los cuatro controles aguantan. Eso ya no es una impresión: es un número con una corrida detrás.</p>
+
+<p>El tercero <span class="no">no funciona en absoluto</span>. Y no falla «a veces»: las cinco cartas escribieron la misma frase.</p>
+
+<pre><code>"…con más de <strong>dos</strong> años de experiencia en Python"</code></pre>
+
+<p>La entrada del caso dice <code>"2+ años con Python"</code>. El modelo lo coge, <strong>lo escribe en letra, y deja de considerarlo un número</strong>. Tu prompt dice «el único número que puedes usar es el GPA» y él lo cumple… en dígitos. Ahí tienes la pista exacta para la Fase 3, y no la tenías ayer.</p>
+
+<h2><span class="n">04</span> Las tres sorpresas</h2>
+
+<h3>1 · La báscula se midió a sí misma primero</h3>
+<p>En su primera corrida marcó <code>['34','644','164','145']</code> como «números colados». Es tu teléfono: el modelo firmaba la carta. Pero el bug es <em>usar cifras como argumento</em>, y una firma no argumenta nada. <strong>El instrumento medía «¿hay dígitos?» cuando la regla dice «¿usa métricas para convencer?».</strong></p>
+<p>Corregido leyendo los teléfonos <em>del CV</em> en tiempo de ejecución, no copiando el número en el evaluador: un dato personal vive en un sitio y solo uno. Y verificado en los dos sentidos — tu teléfono pasa, un teléfono inventado sigue fallando.</p>
+<div class="panel amber">
+  <p style="margin:0"><strong>La frontera fina.</strong> «El número no me gusta, aflojo el criterio y sube» es el autoengaño. «El instrumento mide otra cosa distinta de la que dice medir» es una corrección. La diferencia es real, pero es estrecha, y solo se sostiene si la escribes y la defiendes en voz alta. Por eso está aquí.</p>
+</div>
+
+<h3>2 · No era alucinación: era el dato</h3>
+<p>El agente escribía que seguías cursando el máster. Tu CV dice, literalmente, <em>«now <strong>completing</strong> a Master's in DS & AI»</em>. El modelo leyó exactamente eso. <strong>Antes de acusar al prompt, mira la entrada.</strong> Corregido a «with a Master's…» en el <code>.md</code> y en el <code>.html</code> del que se regenera — si no, el arreglo se perdía en la próxima regeneración.</p>
+
+<h3>3 · El accidente que hizo el mejor experimento del día</h3>
+<p>Una corrida que di por muerta seguía viva y terminó siete minutos después de la buena. Resultado: <strong>dos corridas de la misma configuración exacta</strong> — mismo código, mismos prompts, mismo CV.</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>corrida</th><th>numerología</th><th>bugs</th><th>global</th></tr>
+  <tr><td>#2</td><td>0/5</td><td>0.667</td><td>0.833</td></tr>
+  <tr><td>#3</td><td>2/5</td><td>0.8</td><td>0.9</td></tr>
+</table>
+</div>
+
+<p>Sin tocar <strong>nada</strong>, la misma báscula da 0.833 y 0.9. Eso es el ruido de fondo, y sale gratis del accidente.</p>
+
+<div class="panel amber">
+  <p style="margin:0"><strong>La consecuencia, que va al corazón del artefacto:</strong> una diferencia de 0.067 en tu báscula <em>no significa nada</em>. Si en la Fase 3 escribes una v2, sale 0.9 contra 0.833 y lo celebras, habrás celebrado azar con formato de tabla. El eco del umbral 0.40 del Artefacto 3, otra vez: las medias verdes no te salvan de una decisión rota.</p>
+</div>
+
+<p>Lo bueno: las dos corridas juntas dan <strong>diez muestras</strong>, y dicen que la numerología pasa <strong>2 de cada 10 veces</strong>. Ese es el baseline honesto, y es peor que cualquiera de los dos números por separado.</p>
+
+<h2><span class="n">05</span> Fase 2 · cerrada</h2>
+
+<p>Lo que en la primera versión de este capítulo eran «pendientes del próximo día» ya está hecho y verificado. Se cierran aquí, en orden.</p>
+
+<div class="panel amber">
+  <p style="margin:0 0 .6em"><strong>El cerrojo del historial.</strong> <code>evaluar_prompts.py</code> hacía <em>leer → añadir → escribir</em> sin protección: dos corridas a la vez podían pisarse y perder una fila sin que saltara ningún error. Cerrado con <code>flock</code> (exclusión mutua) + escritura atómica (<code>.tmp</code> y renombrado), y probado a lo bruto: <strong>30 escritores en paralelo, 0 pérdidas</strong>. Tiene su propio capítulo: <code>08_el_cerrojo_del_historial.html</code>.</p>
+  <p style="margin:0 0 .6em"><strong>Repeticiones 5 → 20.</strong> Solo en los dos casos de temperatura 0.7, que es donde vive el ruido; los de temp 0 se quedan en 1. Cuadruplicar muestras parte la banda de ruido a la mitad. Una corrida completa son ahora 44 llamadas — calderilla.</p>
+  <p style="margin:0"><strong>La corrida #3, anotada.</strong> No se borró: el historial es append-only y ese par #2/#3 es la evidencia del ruido. Lleva un campo <code>nota_revision</code> que la marca como duplicada accidental, sin tocar una sola de sus mediciones.</p>
+</div>
+
+<h3>El re-baseline honesto</h3>
+<p>Subir a 20 repeticiones <strong>rompe la comparación</strong> con las corridas medidas a 5, así que la primera con la báscula nueva es un baseline nuevo — mismos prompts v1, sin tocar nada. Es la corrida #4:</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>corrida</th><th>numerología</th><th>bugs</th><th>global</th></tr>
+  <tr><td>#4 · re-baseline (20 rep)</td><td>5/20 = 0.25</td><td>0.75</td><td>0.875</td></tr>
+</table>
+</div>
+
+<p>Con 5 pasadas la numerología saltaba entre 0/5 y 2/5 — parecía cualquier cosa. Con 20 se asienta: <strong>pasa 1 de cada 4 veces</strong>, y ese número ya es de fiar. Mejor aún, el fallo es <em>siempre el mismo</em>: la palabra <code>dos</code>, de convertir «2+ años» en «más de dos años». La Fase 3 no dispara a ciegas: tiene una diana de un solo píxel.</p>
+
+<h3><code>render_historial.py</code> · el espejo</h3>
+<p>Lee <code>historial.json</code> y pinta <code>historial.html</code>: la gráfica de evolución (SVG a mano, sin librerías) y dos tablas — una por corrida y otra caso a caso. <strong>Se genera, no se escribe a mano</strong>: ninguna fila existe sin una corrida detrás. Y hornea la lección del ruido en la propia tabla: un salto menor que ±0.07 no sale como «mejora», sale como <em>«≈ ruido»</em>. Es gratis y no llama a nada.</p>
+
+<div class="pend">
+  <div class="quien">sigue abierto · necesita tu criterio</div>
+  <h3>¿Entra <code>agente_system</code> en el eval-set?</h3>
+  <p>Hoy está fuera: no tiene ningún bug real detrás. Si algún día el agente encadena mal las herramientas, entrará.</p>
+  <h3>La copia del CV del agente</h3>
+  <p>El CV que mandas a empresas ya está al día (<code>v5</code>). La copia interna del agente se dejó <em>a propósito</em> sin sincronizar: es una entrada de la báscula, y cambiarla contaminaría el baseline. Se sincroniza al cerrar el artefacto.</p>
+</div>
+
+<div class="pend">
+  <div class="quien">siguiente · Fase 3</div>
+  <h3>Few-shot + chain-of-thought → v2</h3>
+  <p>Solo donde el eval lo mueva, y con la pista que ya tenemos: el «2+» que se convierte en «dos». La regla de oro sigue en pie — <strong>una versión publicada no se edita, se crea la siguiente</strong>.</p>
+  <h3>Y ahí sí, el juez LLM</h3>
+  <p>Porque las cinco cartas abren con <em>«Soy Denys Porynets, un apasionado ingeniero de IA…»</em>. Tu prompt prohíbe el relleno de plantilla y pide empezar fuerte y personal. <strong>Eso es relleno de plantilla</strong>, y el control lo da por bueno porque solo cuenta palabras. Es la justificación en vivo de la mitad cara de la báscula: hay reglas que ningún <code>if</code> caza.</p>
+</div>
+
+<div class="pend">
+  <div class="quien">fuera del artefacto · no se olvida</div>
+  <h3>El rediseño del portfolio</h3>
+  <p>El GitHub Pages te parece soso. Sigue pendiente entre artefactos.</p>
+  <h3>Formación de Anthropic Academy</h3>
+  <p>MCP (intro + advanced), Subagents + Agent Skills, Claude Cowork. Gratis.</p>
+  <h3>Producción no se ha enterado de nada</h3>
+  <p>Y está bien así. La imagen viva es la del 11/07: funcionalmente idéntica, porque el refactor es no-op. El <code>COPY</code> arreglado entra en el próximo despliegue, cuando haya algo que merezca desplegarse.</p>
+</div>
+
+<h2><span class="n">06</span> Diccionario para el CV</h2>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Término</th><th>Qué significa de verdad</th></tr>
+  <tr><td><strong>Prompt versioning</strong></td><td>Tratar el prompt como un artefacto versionado, igual que un modelo o un esquema. Es lo que te deja decir «la v2 subió el score» en vez de «lo toqué y parece que va mejor».</td></tr>
+  <tr><td><strong>Refactor no-op</strong></td><td>Mover sin cambiar comportamiento, a propósito y por separado. Aislar una variable cada vez.</td></tr>
+  <tr><td><strong>Golden set / casos de control</strong></td><td>Los casos que miden si mejoras, y los que miden si rompes. Sin los segundos, la tabla te miente con muy buena cara.</td></tr>
+  <tr><td><strong>Sobreajuste al eval-set</strong></td><td>Subir la nota arreglando justo lo que se mide. La forma más fácil de hacer trampa sin querer.</td></tr>
+  <tr><td><strong>Varianza / ruido de medida</strong></td><td>Lo que se mueve la nota sin que cambies nada. Si tu «mejora» es menor que el ruido, no has mejorado: has tenido suerte.</td></tr>
+  <tr><td><strong>Append-only / fuente de verdad</strong></td><td>Un fichero al que solo se añade. Los resultados incómodos se quedan, y por eso se puede confiar en los buenos.</td></tr>
+  <tr><td><strong>Condición de carrera</strong></td><td>Dos procesos leyendo y escribiendo lo mismo a la vez; uno pisa al otro y nadie se entera. El fichero queda coherente y falso.</td></tr>
+  <tr><td><strong>Báscula híbrida</strong></td><td>Asserts donde se pueda (coste 0, ruido 0), juez LLM solo donde no queda otra. Criterio de coste, no LLM para todo.</td></tr>
+</table>
+</div>
+
+<footer>
+  Artefacto 5 · Endurecimiento · Concepto 07 — Fases 1 y 2, escritas el 17/07/2026.<br>
+  Frase eje del artefacto: <em>«la parte difícil no es escribir mejores prompts, es construir una báscula en la que puedas confiar»</em>.<br>
+  Hoy la báscula se equivocó dos veces antes que el agente. Por eso se construye primero.
+</footer>
+
+</div>
+
+<script>
+  const dial = document.getElementById('warmth');
+  const CLAVE = 'a4-warmth';
+  function aplicarHora(v){
+    document.documentElement.style.setProperty('--warmth', v / 100);
+  }
+  const guardado = localStorage.getItem(CLAVE);
+  if (guardado !== null) { dial.value = guardado; }
+  aplicarHora(dial.value);
+  dial.addEventListener('input', () => {
+    aplicarHora(dial.value);
+    localStorage.setItem(CLAVE, dial.value);
+  });
+
+  const CLAVE_PAL = 'a4-paleta';
+  const botones = document.querySelectorAll('.pal');
+  function aplicarPaleta(p){
+    document.documentElement.setAttribute('data-paleta', p);
+    botones.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === p)));
+  }
+  aplicarPaleta(localStorage.getItem(CLAVE_PAL) || 'calida');
+  botones.forEach(b => b.addEventListener('click', () => {
+    aplicarPaleta(b.dataset.p);
+    localStorage.setItem(CLAVE_PAL, b.dataset.p);
+  }));
+</script>
+
+</body>
+</html>

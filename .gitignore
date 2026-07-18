@@ -61,3 +61,19 @@ material-visual/
 **/informe_eval*.html
 **/comparacion*.json
 **/comparacion*.html
+
+# ── Artefacto 4 · BLINDAJE DEL AGENTE DE BUSQUEDA DE EMPLEO ──
+# El CV lleva datos de contacto personales (direccion, telefono, email) y no debe
+# publicarse con esa info en un repo publico. Todo lo personal vive aislado en
+# datos_personales/ (CV, ofertas pegadas, borradores generados).
+# (El codigo del agente y sus herramientas SI puede subir: es la logica, no el dato.)
+**/datos_personales/
+# Ofertas y borradores sueltos que puedan quedar en la raiz del artefacto
+**/oferta_*.txt
+**/borrador_*.txt
+**/borrador_*.md
+# Capturas de tokens/secretos: JAMAS suben a un repo publico.
+# (la del Artefacto 4 se llama "   Token App.png" — con espacios; el glob la cubre)
+**/*Token*.png
+**/*token*.png
+**/*secret*.png

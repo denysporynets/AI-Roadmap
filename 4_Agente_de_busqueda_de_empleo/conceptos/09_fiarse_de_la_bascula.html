@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concepto 09 · Fiarse de la báscula</title>
+<style>
+  :root{
+    --warmth: 0;
+    --h-bg: 40;  --s-bg: 30%;  --s-panel: 33%;
+    --h-ink: 30; --s-ink: 15%;
+    --h-acc: 38; --s-acc: 92%;
+
+    --bg: hsl(var(--h-bg) var(--s-bg) calc(98% - var(--warmth) * 12%));
+    --panel: hsl(var(--h-bg) var(--s-panel) calc(100% - var(--warmth) * 14%));
+    --ink: hsl(var(--h-ink) var(--s-ink) calc(18% + var(--warmth) * 4%));
+    --soft: hsl(var(--h-ink) 10% calc(42% + var(--warmth) * 6%));
+    --amber: hsl(var(--h-acc) var(--s-acc) calc(45% - var(--warmth) * 6%));
+    --line: hsl(var(--h-acc) 25% calc(86% - var(--warmth) * 12%));
+    --code-bg: hsl(var(--h-bg) 25% calc(95% - var(--warmth) * 13%));
+    --accent-soft: hsl(var(--h-acc) 60% calc(92% - var(--warmth) * 12%));
+    --blue-filter: sepia(calc(var(--warmth) * 0.35)) brightness(calc(1 - var(--warmth) * 0.04));
+  }
+  :root[data-paleta="azul"]{
+    --h-bg: 208; --s-bg: 26%; --s-panel: 30%;
+    --h-ink: 215; --s-ink: 16%;
+    --h-acc: 205; --s-acc: 72%;
+  }
+  :root[data-paleta="neutra"]{
+    --h-bg: 220; --s-bg: 6%; --s-panel: 7%;
+    --h-ink: 220; --s-ink: 9%;
+    --h-acc: 250; --s-acc: 38%;
+  }
+  *{box-sizing:border-box}
+  html{filter:var(--blue-filter);transition:filter .3s}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.65;font-size:18px;
+    padding:0 20px 120px;
+    transition:background .3s,color .3s;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{padding:54px 0 20px;border-bottom:2px solid var(--line);margin-bottom:36px}
+  .kicker{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);font-weight:600}
+  h1{font-size:34px;line-height:1.15;margin:.35em 0 .15em;font-weight:600}
+  .sub{color:var(--soft);font-size:16px;font-style:italic}
+  h2{font-size:24px;margin:2.2em 0 .5em;font-weight:600;display:flex;align-items:baseline;gap:.5em}
+  h2 .n{font-family:"DM Mono",ui-monospace,monospace;font-size:14px;color:var(--amber);font-weight:600}
+  h3{font-size:18px;margin:1.6em 0 .4em;font-weight:600;font-family:system-ui,sans-serif}
+  p,li{font-size:18px}
+  strong{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 24px;margin:20px 0}
+  .panel.amber{border-left:4px solid var(--amber);background:var(--accent-soft)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;overflow-x:auto;font-family:"DM Mono",ui-monospace,Menlo,monospace;
+    font-size:14px;line-height:1.6;color:var(--ink)}
+  code{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+    background:var(--code-bg);padding:.1em .35em;border-radius:5px}
+  pre code{background:none;padding:0}
+  .tabla-wrap{overflow-x:auto;margin:18px 0}
+  table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:15px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft)}
+  td.num{font-family:"DM Mono",monospace;text-align:center;white-space:nowrap}
+  ul{padding-left:1.2em}
+  li{margin:.35em 0}
+  .flow{font-family:"DM Mono",ui-monospace,monospace;font-size:13.5px;white-space:pre;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:18px;overflow-x:auto;line-height:1.5}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--soft);font-size:14px;font-family:"DM Mono",monospace}
+  .dial{position:fixed;top:14px;right:14px;z-index:99;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:8px 14px;display:flex;
+    align-items:center;gap:10px;box-shadow:0 2px 14px hsl(30 20% 20% / .12);
+    font-family:system-ui,sans-serif;font-size:13px;color:var(--soft)}
+  .dial input[type=range]{width:110px;accent-color:var(--amber)}
+  .sep{width:1px;height:18px;background:var(--line)}
+  .pal{width:15px;height:15px;border-radius:50%;border:1px solid hsl(30 15% 45% / .5);
+    padding:0;cursor:pointer;transition:transform .15s}
+  .pal:hover{transform:scale(1.18)}
+  .pal[data-p="calida"]{background:hsl(38 92% 52%)}
+  .pal[data-p="azul"]{background:hsl(205 72% 52%)}
+  .pal[data-p="neutra"]{background:hsl(250 38% 58%)}
+  .pal[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+  @media print{.dial{display:none}}
+  .si{color:hsl(150 45% calc(32% - var(--warmth) * 4%));font-weight:600}
+  .no{color:hsl(5 60% calc(45% - var(--warmth) * 4%));font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="dial">
+  <span>☀️</span>
+  <input type="range" id="warmth" min="0" max="100" value="0" aria-label="Hora: día a noche">
+  <span>🌙</span>
+  <span class="sep"></span>
+  <button class="pal" data-p="calida" aria-pressed="true" title="Paleta cálida"></button>
+  <button class="pal" data-p="azul" aria-pressed="false" title="Paleta azul"></button>
+  <button class="pal" data-p="neutra" aria-pressed="false" title="Paleta neutra"></button>
+</div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">Artefacto 5 · AI Engineering · Concepto 09</div>
+  <h1>Fiarse de la báscula</h1>
+  <div class="sub">Antes de creerte que un cambio mejora las cosas, tienes que poder creerte el instrumento con que lo mides. Un run «aburrido» destapó que no podíamos.</div>
+</header>
+
+<p>Íbamos lanzados. En la Fase 3 escribimos la versión <code>v2</code> del prompt de la carta, la medimos, y el caso de numerología saltó de <code>0.25</code> a <code>1.0</code>. Justo antes de seguir, surgió una pregunta sencilla: <strong>«¿y si corro exactamente lo mismo otra vez? ¿sale lo mismo?»</strong>. Esa pregunta —la más barata de hacer y la que más gente se salta— destapó que el número en el que nos apoyábamos temblaba. Este capítulo es esa historia y las tres ideas que deja: <strong>no-determinismo</strong>, <strong>ruido de muestreo</strong> y <strong>calibrar el instrumento antes de medir</strong>.</p>
+
+<h2><span class="n">01</span> El experimento aburrido: correr lo mismo dos veces</h2>
+
+<p>El concepto 07 ya nos había enseñado una lección incómoda: dos corridas de configuración <strong>idéntica</strong> dieron <code>0.833</code> y <code>0.9</code>. De ahí salió el <em>margen de ruido</em>: una diferencia menor de <code>~0.07</code> no significa nada, es el temblor de fondo. Bien. Pero eso lo achacábamos a la temperatura alta de la carta (temp <code>0.7</code>), donde el modelo escribe distinto cada vez.</p>
+
+<p>Así que repetimos la corrida de <code>v2</code> sin tocar <strong>ni una coma</strong> —mismo prompt, mismo hash <code>e78ee59cdd06</code>— solo para confirmar que los resultados aguantaban. Y aguantaron... casi todos. Uno no:</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Caso</th><th>Temp.</th><th class="num">Corrida #5</th><th class="num">Corrida #6</th><th>¿Igual?</th></tr>
+  <tr><td><code>carta_bug_numerologia</code></td><td class="num">0.7</td><td class="num">20/20</td><td class="num">20/20</td><td class="si">sí, sólido</td></tr>
+  <tr><td><code>carta_control</code> (longitud)</td><td class="num">0.7</td><td class="num">5/20</td><td class="num">4/20</td><td class="si">≈ (dentro del ruido)</td></tr>
+  <tr><td><code>cv_bug_cefr_b2</code></td><td class="num">0</td><td class="num"><span class="si">1/1 ✓</span></td><td class="num"><span class="no">0/1 ✗</span></td><td class="no">VOLTEÓ</td></tr>
+</table>
+</div>
+
+<p>El caso <code>cv_bug_cefr_b2</code> pasó de acertar a fallar <strong>sin que cambiáramos absolutamente nada</strong>. Y lo raro no es que fallara: es <em>dónde</em> falló. Ese caso corre a <strong>temperatura 0</strong>, la temperatura del «modo determinista», con la que todo el mundo asume que la misma entrada da siempre la misma salida. Estaba puesto a <strong>1 sola pasada</strong> justamente por eso.</p>
+
+<h2><span class="n">02</span> La creencia que se rompió: «temperatura 0 = determinista»</h2>
+
+<p>La temperatura de un LLM regula el azar al elegir cada palabra: alta (<code>0.7</code>) = más creativo y variable; <code>0</code> = «coge siempre la opción más probable». De ahí el mito cómodo: <strong>temp 0 → misma entrada, misma salida, siempre</strong>. Nuestro propio <code>casos.json</code> lo daba por hecho: repetía solo los casos de temp <code>0.7</code>.</p>
+
+<div class="panel amber">
+  <p style="margin:0"><strong>Es mentira, y lo acabábamos de comprobar por accidente.</strong> Temperatura 0 baja el azar, no lo apaga. Un modelo como <code>gpt-4o-mini</code> sigue teniendo dos fuentes de variación que la temperatura no toca: el <strong>enrutado interno</strong> (estos modelos reparten el trabajo entre «expertos», y a quién le toca puede variar) y el <strong>batching del servidor</strong> (tu petición se agrupa con las de otros usuarios, y el orden de esa suma en coma flotante no siempre es el mismo). El resultado: a temp 0, el modelo acierta <em>casi</em> siempre... y ese «casi» es justo lo que voltea una tirada de vez en cuando.</p>
+</div>
+
+<p>Esto no es un detalle de trivia. Es una de las primeras cosas con las que choca cualquiera que monta evaluaciones de LLMs en serio, y la fuente número uno de <em>flaky tests</em> (pruebas que fallan sin motivo aparente) en un pipeline de MLOps. Lo bonito es que lo <strong>falsamos con un experimento que costó céntimos</strong>: correr lo mismo dos veces.</p>
+
+<h2><span class="n">03</span> Por qué una sola pasada envenena el titular</h2>
+
+<p>El daño de <code>n=1</code> no se queda en su casilla. Nuestra báscula resume todo en tres números: nota de bugs, de controles y global. <code>cv_bug_cefr_b2</code> es <strong>1 de los 3 bugs</strong>. Mira lo que le hizo al titular al voltear:</p>
+
+<div class="flow">  corrida #5 (v2)          cv_bug = 1/1 = 1.0
+                           media de bugs = (1.0 + 1.0 + 1.0) / 3 = <span class="si">1.000</span>
+
+  corrida #6 (v2 igual)    cv_bug = 0/1 = 0.0   ← una mala tirada
+                           media de bugs = (1.0 + 1.0 + 0.0) / 3 = <span class="no">0.667</span>
+
+  el «global» cayó de 0.875 a 0.7 — sin que nada cambiara</div>
+
+<p>El <code>global 0.7</code> de la #6 daba miedo, como si la <code>v2</code> hubiera empeorado. <strong>No había empeorado nada.</strong> Una moneda al aire, en un caso de una sola pasada, había arrastrado la media entera. La nota agregada era <strong>rehén de una tirada</strong>. Esta es la trampa de mirar solo el número gordo: mezcla casos de 20 pasadas (firmes) con casos de 1 pasada (una moneda), y la moneda pesa lo mismo que la roca.</p>
+
+<h2><span class="n">04</span> El arreglo: dar más pasadas a los casos frágiles</h2>
+
+<p>La solución es la misma que ya usábamos en la carta, ahora aplicada a todos: <strong>si una pasada es una moneda al aire, tira la moneda varias veces</strong> y quédate con la fracción. Subimos los cuatro casos de temp 0 de <strong>1 a 5 pasadas</strong>. El coste es ridículo (unos céntimos más por corrida); la fiabilidad, otra liga.</p>
+
+<pre><code>// evaluacion/casos.json  —  en los 4 casos de temperatura 0
+- "repeticiones": 1,
++ "repeticiones": 5,</code></pre>
+
+<p>Con 1 pasada, la nota de un caso solo puede ser <code>0.0</code> o <code>1.0</code>: no hay término medio, y una voltereta la manda de un extremo al otro. Con 5, la nota se mueve en pasos de <code>0.2</code> y hace falta una racha muy rara para desplazarla de verdad. La moneda no desaparece —el no-determinismo sigue ahí— pero <strong>promediar varias tiradas ahoga el ruido</strong> y deja ver la señal.</p>
+
+<div class="panel">
+  <p style="margin:0">De paso dejamos el hallazgo <strong>escrito en el propio <code>casos.json</code></strong>, en la nota de cabecera del eval-set. Es su sitio natural: el fichero que define las pruebas explica <em>por qué</em> mide con 5 pasadas y no con 1. Dentro de tres meses, quien lo lea (tú incluido) no tendrá que redescubrir el susto.</p>
+</div>
+
+<h2><span class="n">05</span> Calibrar: probar que ahora sí me puedo fiar</h2>
+
+<p>Cambiar la báscula no basta: hay que <strong>demostrar que el cambio la volvió fiable</strong>. Igual que en el concepto 08 no dijimos «el cerrojo funciona» sino que lanzamos 30 escritores a la vez, aquí no dijimos «5 pasadas bastan»: corrimos la báscula nueva <strong>dos veces seguidas</strong>, idénticas, y miramos si los cuatro casos de temp 0 daban lo mismo.</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Caso (temp 0, ahora 5 pasadas)</th><th class="num">Corrida #7</th><th class="num">Corrida #8</th><th>¿Estable?</th></tr>
+  <tr><td><code>of_bug_alternativa_o</code></td><td class="num">5/5 = 1.0</td><td class="num">5/5 = 1.0</td><td class="si">sí</td></tr>
+  <tr><td><code>of_control_compuesto_y</code></td><td class="num">5/5 = 1.0</td><td class="num">5/5 = 1.0</td><td class="si">sí</td></tr>
+  <tr><td><code>cv_bug_cefr_b2</code></td><td class="num">5/5 = 1.0</td><td class="num">5/5 = 1.0</td><td class="si">sí</td></tr>
+  <tr><td><code>cv_control_bloqueante_real</code></td><td class="num">5/5 = 1.0</td><td class="num">5/5 = 1.0</td><td class="si">sí</td></tr>
+</table>
+</div>
+
+<p>Clavados. Y fíjate en <code>cv_bug_cefr_b2</code>, el que nos había asustado con su <code>0/1</code>: con 5 pasadas sale <strong>5/5, las dos veces</strong>. Veredicto: el prompt <code>v1</code> de <code>match_cv</code> siempre estuvo bien; lo que fallaba era el <em>instrumento</em>, que con una sola pasada nos mostró una mala tirada como si fuera una regresión. <strong>Instrumento calibrado.</strong></p>
+
+<div class="panel amber">
+  <p style="margin:0"><strong>Regalo escondido en la misma corrida:</strong> como las cartas de la #7/#8 usaban el prompt <code>v1</code>, de paso obtuvimos un <strong>re-baseline limpio</strong> del baseline con la báscula buena. Y reveló un matiz: el control de longitud con <code>v1</code> ya rozaba a veces (<code>0.80</code>–<code>0.95</code>), no era perfecto. Es decir, la <code>v2</code> no <em>rompió</em> algo intacto: <strong>agravó</strong> (hasta <code>~0.20</code>) un punto que ya era flojo. La <code>v3</code> que viene ahora no repara un destrozo nuestro; mejora una debilidad que llevaba ahí desde el principio.</p>
+</div>
+
+<h2><span class="n">06</span> La regla de oro que deja este capítulo</h2>
+
+<p>Todo esto para una moraleja que en ciencia de datos vale su peso en oro y que es fácil de saltarse con las prisas:</p>
+
+<div class="panel">
+  <p style="margin:0;font-size:19px"><strong>Antes de fiarte de una comparación, fíate del instrumento.</strong> Si la báscula tiembla, cualquier «mejora» que midas puede ser el temblor disfrazado. Primero <em>calibras</em> (corre lo mismo dos veces, mira si aguanta), y solo entonces <em>mides</em> el cambio de verdad.</p>
+</div>
+
+<p>Es exactamente por lo que la <code>v3</code> tuvo que esperar. Habría sido facilísimo escribirla, medirla, ver un número más alto y cantar victoria. Pero sin saber cuánto tiembla la báscula, ese número más alto podría haber sido puro ruido. Ahora sabemos que los casos de temp 0 no se mueven, que la carta tiene su banda conocida (<code>~0.07</code>), y que una mejora tiene que <strong>superar esa banda</strong> para contar. Con eso, ya podemos medir la <code>v3</code> y creernos el resultado.</p>
+
+<h2><span class="n">07</span> Diccionario para el CV</h2>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Término</th><th>Qué significa de verdad</th></tr>
+  <tr><td><strong>No-determinismo</strong><br><em>non-determinism</em></td><td>La misma entrada no garantiza la misma salida. En LLMs ocurre <em>incluso a temperatura 0</em>: el enrutado interno del modelo y el batching del servidor introducen variación que la temperatura no controla.</td></tr>
+  <tr><td><strong>Reproducibilidad</strong><br><em>reproducibility</em></td><td>Que un experimento repetido dé el mismo resultado. Se comprueba, no se supone: corres lo mismo dos veces y miras si aguanta.</td></tr>
+  <tr><td><strong>Ruido de muestreo</strong><br><em>sampling noise</em></td><td>La variación que ves solo por haber tomado pocas muestras. Con <code>n=1</code> es máximo (0 ó 1, nada en medio); crece la muestra y el ruido baja.</td></tr>
+  <tr><td><strong>Tamaño de muestra</strong><br><em>sample size (n)</em></td><td>Cuántas veces repites para estimar una tasa. Subir de 1 a 5 pasadas convirtió una moneda al aire en una medida estable.</td></tr>
+  <tr><td><strong>Prueba inestable</strong><br><em>flaky test</em></td><td>Una prueba que pasa o falla sin que el código cambie. Con LLMs, la causa nº 1 es tratar una salida no-determinista como si fuera fija.</td></tr>
+  <tr><td><strong>Señal vs. ruido</strong><br><em>signal / noise</em></td><td>La señal es la mejora real; el ruido, el temblor de fondo (<code>~0.07</code> aquí). Un cambio solo cuenta si su efecto supera el ruido.</td></tr>
+  <tr><td><strong>Calibrar el instrumento</strong></td><td>Comprobar que la herramienta de medida es fiable <em>antes</em> de usarla para decidir. Si la báscula miente, todo lo que peses con ella miente.</td></tr>
+</table>
+</div>
+
+<footer>
+  Artefacto 5 · Endurecimiento · Concepto 09 — fiarse de la báscula, escrito el 18/07/2026.<br>
+  Nace del run de reproducibilidad que pidió parar antes de la v3. Cambio aplicado: casos temp 0 de 1 → 5 pasadas.<br>
+  Calibración verificada: corridas #7 y #8, los 4 casos temp 0 clavados a 5/5.<br>
+  Regla que deja: <em>antes de fiarte de una comparación, fíate del instrumento. Primero calibras, luego mides.</em>
+</footer>
+
+</div>
+
+<script>
+  const dial = document.getElementById('warmth');
+  const CLAVE = 'a4-warmth';
+  function aplicarHora(v){
+    document.documentElement.style.setProperty('--warmth', v / 100);
+  }
+  const guardado = localStorage.getItem(CLAVE);
+  if (guardado !== null) { dial.value = guardado; }
+  aplicarHora(dial.value);
+  dial.addEventListener('input', () => {
+    aplicarHora(dial.value);
+    localStorage.setItem(CLAVE, dial.value);
+  });
+
+  const CLAVE_PAL = 'a4-paleta';
+  const botones = document.querySelectorAll('.pal');
+  function aplicarPaleta(p){
+    document.documentElement.setAttribute('data-paleta', p);
+    botones.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === p)));
+  }
+  aplicarPaleta(localStorage.getItem(CLAVE_PAL) || 'calida');
+  botones.forEach(b => b.addEventListener('click', () => {
+    aplicarPaleta(b.dataset.p);
+    localStorage.setItem(CLAVE_PAL, b.dataset.p);
+  }));
+</script>
+
+</body>
+</html>

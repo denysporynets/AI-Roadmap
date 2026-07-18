@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concepto 12 · Tocar y demostrar</title>
+<style>
+  :root{
+    --warmth: 0;
+    --h-bg: 40;  --s-bg: 30%;  --s-panel: 33%;
+    --h-ink: 30; --s-ink: 15%;
+    --h-acc: 38; --s-acc: 92%;
+
+    --bg: hsl(var(--h-bg) var(--s-bg) calc(98% - var(--warmth) * 12%));
+    --panel: hsl(var(--h-bg) var(--s-panel) calc(100% - var(--warmth) * 14%));
+    --ink: hsl(var(--h-ink) var(--s-ink) calc(18% + var(--warmth) * 4%));
+    --soft: hsl(var(--h-ink) 10% calc(42% + var(--warmth) * 6%));
+    --amber: hsl(var(--h-acc) var(--s-acc) calc(45% - var(--warmth) * 6%));
+    --line: hsl(var(--h-acc) 25% calc(86% - var(--warmth) * 12%));
+    --code-bg: hsl(var(--h-bg) 25% calc(95% - var(--warmth) * 13%));
+    --accent-soft: hsl(var(--h-acc) 60% calc(92% - var(--warmth) * 12%));
+    --blue-filter: sepia(calc(var(--warmth) * 0.35)) brightness(calc(1 - var(--warmth) * 0.04));
+  }
+  :root[data-paleta="azul"]{
+    --h-bg: 208; --s-bg: 26%; --s-panel: 30%;
+    --h-ink: 215; --s-ink: 16%;
+    --h-acc: 205; --s-acc: 72%;
+  }
+  :root[data-paleta="neutra"]{
+    --h-bg: 220; --s-bg: 6%; --s-panel: 7%;
+    --h-ink: 220; --s-ink: 9%;
+    --h-acc: 250; --s-acc: 38%;
+  }
+  *{box-sizing:border-box}
+  html{filter:var(--blue-filter);transition:filter .3s}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.65;font-size:18px;
+    padding:0 20px 120px;
+    transition:background .3s,color .3s;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{padding:54px 0 20px;border-bottom:2px solid var(--line);margin-bottom:36px}
+  .kicker{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);font-weight:600}
+  h1{font-size:34px;line-height:1.15;margin:.35em 0 .15em;font-weight:600}
+  .sub{color:var(--soft);font-size:16px;font-style:italic}
+  h2{font-size:24px;margin:2.2em 0 .5em;font-weight:600;display:flex;align-items:baseline;gap:.5em}
+  h2 .n{font-family:"DM Mono",ui-monospace,monospace;font-size:14px;color:var(--amber);font-weight:600}
+  h3{font-size:18px;margin:1.6em 0 .4em;font-weight:600;font-family:system-ui,sans-serif}
+  p,li{font-size:18px}
+  strong{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 24px;margin:20px 0}
+  .panel.amber{border-left:4px solid var(--amber);background:var(--accent-soft)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;overflow-x:auto;font-family:"DM Mono",ui-monospace,Menlo,monospace;
+    font-size:14px;line-height:1.6;color:var(--ink)}
+  code{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+    background:var(--code-bg);padding:.1em .35em;border-radius:5px}
+  pre code{background:none;padding:0}
+  .tabla-wrap{overflow-x:auto;margin:18px 0}
+  table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:15px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft)}
+  td.num{font-family:"DM Mono",monospace;text-align:center;white-space:nowrap}
+  ul{padding-left:1.2em}
+  li{margin:.35em 0}
+  .flow{font-family:"DM Mono",ui-monospace,monospace;font-size:13.5px;white-space:pre;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:18px;overflow-x:auto;line-height:1.5}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--soft);font-size:14px;font-family:"DM Mono",monospace}
+  .dial{position:fixed;top:14px;right:14px;z-index:99;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:8px 14px;display:flex;
+    align-items:center;gap:10px;box-shadow:0 2px 14px hsl(30 20% 20% / .12);
+    font-family:system-ui,sans-serif;font-size:13px;color:var(--soft)}
+  .dial input[type=range]{width:110px;accent-color:var(--amber)}
+  .sep{width:1px;height:18px;background:var(--line)}
+  .pal{width:15px;height:15px;border-radius:50%;border:1px solid hsl(30 15% 45% / .5);
+    padding:0;cursor:pointer;transition:transform .15s}
+  .pal:hover{transform:scale(1.18)}
+  .pal[data-p="calida"]{background:hsl(38 92% 52%)}
+  .pal[data-p="azul"]{background:hsl(205 72% 52%)}
+  .pal[data-p="neutra"]{background:hsl(250 38% 58%)}
+  .pal[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+  @media print{.dial{display:none}}
+  .si{color:hsl(150 45% calc(32% - var(--warmth) * 4%));font-weight:600}
+  .no{color:hsl(5 60% calc(45% - var(--warmth) * 4%));font-weight:600}
+  .pend{color:var(--amber);font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="dial">
+  <span>☀️</span>
+  <input type="range" id="warmth" min="0" max="100" value="0" aria-label="Hora: día a noche">
+  <span>🌙</span>
+  <span class="sep"></span>
+  <button class="pal" data-p="calida" aria-pressed="true" title="Paleta cálida"></button>
+  <button class="pal" data-p="azul" aria-pressed="false" title="Paleta azul"></button>
+  <button class="pal" data-p="neutra" aria-pressed="false" title="Paleta neutra"></button>
+</div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">Artefacto 5 · AI Engineering · Concepto 12 · capstone</div>
+  <h1>Tocar y demostrar</h1>
+  <div class="sub">El resumen del artefacto entero. No trata una técnica: cuenta cómo un agente que funcionaba «a ojo» se convirtió en uno donde ningún cambio entra en producción sin un número que lo respalde.</div>
+</header>
+
+<p>Los once capítulos anteriores fueron piezas. Este es el plano completo. El Artefacto 5 no construyó una app nueva: cogió el <strong>agente del Artefacto 4</strong> —que ya vivía en Cloud Run— y le dio <strong>disciplina</strong>. La tesis cabe en tres palabras que dan título a este cierre: <em>tocar y demostrar</em>. Se puede tocar un prompt; lo que no se puede es <strong>afirmar que mejoró sin medirlo</strong>.</p>
+
+<h2><span class="n">01</span> El pecado de partida: «a ojo»</h2>
+
+<p>El agente funcionaba. Pero sus prompts se habían afinado como se afina casi todo en la práctica: escribo una instrucción, la pruebo <strong>una vez</strong>, y si cuela, a producción. Durante la construcción del Artefacto 4 cacé <strong>tres bugs de prompt reales</strong> y los parcheé metiendo frases en la instrucción:</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Bug real</th><th>El parche a ojo</th></tr>
+  <tr><td>Marcaba «GCP o AWS» como <em>dos</em> requisitos y uno faltaba</td><td>«las alternativas con <em>o</em> no se separan»</td></tr>
+  <tr><td>Decía que un inglés C1 no cumplía un B2 (comparaba literal)</td><td>«el CEFR está ordenado: un nivel superior cumple»</td></tr>
+  <tr><td>Colaba «más de dos años» en cartas que prohíben cifras</td><td>«nada de números salvo el GPA»</td></tr>
+</table>
+</div>
+
+<p>Funcionaban… <strong>pero nunca medí si funcionaban siempre.</strong> Y esa es la trampa: un parche que arregla el caso que tienes delante puede estar rompiendo otro que no estás mirando. Esos tres bugs no eran un problema — eran el <strong>eval-set perfecto</strong>, porque eran reales.</p>
+
+<h2><span class="n">02</span> Las cinco piezas de la disciplina</h2>
+
+<p>Endurecer fue apilar cinco piezas, cada una con su capítulo. Juntas convierten «parece que va mejor» en un dato:</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Pieza</th><th>Qué aporta</th><th>Cap.</th></tr>
+  <tr><td><strong>Versionar</strong> los prompts</td><td>Los prompts salen de estar horneados en cada función a un módulo con catálogo (v1, v2, v3) y versión activa. Cada corrida guarda el <em>hash</em>: una versión publicada no se edita, y es comprobable.</td><td>07</td></tr>
+  <tr><td><strong>Medir en parejas</strong></td><td>Cada <em>bug</em> (¿mejoras?) lleva su <em>control</em> (¿rompes?). Sin el control, la tabla miente con buena cara.</td><td>07</td></tr>
+  <tr><td><strong>Calibrar</strong> la báscula</td><td>Temperatura 0 no es determinista; la misma entrada voltea de acierto a fallo. Se sube a varias pasadas y se registra sin carreras (un cerrojo).</td><td>08 · 09</td></tr>
+  <tr><td><strong>Few-shot + CoT + juez</strong></td><td>Enseñar con ejemplos y hacer razonar antes de escribir domó la numerología (0.25 → 1.0). Y un <em>juez-LLM</em> puntúa lo que ningún <code>if</code> ve: si suena a persona o a plantilla.</td><td>10</td></tr>
+  <tr><td><strong>Structured outputs</strong></td><td>Un molde Pydantic que el decodificador está obligado a rellenar. Se acabó el <code>json.loads</code> a ciegas: la forma pasa de probable a garantizada.</td><td>11</td></tr>
+</table>
+</div>
+
+<p>El recorrido de las notas cuenta la historia sin adjetivos: numerología <span class="no">0.25</span> → <span class="si">1.0</span> con few-shot y CoT; y al migrar toda la salida a structured outputs, la báscula confirmó <strong>cero regresión</strong> — la calidad ni se movió del ruido. Trece corridas, cada una con su hash y su nota, en un historial que solo crece.</p>
+
+<h2><span class="n">03</span> Los tres sustos que enseñaron más que los aciertos</h2>
+
+<p>Si algo distingue este artefacto no son los prompts que salieron bien, sino los <strong>tres momentos en que casi nos equivocamos</strong> y la disciplina lo evitó:</p>
+
+<ul>
+  <li><strong>Temperatura 0 no apaga el azar.</strong> Un caso a 1 sola pasada volteó de <code>1/1</code> a <code>0/1</code> sin tocar nada. Con una moneda al aire por caso, la nota global asusta sin que nada haya empeorado. <em>Lección: calibra el instrumento antes de fiarte de lo que marca.</em></li>
+  <li><strong>La muestra pequeña invirtió la conclusión.</strong> Con 3 cartas el juez dijo que <code>v3</code> sonaba <em>peor</em>; con 15, que era claramente <em>mejor</em>. No fue imprecisión: fue el <strong>signo</strong> cambiado. Casi desplegamos lo contrario de la verdad por tres monedas al aire.</li>
+  <li><strong>El secreto que casi viaja.</strong> Antes del despliegue, <code>/code-review</code> cazó una captura del token que iba a subirse a los servidores del build — protegida en <code>.gitignore</code> pero no en <code>.gcloudignore</code>, que son ficheros distintos. <em>Lección: la red de seguridad se pone antes de saltar, no después.</em></li>
+</ul>
+
+<div class="panel amber">
+  <p style="margin:0">Los tres tienen la misma moraleja, que es la del artefacto entero: <strong>la intuición es una buena generadora de hipótesis y una pésima jueza</strong>. «Parece peor», «seguro que va bien», «esto no puede fallar» — cada una era falsa, y solo un número (o una revisión) lo destapó a tiempo.</p>
+</div>
+
+<h2><span class="n">04</span> Lo que queda: la guinda</h2>
+
+<p>El artefacto está <strong>desplegado y endurecido</strong>: el agente vive en producción con prompts versionados, salida validada y una báscula que respalda cada cambio. Queda una pieza, a propósito para el final y sin prisa:</p>
+
+<p><span class="pend">◔ Pendiente — CI/CD.</span> Hoy la báscula se corre a mano. El paso natural es un <strong>GitHub Actions</strong> que la corra como <em>regresión</em> en cada <code>push</code> del agente: bloquear si un control baja de <code>1.0</code> o si los bugs caen por debajo del baseline menos el ruido. Los asserts baratos, en cada push; el juez-LLM caro, por la noche. Es la misma idea del <em>quality gate</em> del Artefacto 3, ahora automática. El terreno ya está preparado —los asserts y el juez viven en ejes separados justo por esto— pero merece su propia sesión, tranquila.</p>
+
+<h2><span class="n">05</span> La frase para el CV</h2>
+
+<div class="panel">
+  <p style="margin:0 0 .6em"><strong>La historia redonda:</strong> «Cacé tres bugs de prompt a ojo durante un proyecto, los convertí en un eval-set con casos de control, y ahora ningún cambio de prompt entra en producción sin un número que lo respalde. Por el camino aprendí que la temperatura 0 no es determinista y que una muestra pequeña puede invertir la conclusión, no solo hacerla imprecisa.»</p>
+  <p style="margin:0;color:var(--soft);font-style:italic">Eso no es «sé escribir prompts». Es <strong>ingeniería de prompts disciplinada</strong>: versionar, medir, y demostrar cada cambio contra un banco de pruebas — con la humildad estadística de no fiarse de la primera impresión.</p>
+</div>
+
+<footer>
+  Artefacto 5 · Endurecimiento · Concepto 12 (capstone) — «tocar y demostrar», escrito el 18/07/2026.<br>
+  Cierra el arco: versionar (07) · cerrojo (08) · calibrar la báscula (09) · juez y few-shot/CoT (10) · structured outputs (11).<br>
+  Estado: agente desplegado y endurecido en Cloud Run (v3 + structured outputs, corrida #13 sin regresión). Pendiente: CI/CD (la guinda).<br>
+  Regla que deja: <em>toca lo que quieras, pero no digas que mejoró hasta que un número lo firme.</em>
+</footer>
+
+</div>
+
+<script>
+  const dial = document.getElementById('warmth');
+  const CLAVE = 'a4-warmth';
+  function aplicarHora(v){
+    document.documentElement.style.setProperty('--warmth', v / 100);
+  }
+  const guardado = localStorage.getItem(CLAVE);
+  if (guardado !== null) { dial.value = guardado; }
+  aplicarHora(dial.value);
+  dial.addEventListener('input', () => {
+    aplicarHora(dial.value);
+    localStorage.setItem(CLAVE, dial.value);
+  });
+
+  const CLAVE_PAL = 'a4-paleta';
+  const botones = document.querySelectorAll('.pal');
+  function aplicarPaleta(p){
+    document.documentElement.setAttribute('data-paleta', p);
+    botones.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === p)));
+  }
+  aplicarPaleta(localStorage.getItem(CLAVE_PAL) || 'calida');
+  botones.forEach(b => b.addEventListener('click', () => {
+    aplicarPaleta(b.dataset.p);
+    localStorage.setItem(CLAVE_PAL, b.dataset.p);
+  }));
+</script>
+
+</body>
+</html>

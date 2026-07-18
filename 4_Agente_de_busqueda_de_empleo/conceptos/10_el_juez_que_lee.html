@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concepto 10 · El juez que lee</title>
+<style>
+  :root{
+    --warmth: 0;
+    --h-bg: 40;  --s-bg: 30%;  --s-panel: 33%;
+    --h-ink: 30; --s-ink: 15%;
+    --h-acc: 38; --s-acc: 92%;
+
+    --bg: hsl(var(--h-bg) var(--s-bg) calc(98% - var(--warmth) * 12%));
+    --panel: hsl(var(--h-bg) var(--s-panel) calc(100% - var(--warmth) * 14%));
+    --ink: hsl(var(--h-ink) var(--s-ink) calc(18% + var(--warmth) * 4%));
+    --soft: hsl(var(--h-ink) 10% calc(42% + var(--warmth) * 6%));
+    --amber: hsl(var(--h-acc) var(--s-acc) calc(45% - var(--warmth) * 6%));
+    --line: hsl(var(--h-acc) 25% calc(86% - var(--warmth) * 12%));
+    --code-bg: hsl(var(--h-bg) 25% calc(95% - var(--warmth) * 13%));
+    --accent-soft: hsl(var(--h-acc) 60% calc(92% - var(--warmth) * 12%));
+    --blue-filter: sepia(calc(var(--warmth) * 0.35)) brightness(calc(1 - var(--warmth) * 0.04));
+  }
+  :root[data-paleta="azul"]{
+    --h-bg: 208; --s-bg: 26%; --s-panel: 30%;
+    --h-ink: 215; --s-ink: 16%;
+    --h-acc: 205; --s-acc: 72%;
+  }
+  :root[data-paleta="neutra"]{
+    --h-bg: 220; --s-bg: 6%; --s-panel: 7%;
+    --h-ink: 220; --s-ink: 9%;
+    --h-acc: 250; --s-acc: 38%;
+  }
+  *{box-sizing:border-box}
+  html{filter:var(--blue-filter);transition:filter .3s}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.65;font-size:18px;
+    padding:0 20px 120px;
+    transition:background .3s,color .3s;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{padding:54px 0 20px;border-bottom:2px solid var(--line);margin-bottom:36px}
+  .kicker{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);font-weight:600}
+  h1{font-size:34px;line-height:1.15;margin:.35em 0 .15em;font-weight:600}
+  .sub{color:var(--soft);font-size:16px;font-style:italic}
+  h2{font-size:24px;margin:2.2em 0 .5em;font-weight:600;display:flex;align-items:baseline;gap:.5em}
+  h2 .n{font-family:"DM Mono",ui-monospace,monospace;font-size:14px;color:var(--amber);font-weight:600}
+  h3{font-size:18px;margin:1.6em 0 .4em;font-weight:600;font-family:system-ui,sans-serif}
+  p,li{font-size:18px}
+  strong{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 24px;margin:20px 0}
+  .panel.amber{border-left:4px solid var(--amber);background:var(--accent-soft)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;overflow-x:auto;font-family:"DM Mono",ui-monospace,Menlo,monospace;
+    font-size:14px;line-height:1.6;color:var(--ink)}
+  code{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+    background:var(--code-bg);padding:.1em .35em;border-radius:5px}
+  pre code{background:none;padding:0}
+  .tabla-wrap{overflow-x:auto;margin:18px 0}
+  table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:15px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft)}
+  td.num{font-family:"DM Mono",monospace;text-align:center;white-space:nowrap}
+  ul{padding-left:1.2em}
+  li{margin:.35em 0}
+  .flow{font-family:"DM Mono",ui-monospace,monospace;font-size:13.5px;white-space:pre;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:18px;overflow-x:auto;line-height:1.5}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--soft);font-size:14px;font-family:"DM Mono",monospace}
+  .dial{position:fixed;top:14px;right:14px;z-index:99;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:8px 14px;display:flex;
+    align-items:center;gap:10px;box-shadow:0 2px 14px hsl(30 20% 20% / .12);
+    font-family:system-ui,sans-serif;font-size:13px;color:var(--soft)}
+  .dial input[type=range]{width:110px;accent-color:var(--amber)}
+  .sep{width:1px;height:18px;background:var(--line)}
+  .pal{width:15px;height:15px;border-radius:50%;border:1px solid hsl(30 15% 45% / .5);
+    padding:0;cursor:pointer;transition:transform .15s}
+  .pal:hover{transform:scale(1.18)}
+  .pal[data-p="calida"]{background:hsl(38 92% 52%)}
+  .pal[data-p="azul"]{background:hsl(205 72% 52%)}
+  .pal[data-p="neutra"]{background:hsl(250 38% 58%)}
+  .pal[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+  @media print{.dial{display:none}}
+  .si{color:hsl(150 45% calc(32% - var(--warmth) * 4%));font-weight:600}
+  .no{color:hsl(5 60% calc(45% - var(--warmth) * 4%));font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="dial">
+  <span>☀️</span>
+  <input type="range" id="warmth" min="0" max="100" value="0" aria-label="Hora: día a noche">
+  <span>🌙</span>
+  <span class="sep"></span>
+  <button class="pal" data-p="calida" aria-pressed="true" title="Paleta cálida"></button>
+  <button class="pal" data-p="azul" aria-pressed="false" title="Paleta azul"></button>
+  <button class="pal" data-p="neutra" aria-pressed="false" title="Paleta neutra"></button>
+</div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">Artefacto 5 · AI Engineering · Concepto 10</div>
+  <h1>El juez que lee</h1>
+  <div class="sub">Un <code>if</code> cuenta números y palabras. Pero «¿esta carta suena a una persona o a una plantilla?» no lo sabe contar nadie con un <code>if</code>. Para eso hace falta otro modelo que lea.</div>
+</header>
+
+<p>Este capítulo cierra la Fase 3, la de domar la <strong>numerología</strong> (los números que se colaban en las cartas). Tiene dos mitades. La primera son las dos técnicas de <em>prompt engineering</em> con las que se arregló —<strong>few-shot</strong> y <strong>chain-of-thought</strong>— y el precio que hubo que pagar. La segunda es la pieza nueva del harness: un <strong>juez-LLM</strong> que puntúa lo que ningún <code>if</code> puede ver, y el susto estadístico que dio por el camino.</p>
+
+<h2><span class="n">01</span> Dos formas de decirle algo a un modelo</h2>
+
+<p>El baseline fallaba siempre igual: la oferta traía «2+ años con Python» y la carta lo escribía «más de dos años». La regla del prompt decía «no uses números», y el modelo la leía como «no uses <em>dígitos</em>» — «dos» en letra le sonaba a prosa, no a cifra. Para arreglarlo se usaron dos herramientas que conviene saber nombrar:</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Técnica</th><th>Qué es</th><th>Cómo se usó aquí</th></tr>
+  <tr><td><strong>Few-shot</strong></td><td>No le <em>describes</em> la regla: le <em>enseñas</em> ejemplos de lo que quieres y lo que no.</td><td>Tres pares MAL→BIEN, con la trampa exacta: <em>«más de dos años» → «una base sólida que vengo afinando desde el máster»</em>. El ejemplo pega donde la orden abstracta resbala.</td></tr>
+  <tr><td><strong>Chain-of-Thought</strong> (CoT)</td><td>Pedirle que <em>razone antes de responder</em>, en vez de soltar la respuesta a bocajarro.</td><td>Un campo nuevo, <code>numeros_detectados</code>, donde apunta cada cifra que ve y cómo la reescribe — <strong>antes</strong> de tocar el cuerpo.</td></tr>
+</table>
+</div>
+
+<h3>La tensión bonita: CoT dentro de una salida estructurada</h3>
+
+<p>Aquí hay un detalle que conecta con el título mismo del artefacto («prompts + <strong>structured outputs</strong>»). La herramienta está obligada a devolver <strong>solo JSON</strong>: <code>{asunto, cuerpo, notas}</code>. Pero si el modelo solo puede emitir ese JSON... <em>¿dónde piensa?</em> No hay hueco para razonar. La solución es elegante: <strong>se le da un campo para pensar dentro del propio JSON</strong>.</p>
+
+<pre><code>Responde SOLO con un objeto JSON, EN ESTE ORDEN:
+  numeros_detectados  ← PRIMERO: aquí lista cada cifra y su reescritura
+  asunto
+  cuerpo              ← luego, ya SIN esas cifras
+  notas</code></pre>
+
+<div class="panel amber">
+  <p style="margin:0">El <strong>orden</strong> no es decorativo: es lo que hace que el CoT funcione. Un modelo genera el JSON <em>clave por clave, de arriba abajo</em>. Si <code>numeros_detectados</code> va antes que <code>cuerpo</code>, cuando llega a escribir el cuerpo <strong>ya ha visto y reescrito</strong> las cifras. Si fuera al revés, razonaría <em>después</em> de haberla cagado: puro teatro. El razonamiento deja de ser invisible y se vuelve un <strong>dato que puedes leer</strong> — la misma filosofía que recorre todo el Artefacto 5.</p>
+</div>
+
+<p>Funcionó: la numerología pasó de <code>0.25</code> a <code>1.0</code>. En una carta real, el campo mostró al modelo trabajando: <code>["GPA 8.57 → se permite", "87% → optimización del tiempo", "42+ → diversidad de nacionalidades"]</code>. Vio las cifras, las nombró, las tradujo. Eso es CoT haciendo su trabajo a la vista.</p>
+
+<h2><span class="n">02</span> Toda mejora tiene una factura: medir las dos caras</h2>
+
+<p>Ese arreglo (llamémoslo <code>v2</code>) tuvo un <strong>efecto secundario</strong>. Al reescribir cada cifra en cualitativo, el texto se encogía: <strong>15 de 20 cartas</strong> cayeron por debajo de las 130 palabras de su propio contrato. La numerología subió a <code>1.0</code>, pero el control de longitud se hundió a <code>~0.20</code>. <strong>Cambiamos un problema por otro.</strong></p>
+
+<p>Esto solo se ve si mides <em>las dos caras</em>. Por eso el eval-set va en parejas (concepto 07): un caso mide si <strong>mejoras</strong> (la numerología), su espejo mide si <strong>rompes</strong> (que siga siendo una carta). Sin el espejo, habríamos cantado victoria con la numerología a <code>1.0</code> y desplegado una regresión silenciosa. La <code>v3</code> corrigió con un <strong>único cambio</strong> —apuntar a 150-170 palabras en vez de 130-180— para no confundir de dónde venía la mejora. Resultado: numerología <span class="si">1.0</span> Y longitud <span class="si">1.0</span>. Un cambio, una causa, dos caras verdes.</p>
+
+<h2><span class="n">03</span> Lo que ningún <code>if</code> puede ver</h2>
+
+<p>Hasta aquí, la báscula juzga con Python: cuenta números, mide palabras, comprueba que el asunto no esté vacío. Barato, determinista, perfecto para lo <strong>objetivo</strong>. Pero una cover letter tiene una dimensión que ningún <code>if</code> alcanza: <em>¿suena a una persona o a un folleto?</em> El bug original del Artefacto 4 era justo ese — las cartas abrían con <em>«Soy Denys Porynets, un apasionado ingeniero de IA…»</em>, relleno de plantilla que el prompt prohíbe y que <strong>ningún <code>if</code> detecta</strong>: gramaticalmente es una frase impecable.</p>
+
+<p>Para puntuar lo cualitativo hace falta algo que <strong>lea y entienda</strong>: otro LLM. Es el patrón <strong>LLM-as-a-judge</strong>, el mismo que ya montaste en el <strong>Artefacto 3</strong>. Lo trajimos entero, sin reinventarlo:</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Regla del juez</th><th>Por qué</th></tr>
+  <tr><td>Juez <strong>más capaz</strong> que el generador: las cartas las hace <code>gpt-4o-mini</code>, las juzga <code>gpt-4o</code></td><td>Evita el <strong>self-preference bias</strong>: un modelo tiende a aprobar su propio estilo. Que juzgue uno mejor.</td></tr>
+  <tr><td><code>temperature 0</code> + salida JSON forzada</td><td>Notas consistentes y parseables, no un párrafo suelto.</td></tr>
+  <tr><td>Rúbrica <strong>1-5 con cada nivel descrito</strong> con palabras</td><td>El juez es tan bueno como su rúbrica. «Puntúa del 1 al 5» a secas da notas al azar.</td></tr>
+  <tr><td>Cada nota lleva su <code>reason</code></td><td>Una nota sin motivo no es auditable. El juez cita la evidencia: «abre con 'Me dirijo a ustedes'».</td></tr>
+</table>
+</div>
+
+<p>Nuestro juez puntúa tres cosas: <strong>arranque sin plantilla</strong>, <strong>suena a Denys</strong> y <strong>engancha</strong>. En el autotest discriminó de libro: una carta de plantilla sacó <span class="no">1/5</span> en arranque; una con voz propia, <span class="si">5/5</span>.</p>
+
+<h2><span class="n">04</span> El susto: cuando la muestra pequeña te da la vuelta</h2>
+
+<p>Con el juez listo, lo apuntamos a las cartas reales para comparar <code>v1</code> contra la flamante <code>v3</code>. Primera tanda, <strong>3 cartas</strong> por versión:</p>
+
+<div class="flow">  N = 3          arranque   suena   engancha
+  v1              3.33       3.67     3.67
+  v3              2.33       3.00     3.00   ← v3 PEOR en todo</div>
+
+<p>Susto. La <code>v3</code>, nuestra ganadora en los asserts, parecía <strong>sonar peor</strong> que la <code>v1</code>. La hipótesis daba miedo y sonaba plausible: la habíamos cargado de tantas reglas (no números, extensión, el campo de razonamiento) que escribía como quien rellena un formulario. A punto estuvimos de creérnoslo. Pero el concepto 09 nos había enseñado a desconfiar de las muestras pequeñas. Así que subimos a <strong>15 cartas</strong> por versión:</p>
+
+<div class="flow">  N = 15         arranque   suena   engancha    abren con plantilla
+  v1              2.80       3.47     3.47        <span class="no">7 de 15</span>
+  v3              4.20       4.07     4.07        <span class="si">0 de 15</span>
+                  ▲ +1.40    ▲ +0.60  ▲ +0.60</div>
+
+<div class="panel amber">
+  <p style="margin:0">La conclusión <strong>se dio la vuelta entera</strong>. Con 15 cartas, la <code>v3</code> no es peor: es <strong>claramente mejor</strong>, y la <code>v1</code> es la que abre con plantilla <strong>casi la mitad de las veces</strong>. Aquellas 3 cartas <code>v3</code> del primer intento pillaron por azar un <code>1</code> y un <code>2</code> que en 15 tiradas ni asoman. La muestra pequeña no fue solo imprecisa: <strong>invirtió el signo de la respuesta</strong>. Es la lección del concepto 09 en su forma más brutal — con <code>N=3</code> casi desplegamos la conclusión contraria a la verdad.</p>
+</div>
+
+<h2><span class="n">05</span> Barato y caro no van en el mismo cubo</h2>
+
+<p>El juez cuesta: una llamada a <code>gpt-4o</code> por cada carta. Los asserts son gratis y deterministas. Mezclarlos en cada medición sería pagar <code>gpt-4o</code> cuarenta veces cada vez que ajustas una coma. Por eso el juez es <strong>opt-in</strong>, con una bandera:</p>
+
+<pre><code>python evaluar_prompts.py --version redactar_borrador=v3 --nota "..."          # solo asserts (gratis)
+python evaluar_prompts.py --version redactar_borrador=v3 --juez --nota "..."   # + juez (gpt-4o)</code></pre>
+
+<p>Y las notas del juez se guardan en un <strong>eje aparte</strong> del <code>pasa/falla</code>: son <code>1-5</code>, no un booleano. Meterlas en la misma columna sería sumar peras con manzanas. Esta separación no es cosmética — es <strong>justo la forma</strong> que querrá el siguiente paso, el CI/CD: los asserts baratos corren en <em>cada push</em>, el juez caro corre <em>por la noche</em> (nightly). El terreno queda preparado.</p>
+
+<h2><span class="n">06</span> Diccionario para el CV</h2>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Término</th><th>Qué significa de verdad</th></tr>
+  <tr><td><strong>Few-shot prompting</strong></td><td>Enseñar con ejemplos (MAL→BIEN) en vez de describir la regla. Suele pegar donde la instrucción abstracta resbala.</td></tr>
+  <tr><td><strong>Chain-of-Thought</strong> (CoT)</td><td>Pedir al modelo que razone <em>antes</em> de responder. Sube la calidad en tareas con un paso intermedio de razonamiento.</td></tr>
+  <tr><td><strong>Structured output</strong></td><td>Forzar la salida a un esquema fijo (JSON). Se combina con CoT dándole un campo para pensar, colocado <em>antes</em> de la respuesta.</td></tr>
+  <tr><td><strong>LLM-as-a-judge</strong></td><td>Usar un LLM para puntuar la salida de otro según una rúbrica. Alcanza lo cualitativo que un <code>if</code> no puede medir.</td></tr>
+  <tr><td><strong>Self-preference bias</strong></td><td>Un modelo tiende a puntuar mejor su propio estilo. Se mitiga usando de juez un modelo distinto (y más capaz) que el generador.</td></tr>
+  <tr><td><strong>Rúbrica</strong></td><td>La descripción, nivel a nivel, de qué merece cada nota. Es lo que separa un juez útil de un dado.</td></tr>
+  <tr><td><strong>La muestra pequeña puede invertir la conclusión</strong></td><td>No solo añade imprecisión: con <code>N</code> bajo el azar puede darle la vuelta al signo del resultado. Sube la muestra antes de creerte una comparación.</td></tr>
+  <tr><td><strong>Separar barato de caro</strong></td><td>Comprobaciones deterministas gratis en cada cambio; juez-LLM costoso a demanda. La base del futuro CI: asserts por push, juez nightly.</td></tr>
+</table>
+</div>
+
+<footer>
+  Artefacto 5 · Endurecimiento · Concepto 10 — el juez que lee, escrito el 18/07/2026.<br>
+  Cierra la Fase 3: numerología domada (v2 few-shot+CoT → v3), y el juez de estilo integrado (--juez).<br>
+  Corrida canónica #11 (v3 + juez): asserts 1.0/1.0/1.0 · juez arranque 3.95 · suena 4.40 · engancha 4.40.<br>
+  Regla que deja: <em>lo que no puedes contar con un <code>if</code>, hazlo leer a un juez; y no te fíes de la comparación hasta tener muestra.</em>
+</footer>
+
+</div>
+
+<script>
+  const dial = document.getElementById('warmth');
+  const CLAVE = 'a4-warmth';
+  function aplicarHora(v){
+    document.documentElement.style.setProperty('--warmth', v / 100);
+  }
+  const guardado = localStorage.getItem(CLAVE);
+  if (guardado !== null) { dial.value = guardado; }
+  aplicarHora(dial.value);
+  dial.addEventListener('input', () => {
+    aplicarHora(dial.value);
+    localStorage.setItem(CLAVE, dial.value);
+  });
+
+  const CLAVE_PAL = 'a4-paleta';
+  const botones = document.querySelectorAll('.pal');
+  function aplicarPaleta(p){
+    document.documentElement.setAttribute('data-paleta', p);
+    botones.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === p)));
+  }
+  aplicarPaleta(localStorage.getItem(CLAVE_PAL) || 'calida');
+  botones.forEach(b => b.addEventListener('click', () => {
+    aplicarPaleta(b.dataset.p);
+    localStorage.setItem(CLAVE_PAL, b.dataset.p);
+  }));
+</script>
+
+</body>
+</html>

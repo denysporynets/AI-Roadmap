@@ -13,6 +13,11 @@
 # ── Secretos: jamás salen del Mac ──
 .env
 .env.*
+# Capturas del token de la app (p.ej. "Token App.png"): son un secreto, como el
+# .env. Nada servible es una imagen, así que ninguna .png/.jpg sube al build.
+*.png
+*.jpg
+*.jpeg
 
 # ── Entornos / cachés / control de versiones / basura ──
 .venv/
@@ -25,7 +30,11 @@ __pycache__/
 # ── Material metodológico y no servible ──
 conceptos/
 00_diseno_agente.html
+00_diseno_endurecimiento.html
+GUION_A_SEGUIR.html
 cli.py
+# Banco de pruebas del Art.5: se ejecuta en el Mac, NO se despliega.
+evaluacion/
 
 # ── La copia HTML del CV fuera; el .md (que el agente lee) se queda ──
 datos_personales/cv_denys.html

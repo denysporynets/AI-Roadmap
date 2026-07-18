@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concepto 06 · La lista blanca de la imagen</title>
+<style>
+  /* Mismo chasis que el resto: deslizador = la hora · botones = la familia de color. */
+  :root{
+    --warmth: 0;
+    --h-bg: 40;  --s-bg: 30%;  --s-panel: 33%;
+    --h-ink: 30; --s-ink: 15%;
+    --h-acc: 38; --s-acc: 92%;
+
+    --bg: hsl(var(--h-bg) var(--s-bg) calc(98% - var(--warmth) * 12%));
+    --panel: hsl(var(--h-bg) var(--s-panel) calc(100% - var(--warmth) * 14%));
+    --ink: hsl(var(--h-ink) var(--s-ink) calc(18% + var(--warmth) * 4%));
+    --soft: hsl(var(--h-ink) 10% calc(42% + var(--warmth) * 6%));
+    --amber: hsl(var(--h-acc) var(--s-acc) calc(45% - var(--warmth) * 6%));
+    --line: hsl(var(--h-acc) 25% calc(86% - var(--warmth) * 12%));
+    --code-bg: hsl(var(--h-bg) 25% calc(95% - var(--warmth) * 13%));
+    --accent-soft: hsl(var(--h-acc) 60% calc(92% - var(--warmth) * 12%));
+    --blue-filter: sepia(calc(var(--warmth) * 0.35)) brightness(calc(1 - var(--warmth) * 0.04));
+  }
+  :root[data-paleta="azul"]{
+    --h-bg: 208; --s-bg: 26%; --s-panel: 30%;
+    --h-ink: 215; --s-ink: 16%;
+    --h-acc: 205; --s-acc: 72%;
+  }
+  :root[data-paleta="neutra"]{
+    --h-bg: 220; --s-bg: 6%; --s-panel: 7%;
+    --h-ink: 220; --s-ink: 9%;
+    --h-acc: 250; --s-acc: 38%;
+  }
+  *{box-sizing:border-box}
+  html{filter:var(--blue-filter);transition:filter .3s}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.65;font-size:18px;
+    padding:0 20px 120px;
+    transition:background .3s,color .3s;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{padding:54px 0 20px;border-bottom:2px solid var(--line);margin-bottom:36px}
+  .kicker{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);font-weight:600}
+  h1{font-size:34px;line-height:1.15;margin:.35em 0 .15em;font-weight:600}
+  .sub{color:var(--soft);font-size:16px;font-style:italic}
+  h2{font-size:24px;margin:2.2em 0 .5em;font-weight:600;display:flex;align-items:baseline;gap:.5em}
+  h2 .n{font-family:"DM Mono",ui-monospace,monospace;font-size:14px;color:var(--amber);font-weight:600}
+  h3{font-size:18px;margin:1.6em 0 .4em;font-weight:600;font-family:system-ui,sans-serif}
+  p,li{font-size:18px}
+  strong{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 24px;margin:20px 0}
+  .panel.amber{border-left:4px solid var(--amber);background:var(--accent-soft)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;overflow-x:auto;font-family:"DM Mono",ui-monospace,Menlo,monospace;
+    font-size:14px;line-height:1.6;color:var(--ink)}
+  code{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+    background:var(--code-bg);padding:.1em .35em;border-radius:5px}
+  pre code{background:none;padding:0}
+  .tabla-wrap{overflow-x:auto;margin:18px 0}
+  table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:15px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft)}
+  ul{padding-left:1.2em}
+  li{margin:.35em 0}
+  .flow{font-family:"DM Mono",ui-monospace,monospace;font-size:13.5px;white-space:pre;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:18px;overflow-x:auto;line-height:1.5}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--soft);font-size:14px;font-family:"DM Mono",monospace}
+  .dial{position:fixed;top:14px;right:14px;z-index:99;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:8px 14px;display:flex;
+    align-items:center;gap:10px;box-shadow:0 2px 14px hsl(30 20% 20% / .12);
+    font-family:system-ui,sans-serif;font-size:13px;color:var(--soft)}
+  .dial input[type=range]{width:110px;accent-color:var(--amber)}
+  .sep{width:1px;height:18px;background:var(--line)}
+  .pal{width:15px;height:15px;border-radius:50%;border:1px solid hsl(30 15% 45% / .5);
+    padding:0;cursor:pointer;transition:transform .15s}
+  .pal:hover{transform:scale(1.18)}
+  .pal[data-p="calida"]{background:hsl(38 92% 52%)}
+  .pal[data-p="azul"]{background:hsl(205 72% 52%)}
+  .pal[data-p="neutra"]{background:hsl(250 38% 58%)}
+  .pal[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+  @media print{.dial{display:none}}
+  .si{color:hsl(150 45% calc(32% - var(--warmth) * 4%));font-weight:600}
+  .no{color:hsl(5 60% calc(45% - var(--warmth) * 4%));font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="dial">
+  <span>☀️</span>
+  <input type="range" id="warmth" min="0" max="100" value="0" aria-label="Hora: día a noche">
+  <span>🌙</span>
+  <span class="sep"></span>
+  <button class="pal" data-p="calida" aria-pressed="true" title="Paleta cálida"></button>
+  <button class="pal" data-p="azul" aria-pressed="false" title="Paleta azul"></button>
+  <button class="pal" data-p="neutra" aria-pressed="false" title="Paleta neutra"></button>
+</div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">Artefacto 5 · AI Engineering · Concepto 06</div>
+  <h1>La lista blanca de la imagen</h1>
+  <div class="sub">Por qué añadir un fichero al proyecto puede tumbar producción, y por qué no te enteras hasta el final.</div>
+</header>
+
+<p>Durante la Fase 1 creamos <code>prompts.py</code>. Todo funcionaba en tu Mac. Y sin embargo, el agente desplegado habría muerto al arrancar. Esta es la explicación larga de por qué, porque el mecanismo se repite y merece la pena tenerlo anclado.</p>
+
+<h2><span class="n">01</span> El cambio, literalmente</h2>
+
+<p>Una palabra en el <code>Dockerfile</code>:</p>
+
+<pre><code>- COPY herramientas.py agente.py api.py ./
++ COPY herramientas.py agente.py api.py prompts.py ./</code></pre>
+
+<p>Eso es todo. Ahora la pregunta buena: <strong>¿por qué esa línea existe, y por qué olvidarla no da un error hasta el despliegue?</strong></p>
+
+<h2><span class="n">02</span> Hay dos mundos, y el <code>COPY</code> es la frontera</h2>
+
+<p>Cuando corres el agente en tu Mac, Python busca <code>import prompts</code> en la carpeta donde estás. El fichero está ahí. Funciona.</p>
+
+<p>Cuando el agente corre en Cloud Run, <strong>tu Mac no existe</strong>. Lo que corre es una <em>imagen</em>: una caja cerrada que se construyó en la nube y que contiene solo lo que alguien metió dentro, a propósito. Dentro de esa caja hay un <code>/app</code> que no es tu carpeta: es una carpeta nueva y vacía a la que se le fueron poniendo cosas, una a una, siguiendo la receta del <code>Dockerfile</code>.</p>
+
+<div class="panel">
+  <p style="margin-top:0"><strong>La analogía de la mudanza.</strong> Tu carpeta del Mac es tu casa. La imagen es una caja que mandas a otro país. En tu casa el destornillador está en el cajón de siempre, y por eso nunca piensas en él. Si la caja se empaqueta con una lista escrita a mano y el destornillador no está en la lista, la caja llega perfecta, sellada, sin ningún error… y al abrirla no puedes montar el mueble.</p>
+  <p style="margin-bottom:0">El <code>COPY</code> es esa lista. <strong>Lo que no está en la lista, no viaja.</strong></p>
+</div>
+
+<div class="flow">TU MAC                          LA IMAGEN (lo que corre de verdad)
+──────                          ──────────────────────────────────
+herramientas.py   ─── COPY ──→  /app/herramientas.py
+agente.py         ─── COPY ──→  /app/agente.py
+api.py            ─── COPY ──→  /app/api.py
+prompts.py        ─── ✗ ───→    (no llegó: nadie lo puso en la lista)
+cli.py                          (excluido a propósito: no se sirve por web)
+.env                            (excluido a propósito: es un secreto)
+.venv/                          (no viaja: dentro se instala con pip)</div>
+
+<h2><span class="n">03</span> Lista blanca vs. lista negra: el portero</h2>
+
+<p>Hay dos formas de decidir qué entra en la caja, y son filosofías opuestas.</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr>
+    <th></th>
+    <th>Lista negra</th>
+    <th>Lista blanca (la tuya)</th>
+  </tr>
+  <tr>
+    <td><strong>La regla</strong></td>
+    <td>«Entra todo, menos lo que yo prohíba»</td>
+    <td>«No entra nada, salvo lo que yo nombre»</td>
+  </tr>
+  <tr>
+    <td><strong>Cómo se escribe</strong></td>
+    <td><code>COPY . .</code> + un <code>.dockerignore</code> que excluya</td>
+    <td><code>COPY a.py b.py ./</code>, fichero a fichero</td>
+  </tr>
+  <tr>
+    <td><strong>Si olvidas algo</strong></td>
+    <td>Se cuela lo que no querías. <span class="no">Un secreto puede acabar en la imagen.</span></td>
+    <td>Falta lo que necesitabas. <span class="si">La app no arranca, pero nada se filtra.</span></td>
+  </tr>
+  <tr>
+    <td><strong>Mantenimiento</strong></td>
+    <td>Barato: añades ficheros y ya está</td>
+    <td>Caro: cada fichero nuevo se da de alta a mano</td>
+  </tr>
+  <tr>
+    <td><strong>El fallo es…</strong></td>
+    <td>Silencioso y grave</td>
+    <td>Ruidoso y reparable</td>
+  </tr>
+</table>
+</div>
+
+<p>El portero de discoteca lo resume: «solo entra quien esté en la lista» deja fuera a algún amigo tuyo por error, pero no deja entrar a nadie peligroso. «Entra todo el mundo menos los que llevo apuntados» no falla nunca con tus amigos, y basta con que olvides un nombre para que entre quien no debía.</p>
+
+<div class="panel amber">
+  <p style="margin:0"><strong>Tú elegiste lista blanca, y elegiste bien.</strong> Está escrito en tu propio Dockerfile: <em>«Copiando solo esto, el .env NUNCA puede colarse en la imagen aunque exista»</em>. Con lista negra, tu clave de OpenAI vive a una errata de distancia de acabar dentro de una imagen pública. Con lista blanca, eso es imposible por construcción — no depende de que no te equivoques. <strong>El precio de esa garantía es exactamente el susto de la Fase 1.</strong> No es un defecto del diseño: es la factura del diseño, y es barata.</p>
+</div>
+
+<h2><span class="n">04</span> Por qué el fallo llega tan tarde</h2>
+
+<p>Esta es la parte que de verdad conviene interiorizar. <strong>Construir la imagen no ejecuta tu Python.</strong> Docker no lee tu código, no sabe qué importas, no tiene ni idea de que <code>agente.py</code> necesita <code>prompts.py</code>. Solo copia ficheros y hace lo que le dices.</p>
+
+<p>Así que la construcción termina <span class="si">con éxito</span>. Verde. Sin avisos. El error aparece más tarde, cuando el contenedor arranca y <code>uvicorn</code> importa <code>api</code> → que importa <code>agente</code> → que hace <code>import prompts</code> → y ahí, por fin:</p>
+
+<pre><code>ModuleNotFoundError: No module named 'prompts'</code></pre>
+
+<p>Fíjate en la cadena de estados, la misma de la lección del grafo (<code>05_grafo_de_la_carpeta</code>) pero mordiendo:</p>
+
+<div class="flow">disco (tu Mac)   →   git   →   imagen   →   producción
+    ✅ existe        ✅ existe    ❌ no está     💥 revienta
+    ↑                                          ↑
+    aquí lo probaste                           aquí te enteras</div>
+
+<div class="panel">
+  <p style="margin:0"><strong>La frase para llevarse:</strong> «está en mi carpeta» y «está en git» <em>no</em> significan «está en la imagen». Son cuatro sitios distintos y un fichero puede estar en tres y faltar en el cuarto. Tus tests locales pasan por los tres primeros y ninguno mira el cuarto.</p>
+</div>
+
+<h2><span class="n">05</span> Tres ejemplos para anclarlo</h2>
+
+<h3>Ejemplo 1 · El que nos pasó: un módulo nuevo</h3>
+<p>Creas <code>prompts.py</code>, lo importas desde <code>herramientas.py</code>, todo verde en local. La imagen se construye bien y el servicio muere al arrancar. <strong>Coste:</strong> un despliegue perdido y diez minutos de desconcierto («¡pero si funciona!»).</p>
+
+<h3>Ejemplo 2 · El renombrado inocente</h3>
+<p>Un día decides que <code>datos_personales/cv_denys.md</code> se llame <code>cv.md</code>, más corto. Cambias el nombre y ajustas <code>RUTA_CV</code> en <code>herramientas.py</code>. En local, perfecto. Pero el Dockerfile dice:</p>
+<pre><code>COPY datos_personales/cv_denys.md ./datos_personales/</code></pre>
+<p>Cloud Build busca un fichero que ya no existe y <strong>aquí sí falla la construcción</strong>, ruidosamente. Este caso es el bueno: la lista blanca te grita pronto porque nombra un fichero que desapareció.</p>
+
+<h3>Ejemplo 3 · El peor de todos: la carpeta nueva</h3>
+<p>En la Fase 2 vas a crear el eval-set: pongamos <code>evaluacion/casos.json</code>. Si algún día la API tuviera que leerlo y añades la carpeta sin tocar el Dockerfile… la imagen construye, el servicio arranca <span class="si">perfectamente</span>, y solo revienta <em>cuando alguien usa la función que lee ese fichero</em>. <strong>Un <code>FileNotFoundError</code> a las tres semanas, en producción, en una ruta concreta.</strong> Este es el que de verdad duele: el fallo ya no está en el arranque, está escondido en un rincón.</p>
+
+<h2><span class="n">06</span> Cuándo estar pendiente</h2>
+
+<p>La señal de alarma es siempre la misma: <strong>¿el conjunto de ficheros que la app necesita en tiempo de ejecución ha cambiado?</strong> En concreto:</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Momento</th><th>¿Tocar el Dockerfile?</th></tr>
+  <tr><td>Creo un <code>.py</code> nuevo que alguien importa</td><td><span class="no">SÍ</span> — darlo de alta en el <code>COPY</code></td>
+  </tr>
+  <tr><td>Renombro o muevo un fichero copiado</td><td><span class="no">SÍ</span> — actualizar el nombre/ruta</td></tr>
+  <tr><td>Añado un fichero de datos que se lee al vuelo (json, md, csv)</td><td><span class="no">SÍ</span> — y es el caso traicionero</td></tr>
+  <tr><td>Añado una librería nueva</td><td><span class="no">SÍ</span>, pero en <code>requirements.txt</code>, que es otra lista blanca</td></tr>
+  <tr><td>Edito el contenido de un fichero ya copiado</td><td><span class="si">No</span> — la lista lo nombra, entra con su contenido nuevo</td></tr>
+  <tr><td>Creo un HTML de conceptos, un plano, un doc</td><td><span class="si">No</span> — no se sirve; que se quede fuera está bien</td></tr>
+</table>
+</div>
+
+<p>Y una regla general que vale más que la tabla: <strong>si un fichero es necesario para que la app responda una petición, tiene que estar nombrado en el Dockerfile.</strong> Si solo es para ti (documentación, cuadernos, el CLI), déjalo fuera: la imagen más pequeña es también la más segura.</p>
+
+<h2><span class="n">07</span> Cómo comprobarlo sin desplegar</h2>
+
+<p>Lo que hicimos en la Fase 1, y que puedes repetir siempre: <strong>simular el sistema de ficheros de la imagen</strong>. Copias a una carpeta vacía <em>solo</em> lo que el Dockerfile copia, y arrancas la app ahí con una clave falsa (en Cloud Run la clave llega por entorno, no dentro de la imagen). Si arranca, la lista está completa.</p>
+
+<p>Y lo importante, que es lo que casi nadie hace: <strong>correr la prueba al revés</strong>. Quitamos <code>prompts.py</code> de la carpeta simulada y comprobamos que el <code>ModuleNotFoundError</code> aparecía de verdad.</p>
+
+<div class="panel amber">
+  <p style="margin:0"><strong>Por qué ese segundo paso no es opcional.</strong> Una prueba que pasa no demuestra nada si no la has visto fallar nunca. Podría estar pasando porque no comprueba lo que crees. Verla romperse cuando <em>debe</em> romperse es lo que te dice que tiene dientes. Es el mismo instinto que hay detrás de toda la Fase 2: <em>una báscula en la que puedas confiar</em> — y no confías en una báscula que siempre marca lo mismo, por buena que suene la cifra.</p>
+</div>
+
+<h2><span class="n">08</span> Diccionario para el CV</h2>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Término</th><th>Qué significa de verdad</th></tr>
+  <tr><td><strong>Build context</strong></td><td>El conjunto de ficheros que Cloud Build recibe para construir. Lo recorta el <code>.gcloudignore</code>. Es lo que <em>puede</em> entrar; no lo que entra.</td></tr>
+  <tr><td><strong>Allowlist / lista blanca</strong></td><td>Denegar por defecto y permitir por excepción. Principio de seguridad general (no es cosa de Docker): más trabajo, menos accidentes graves.</td></tr>
+  <tr><td><strong>Minimal image / superficie de ataque</strong></td><td>Cuanto menos hay dentro, menos hay que pueda filtrarse o explotarse. Por eso <code>python:3.13-slim</code> y por eso el <code>cli.py</code> se queda fuera.</td></tr>
+  <tr><td><strong>Fail fast</strong></td><td>Reventar en el arranque y no en la petición número mil. El <code>ModuleNotFoundError</code> del ejemplo 1 es, dentro de lo malo, el buen escenario.</td></tr>
+  <tr><td><strong>Smoke test</strong></td><td>La prueba mínima de «¿esto al menos arranca?». La simulación de la sección 07 es exactamente eso.</td></tr>
+  <tr><td><strong>Parity dev/prod</strong></td><td>Que lo que corres en local se parezca a lo que corre en producción. Este bug es literalmente un fallo de paridad: en tu Mac había un fichero que en prod no existía.</td></tr>
+</table>
+</div>
+
+<footer>
+  Artefacto 5 · Endurecimiento · Concepto 06 — escrito el 16/07/2026, a raíz del bug real cazado en la Fase 1.<br>
+  Anterior: <code>05_grafo_de_la_carpeta.html</code> (las tres lentes: runtime · git · imagen). Esto es la lente «imagen» mordiendo.
+</footer>
+
+</div>
+
+<script>
+  // ── Mando 1: la hora (brillo + corte de azul) ──────────────
+  const dial = document.getElementById('warmth');
+  const CLAVE = 'a4-warmth';
+  function aplicarHora(v){
+    document.documentElement.style.setProperty('--warmth', v / 100);
+  }
+  const guardado = localStorage.getItem(CLAVE);
+  if (guardado !== null) { dial.value = guardado; }
+  aplicarHora(dial.value);
+  dial.addEventListener('input', () => {
+    aplicarHora(dial.value);
+    localStorage.setItem(CLAVE, dial.value);
+  });
+
+  // ── Mando 2: la familia de color ───────────────────────────
+  const CLAVE_PAL = 'a4-paleta';
+  const botones = document.querySelectorAll('.pal');
+  function aplicarPaleta(p){
+    document.documentElement.setAttribute('data-paleta', p);
+    botones.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === p)));
+  }
+  aplicarPaleta(localStorage.getItem(CLAVE_PAL) || 'calida');
+  botones.forEach(b => b.addEventListener('click', () => {
+    aplicarPaleta(b.dataset.p);
+    localStorage.setItem(CLAVE_PAL, b.dataset.p);
+  }));
+</script>
+
+</body>
+</html>

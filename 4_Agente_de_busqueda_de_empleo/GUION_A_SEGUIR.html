@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artefacto 5 · Guion a seguir</title>
+<style>
+  /* ── DOS MANDOS INDEPENDIENTES ──────────────────────────────
+     · deslizador  → --warmth : la HORA (brillo + corte de luz azul)
+     · botones     → data-paleta : la FAMILIA de color (tono base)
+     Los tonos (--h-*) los pone la paleta; la luminosidad la pone --warmth.
+     Al ir hacia la noche, cualquier paleta se apaga y se desatura → sigue
+     filtrando azul aunque la familia elegida sea fría.                    */
+  :root{
+    --warmth: 0;               /* 0 = día, 1 = noche (lo mueve el deslizador) */
+
+    /* paleta por defecto: CÁLIDA (la de siempre) */
+    --h-bg: 40;  --s-bg: 30%;  --s-panel: 33%;
+    --h-ink: 30; --s-ink: 15%;
+    --h-acc: 38; --s-acc: 92%;
+
+    --bg: hsl(var(--h-bg) var(--s-bg) calc(98% - var(--warmth) * 12%));
+    --panel: hsl(var(--h-bg) var(--s-panel) calc(100% - var(--warmth) * 14%));
+    --ink: hsl(var(--h-ink) var(--s-ink) calc(18% + var(--warmth) * 4%));
+    --soft: hsl(var(--h-ink) 10% calc(42% + var(--warmth) * 6%));
+    --amber: hsl(var(--h-acc) var(--s-acc) calc(45% - var(--warmth) * 6%));
+    --line: hsl(var(--h-acc) 25% calc(86% - var(--warmth) * 12%));
+    --code-bg: hsl(var(--h-bg) 25% calc(95% - var(--warmth) * 13%));
+    --accent-soft: hsl(var(--h-acc) 60% calc(92% - var(--warmth) * 12%));
+    --blue-filter: sepia(calc(var(--warmth) * 0.35)) brightness(calc(1 - var(--warmth) * 0.04));
+  }
+  :root[data-paleta="azul"]{
+    --h-bg: 208; --s-bg: 26%; --s-panel: 30%;
+    --h-ink: 215; --s-ink: 16%;
+    --h-acc: 205; --s-acc: 72%;
+  }
+  :root[data-paleta="neutra"]{
+    --h-bg: 220; --s-bg: 6%; --s-panel: 7%;
+    --h-ink: 220; --s-ink: 9%;
+    --h-acc: 250; --s-acc: 38%;
+  }
+  *{box-sizing:border-box}
+  html{filter:var(--blue-filter);transition:filter .3s}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.65;font-size:18px;
+    padding:0 20px 120px;
+    transition:background .3s,color .3s;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{padding:54px 0 20px;border-bottom:2px solid var(--line);margin-bottom:36px}
+  .kicker{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);font-weight:600}
+  h1{font-size:34px;line-height:1.15;margin:.35em 0 .15em;font-weight:600}
+  .sub{color:var(--soft);font-size:16px;font-style:italic}
+  h2{font-size:24px;margin:2.2em 0 .5em;font-weight:600;display:flex;align-items:baseline;gap:.5em}
+  h2 .n{font-family:"DM Mono",ui-monospace,monospace;font-size:14px;color:var(--amber);font-weight:600}
+  h3{font-size:18px;margin:1.6em 0 .4em;font-weight:600;font-family:system-ui,sans-serif}
+  p,li{font-size:18px}
+  strong{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 24px;margin:20px 0}
+  .panel.amber{border-left:4px solid var(--amber);background:var(--accent-soft)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;overflow-x:auto;font-family:"DM Mono",ui-monospace,Menlo,monospace;
+    font-size:14px;line-height:1.6;color:var(--ink)}
+  code{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+    background:var(--code-bg);padding:.1em .35em;border-radius:5px}
+  pre code{background:none;padding:0}
+  .tabla-wrap{overflow-x:auto;margin:18px 0}
+  table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:15px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft)}
+  .tag{display:inline-block;font-family:"DM Mono",monospace;font-size:12px;padding:.15em .5em;
+    border-radius:6px;background:var(--accent-soft);color:var(--amber);border:1px solid var(--line)}
+  ul{padding-left:1.2em}
+  li{margin:.35em 0}
+  .flow{font-family:"DM Mono",ui-monospace,monospace;font-size:13.5px;white-space:pre;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:18px;overflow-x:auto;line-height:1.5}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--soft);font-size:14px;font-family:"DM Mono",monospace}
+  .dial{position:fixed;top:14px;right:14px;z-index:99;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:8px 14px;display:flex;
+    align-items:center;gap:10px;box-shadow:0 2px 14px hsl(30 20% 20% / .12);
+    font-family:system-ui,sans-serif;font-size:13px;color:var(--soft)}
+  .dial input[type=range]{width:110px;accent-color:var(--amber)}
+  .sep{width:1px;height:18px;background:var(--line)}
+  .pal{width:15px;height:15px;border-radius:50%;border:1px solid hsl(30 15% 45% / .5);
+    padding:0;cursor:pointer;transition:transform .15s}
+  .pal:hover{transform:scale(1.18)}
+  .pal[data-p="calida"]{background:hsl(38 92% 52%)}
+  .pal[data-p="azul"]{background:hsl(205 72% 52%)}
+  .pal[data-p="neutra"]{background:hsl(250 38% 58%)}
+  .pal[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+  @media print{.dial{display:none}}
+  .ok{color:var(--amber);font-weight:600}
+  .dod{font-style:italic}
+  .si{color:hsl(150 45% calc(32% - var(--warmth) * 4%));font-weight:600}
+  .no{color:hsl(5 60% calc(45% - var(--warmth) * 4%));font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="dial">
+  <span>☀️</span>
+  <input type="range" id="warmth" min="0" max="100" value="0" aria-label="Hora: día a noche">
+  <span>🌙</span>
+  <span class="sep"></span>
+  <button class="pal" data-p="calida" aria-pressed="true" title="Paleta cálida"></button>
+  <button class="pal" data-p="azul" aria-pressed="false" title="Paleta azul"></button>
+  <button class="pal" data-p="neutra" aria-pressed="false" title="Paleta neutra"></button>
+</div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">Artefacto 5 · AI Engineering · Guion</div>
+  <h1>El guion a seguir</h1>
+  <p class="sub">Las decisiones, las trampas y la báscula del endurecimiento — antes de tocar una línea de código.</p>
+</header>
+
+<h2><span class="n">01</span> Para qué es este documento</h2>
+<p>
+  El plano (<code>00_diseno_endurecimiento.html</code>) dice <strong>qué</strong> construimos.
+  Este guion dice <strong>cómo no engañarnos mientras lo construimos</strong>. Son las conclusiones
+  de la conversación del 16/07, puestas por escrito para leerlas con calma antes de arrancar la Fase 1.
+</p>
+<div class="panel amber">
+  <p style="margin:0">
+    Si solo te llevas una frase de aquí, que sea esta: <strong>la parte difícil de este artefacto
+    no es escribir mejores prompts. Es construir una báscula en la que puedas confiar.</strong>
+    Un prompt malo con una báscula buena se arregla. Un prompt bueno con una báscula mala es
+    superstición con suerte.
+  </p>
+</div>
+
+<h2><span class="n">02</span> Valoración honesta: ¿esto es «enterprise»?</h2>
+<p>
+  La intuición de que esta etapa sube el nivel es correcta <strong>en la dirección</strong>, y
+  optimista <strong>en la escala</strong>. Merece la pena tener claras las dos mitades.
+</p>
+
+<h3>Dónde sí</h3>
+<p>
+  Versionar prompts y exigir un número antes de tocarlos <strong>es</strong> la práctica real que
+  separa una demo de un sistema que puede mantener un equipo. Y es rara: la mayoría de la gente que
+  construye con LLMs hoy no lo hace. Además hay una pieza de infraestructura que ya está montada sin
+  haberla pedido: <strong>las revisiones de Cloud Run son inmutables</strong>, así que volver a
+  <code>dobe-agente-00001-rrr</code> es un comando. Eso es rollback de verdad, gratis.
+</p>
+
+<h3>Dónde todavía no</h3>
+<ul>
+  <li><strong>Los evals no corren solos.</strong> En el Artefacto 3 se descartó GitHub Actions
+      (decisión deliberada y razonable: ni secreto en GitHub ni gasto por push). Pero un eval que
+      depende de que te acuerdes de lanzarlo no es una puerta, es una buena intención.</li>
+  <li><strong>No hay observabilidad.</strong> Ni trazas ni logs de lo que pasa en producción, ni
+      coste por consulta. Hoy no sabrías decir cuántas veces se ha usado el agente ni qué contestó.</li>
+  <li><strong>El eval-set es diminuto.</strong> Tres casos. En la industria son cientos, con un
+      conjunto reservado que no se toca nunca. Con tres casos no demuestras que un prompt es mejor:
+      demuestras que <em>no es peor en tres sitios concretos</em>.</li>
+</ul>
+
+<div class="panel">
+  <p style="margin:0">
+    <strong>Veredicto:</strong> este no es «el artefacto que te sube a enterprise». Es
+    <strong>el artefacto con más rentabilidad para tu CV</strong>, que es distinto y probablemente
+    mejor. Cualquiera puede enseñar que sabe llamar a una API. Muy poca gente puede señalar un
+    cambio de prompt y enseñar el número que lo justificó. Eso es exactamente lo que compras aquí.
+  </p>
+</div>
+
+<h2><span class="n">03</span> La trampa que hay que ver ahora (no en la Fase 3)</h2>
+<p>
+  Los tres casos golden son tres bugs conocidos. Eso significa que
+  <strong>la forma más fácil de «mejorar el número» es hacer trampa sin querer</strong>: metes en el
+  prompt una frase que resuelve el CEFR, la puntuación sube a 3/3, y celebras. Pero no sabes qué has
+  roto en las ofertas que ya funcionaban, porque no las estás mirando.
+</p>
+<p>Tiene nombre: <strong>sobreajuste al set de evaluación</strong>.</p>
+
+<div class="panel amber">
+  <p style="margin:0 0 .6em">
+    <strong>El antídoto ya lo aprendiste, en el Artefacto 3.</strong> ¿Recuerdas el experimento del
+    umbral 0.40? Las <em>medias</em> siguieron verdes y lo que se rompió fue la <em>decisión</em>.
+    Si solo hubieras mirado las medias, habrías dicho «no pasa nada» y habrías desplegado una
+    alucinación.
+  </p>
+  <p style="margin:0">
+    Aquí igual: el eval-set <strong>no puede ser solo los tres bugs</strong>. Necesita también
+    <strong>casos de control</strong> — ofertas que el agente ya resuelve bien y cuya respuesta debe
+    quedarse <em>igual</em>.
+  </p>
+</div>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Tipo de caso</th><th>Qué mide</th><th>Qué pasa si falta</th></tr>
+  <tr>
+    <td><span class="tag">bug</span></td>
+    <td>Si <strong>mejoras</strong></td>
+    <td>No sabes si el cambio sirvió de algo</td>
+  </tr>
+  <tr>
+    <td><span class="tag">control</span></td>
+    <td>Si <strong>rompes</strong></td>
+    <td>La tabla te miente con muy buena cara</td>
+  </tr>
+</table>
+</div>
+
+<h2><span class="n">04</span> La tabla de trazabilidad: se genera, no se escribe</h2>
+<p>
+  La tabla de seguimiento (cambio aplicado → respuesta obtenida → mejora o empeora → puntuación)
+  es una buena idea con <strong>un modo de fallar</strong>, y es justo el que el artefacto entero
+  intenta matar.
+</p>
+<p>
+  <span class="no">Si la rellenamos a mano</span> a medida que probamos cosas, lo que tendremos es
+  «parece mejor» con formato bonito: se desincroniza en cuanto un día se nos olvide una fila, y no
+  hay forma de auditarla.
+</p>
+<p>
+  <span class="si">Lo que queremos</span> es lo mismo que ya funciona en el Artefacto 3: el paso caro
+  produce datos, y todo lo demás <strong>lee</strong> esos datos.
+</p>
+
+<div class="flow">  evaluar_prompts.py          historial.json            render_historial.py
+  ──────────────────          ──────────────            ───────────────────
+  corre los casos      ──►    añade (append) una  ──►   lee el JSON y pinta
+  contra prompts vX           corrida entera             la tabla + la gráfica
+                              nunca se edita a mano
+  ● CUESTA API                ▲ FUENTE DE VERDAD        ○ GRATIS, mil veces
+</div>
+
+<p>
+  Así la trazabilidad es real: cada fila tiene versión, fecha, caso, puntuación y el cambio que la
+  provocó — y <strong>ninguna fila existe sin una corrida que la respalde</strong>. Si la tabla dice
+  que v2 gana, es porque hay un JSON que lo demuestra. La gráfica de evolución del final sale del
+  mismo fichero, así que no puede contradecir a la tabla.
+</p>
+<p>
+  Es el patrón <strong>caro-una-vez / barato-mil-veces</strong> de la ficha
+  <code>conceptos/04_quality_gate.html</code>, con una capa de renderizado encima.
+</p>
+
+<h2><span class="n">05</span> La báscula: determinista donde se pueda, juez donde no</h2>
+<p>
+  Aquí hay una buena noticia que salió de releer los prompts. En el Artefacto 3 hacía falta un juez
+  LLM porque «¿esta respuesta es fiel al corpus?» no se puede medir con un <code>if</code>.
+  <strong>Los tres bugs del agente, en cambio, sí.</strong>
+</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Caso</th><th>Cómo se mide</th><th>Coste</th><th>Ruido</th></tr>
+  <tr>
+    <td><strong>GCP o AWS</strong></td>
+    <td>¿<code>Cloud (GCP o AWS)</code> salió como <em>un</em> elemento y no como dos?</td>
+    <td class="si">0</td><td class="si">0</td>
+  </tr>
+  <tr>
+    <td><strong>CEFR B2 ≠ C1</strong></td>
+    <td>¿<code>Inglés B2</code> aparece en <code>imprescindibles_que_faltan</code>?</td>
+    <td class="si">0</td><td class="si">0</td>
+  </tr>
+  <tr>
+    <td><strong>numerología</strong></td>
+    <td>Barrido de dígitos y números en letra en <code>cuerpo</code> (salvo el GPA)</td>
+    <td class="si">0</td><td>casi 0</td>
+  </tr>
+  <tr>
+    <td><strong>¿sigue sonando a ti?</strong></td>
+    <td>No hay <code>if</code> que valga → <strong>juez LLM</strong></td>
+    <td class="no">● API</td><td class="no">sí</td>
+  </tr>
+</table>
+</div>
+
+<div class="panel">
+  <p style="margin:0">
+    <strong>Por qué importa el ruido:</strong> con un juez LLM y tres casos, una subida de 0.05 no
+    te dice si es mejora o azar. Con un <code>assert</code>, un <strong>2/3 → 3/3 es un hecho</strong>.
+    La báscula acabará siendo <strong>híbrida</strong>: asserts objetivos para los bugs, juez solo
+    para lo subjetivo. La decisión fina se toma en la Fase 2, con calma.
+  </p>
+</div>
+
+<h2><span class="n">06</span> Fase 1: la mudanza (y cómo demostrar que no rompió nada)</h2>
+<p>
+  Nada de lo anterior se construye en la Fase 1. La Fase 1 <strong>solo muda</strong>.
+</p>
+<ul>
+  <li>Los tres prompts salen de <code>herramientas.py</code> (líneas <strong>46</strong>
+      <code>analizar_oferta</code>, <strong>117</strong> <code>match_cv</code>, <strong>176</strong>
+      <code>redactar_borrador</code>) a un <code>prompts.py</code> nuevo.</li>
+  <li>Entran como <strong>v1, copiados carácter a carácter</strong>: con el parche del «o», con la
+      regla CEFR y con la regla de numerología dentro. <strong>Bugs incluidos.</strong></li>
+  <li><code>herramientas.py</code> pasa a importarlos. Nada más cambia.</li>
+</ul>
+
+<div class="panel amber">
+  <p style="margin:0 0 .6em"><strong>Por qué el refactor es no-op a propósito</strong></p>
+  <p style="margin:0">
+    Si mueves el prompt <em>y</em> lo mejoras a la vez y algo cambia, no sabes si fue la mudanza o la
+    mejora. Separar los dos movimientos es lo que te permite decir después
+    «este número cambió por <em>este</em> cambio». Es la misma disciplina que ya aplicaste cuando el
+    test reutiliza <code>comparar.py</code> en vez de redefinir «regresión».
+  </p>
+</div>
+
+<h3>La verificación: hash, no «parece que va»</h3>
+<p>
+  Antes de tocar nada se saca el <strong>hash</strong> de las tres cadenas <code>instruccion</code>
+  actuales. Después del refactor, el hash de lo que produce <code>prompts.py</code>. Si coinciden,
+  el refactor es no-op <strong>demostrado</strong>, no <em>supuesto</em> — y sin gastar un céntimo
+  de API. Luego una corrida real del agente para confirmar que los imports no rompen nada.
+</p>
+<p class="dod">
+  (Ojo a la tentación: en cuanto abramos el fichero van a apetecer arreglos. Hay que aguantarse.
+  Primero medir v1 <em>con sus bugs dentro</em> — sin ese número de partida, la v2 no tiene contra
+  qué compararse y la definición de hecho se cae.)
+</p>
+
+<h2><span class="n">07</span> El amarre que no se ve: producción no se entera</h2>
+<p>
+  La revisión <code>dobe-agente-00001-rrr</code> que sirve tu agente es <strong>una foto del código
+  del 11/07</strong>. Editar tu Mac <strong>no toca producción</strong>. Cuando la Fase 1 saque los
+  prompts a <code>prompts.py</code>, el agente vivo no se enterará hasta re-desplegar (y entonces
+  nace <code>00002</code>).
+</p>
+<p>
+  Por eso la Fase 5 del plano dice «re-deploy del agente mejorado», y por eso la frase
+  «el agente vivo mejora con cada cambio medido» tiene una condición escondida:
+  <strong>mejora cuando lo vuelves a empujar, con el número en la mano</strong>.
+</p>
+<p>
+  Es el cuarto estado de las tres lentes de <code>conceptos/05_grafo_de_la_carpeta.html</code>:
+  <strong>disco → git → imagen → lo que sirve producción</strong>.
+</p>
+
+<h2><span class="n">08</span> Para el CV / la entrevista</h2>
+<div class="tabla-wrap">
+<table>
+  <tr><th>Lo que dirás</th><th>Lo que demuestra</th></tr>
+  <tr>
+    <td>«Versioné los prompts y cada cambio va justificado por un número de eval»</td>
+    <td>Disciplina de ingeniería, no artesanía</td>
+  </tr>
+  <tr>
+    <td>«El eval-set tiene casos de bug <em>y</em> casos de control, para no sobreajustar»</td>
+    <td>Que entiendes cómo miente una métrica</td>
+  </tr>
+  <tr>
+    <td>«Mido con asserts donde puedo y con juez LLM solo donde no queda otra»</td>
+    <td>Criterio de coste y de ruido, no LLM para todo</td>
+  </tr>
+  <tr>
+    <td>«El informe se genera del JSON de resultados; no se escribe a mano»</td>
+    <td>Una sola fuente de verdad, trazabilidad auditable</td>
+  </tr>
+  <tr>
+    <td>«El refactor lo verifiqué por hash antes de cambiar comportamiento»</td>
+    <td>Que sabes aislar variables</td>
+  </tr>
+</table>
+</div>
+
+<footer>
+  Artefacto 5 · Endurecimiento de prompts · guion escrito el 16/07/2026, antes de la Fase 1<br>
+  protocolo ds-nexus · «parece mejor» no cuenta
+</footer>
+
+</div>
+
+<script>
+  // ── Mando 1: la hora (brillo + corte de azul) ──────────────
+  const dial = document.getElementById('warmth');
+  const CLAVE = 'a4-warmth';
+  function aplicarHora(v){
+    document.documentElement.style.setProperty('--warmth', v / 100);
+  }
+  const guardado = localStorage.getItem(CLAVE);
+  if (guardado !== null) { dial.value = guardado; }
+  aplicarHora(dial.value);
+  dial.addEventListener('input', () => {
+    aplicarHora(dial.value);
+    localStorage.setItem(CLAVE, dial.value);
+  });
+
+  // ── Mando 2: la familia de color ───────────────────────────
+  const CLAVE_PAL = 'a4-paleta';
+  const botones = document.querySelectorAll('.pal');
+  function aplicarPaleta(p){
+    document.documentElement.setAttribute('data-paleta', p);
+    botones.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === p)));
+  }
+  aplicarPaleta(localStorage.getItem(CLAVE_PAL) || 'calida');
+  botones.forEach(b => b.addEventListener('click', () => {
+    aplicarPaleta(b.dataset.p);
+    localStorage.setItem(CLAVE_PAL, b.dataset.p);
+  }));
+</script>
+
+</body>
+</html>

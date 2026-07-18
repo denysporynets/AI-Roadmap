@@ -1,0 +1,197 @@
+{
+  "_lee_esto_primero": [
+    "El eval-set del Artefacto 5. Cada caso mide UNA herramienta por separado (no el agente entero):",
+    "así, si un caso se pone rojo, sabes QUÉ prompt lo rompió y no si fue el orquestador.",
+    "",
+    "Los casos van EN PAREJAS. Cada 'bug' es un fallo real cazado en el Artefacto 4, y su 'control'",
+    "es el daño que causaría pasarse de frenada al arreglarlo. El bug mide si MEJORAS;",
+    "el control mide si ROMPES. Sin el control, la tabla te miente con muy buena cara.",
+    "",
+    "'entrada' son los argumentos con los que se llama a la herramienta (funcion(**entrada)).",
+    "Aquí solo viven los DATOS. Las comprobaciones son código y viven en evaluar_prompts.py:",
+    "un JSON no puede expresar lógica sin acabar inventándose un mini-lenguaje.",
+    "",
+    "'repeticiones' > 1 porque la misma entrada NO da siempre la misma salida. Esto es evidente a",
+    "temperatura 0.7 (los casos de carta van a 20 pasadas). Pero el 2026-07-18, en una corrida de",
+    "reproducibilidad, un caso a temperatura 0 y con 1 sola pasada VOLTEÓ de acierto a fallo sin",
+    "tocar nada (cv_bug_cefr_b2: corrida #5 pasó, #6 falló). Lección: temperatura 0 baja el azar,",
+    "no lo apaga (enrutado interno del modelo + batching no determinista del servidor). Por eso los",
+    "casos a temp 0 pasan de 1 a 5 pasadas: con 1, la nota agregada de bugs es rehén de una moneda",
+    "al aire. La nota de cada caso es la fracción de pasadas que pasan."
+  ],
+
+  "casos": [
+    {
+      "id": "of_bug_alternativa_o",
+      "herramienta": "analizar_oferta",
+      "tipo": "bug",
+      "origen": "Artefacto 4 · 'GCP o AWS' falso-faltante",
+      "mide": "Una alternativa con 'o' (basta una) debe quedar como UN solo requisito, no partirse en dos.",
+      "repeticiones": 5,
+      "entrada": {
+        "texto": "AI Engineer (Mid) · Madrid\n\nQué harás:\n- Llevar prototipos de LLM a producción.\n- Mantener los endpoints de inferencia.\n\nImprescindible:\n- 2+ años con Python.\n- Docker y despliegue en la nube (GCP o AWS).\n- Inglés fluido.\n\nSe valorará:\n- FastAPI.\n\nModalidad híbrida (3 días oficina en Madrid)."
+      }
+    },
+    {
+      "id": "of_control_compuesto_y",
+      "herramienta": "analizar_oferta",
+      "tipo": "control",
+      "espeja_a": "of_bug_alternativa_o",
+      "mide": "Un requisito compuesto con 'y' (hacen falta las dos) debe SEPARARSE en dos requisitos. Si al apretar la regla del 'o' el modelo deja de separar los 'y', esta pareja lo caza.",
+      "repeticiones": 5,
+      "entrada": {
+        "texto": "Machine Learning Engineer · Barcelona\n\nQué harás:\n- Construir sistemas de recuperación sobre documentación interna.\n\nImprescindible:\n- Experiencia con APIs de LLMs y RAG.\n- Python.\n\nSe valorará:\n- LangChain.\n\nRemoto."
+      }
+    },
+
+    {
+      "id": "cv_bug_cefr_b2",
+      "herramienta": "match_cv",
+      "tipo": "bug",
+      "origen": "Artefacto 4 · 'Inglés B2' marcado como bloqueante teniendo el CV C1",
+      "mide": "El CEFR está ORDENADO: un CV con inglés C1 CUMPLE un requisito de B2. No puede aparecer como faltante.",
+      "repeticiones": 5,
+      "entrada": {
+        "requisitos": {
+          "puesto": "AI Engineer",
+          "empresa": null,
+          "seniority": "mid",
+          "imprescindibles": ["Python", "Docker", "Inglés B2"],
+          "deseables": ["FastAPI"],
+          "responsabilidades": ["Llevar modelos a producción"],
+          "idiomas": ["Inglés B2"],
+          "modalidad": "híbrido"
+        }
+      }
+    },
+    {
+      "id": "cv_control_bloqueante_real",
+      "herramienta": "match_cv",
+      "tipo": "control",
+      "espeja_a": "cv_bug_cefr_b2",
+      "mide": "Un imprescindible que el CV de verdad NO sostiene debe seguir marcándose como faltante. Si al enseñarle indulgencia con los idiomas se vuelve optimista y deja de avisar de bloqueantes reales, esta pareja lo caza.",
+      "repeticiones": 5,
+      "entrada": {
+        "requisitos": {
+          "puesto": "Platform Engineer",
+          "empresa": null,
+          "seniority": "senior",
+          "imprescindibles": ["5+ años administrando Kubernetes en producción", "Python"],
+          "deseables": [],
+          "responsabilidades": ["Operar los clústeres del equipo"],
+          "idiomas": ["Inglés B2"],
+          "modalidad": "presencial"
+        }
+      }
+    },
+
+    {
+      "id": "carta_bug_numerologia",
+      "herramienta": "redactar_borrador",
+      "tipo": "bug",
+      "origen": "Artefacto 4 · a temp 0.7 se coló 'más de dos años' pese a la regla de narrativa cualitativa",
+      "mide": "El cuerpo no puede llevar NINGÚN número (ni en dígitos ni en letra) salvo el GPA 8.57. La entrada está cargada de cifras a propósito: es la tentación.",
+      "repeticiones": 20,
+      "entrada": {
+        "oferta": {
+          "puesto": "AI Engineer",
+          "empresa": "Nordika",
+          "seniority": "mid",
+          "imprescindibles": ["2+ años con Python", "APIs de LLMs", "RAG", "Docker"],
+          "deseables": ["FastAPI", "MLOps"],
+          "responsabilidades": ["Desplegar aplicaciones de LLM en producción", "Mantener pipelines de datos"],
+          "idiomas": ["Inglés B2"],
+          "modalidad": "híbrido"
+        },
+        "encaje": {
+          "encaje_global": "alto",
+          "imprescindibles_cumplidos": ["2+ años con Python", "APIs de LLMs", "RAG", "Docker"],
+          "imprescindibles_que_faltan": [],
+          "deseables_cumplidos": ["FastAPI", "MLOps"],
+          "puntos_fuertes": [
+            "Ha desplegado un RAG propio en Cloud Run, con el corpus indexado y sirviendo consultas reales",
+            "Máster en Data Science con GPA 8.57",
+            "Ha construido un harness de evaluación con juez LLM y umbral de regresión de 0.40"
+          ],
+          "veredicto": "Encaje alto: cumple todos los imprescindibles y varios deseables."
+        }
+      }
+    },
+    {
+      "id": "carta_control_sigue_siendo_carta",
+      "herramienta": "redactar_borrador",
+      "tipo": "control",
+      "espeja_a": "carta_bug_numerologia",
+      "mide": "La carta debe seguir siendo una carta: asunto, cuerpo de 130-180 palabras (su propio contrato) y 2-3 notas. Si al prohibirle los números a lo bruto el texto sale mutilado o descafeinado, esta pareja lo caza.",
+      "repeticiones": 20,
+      "entrada": {
+        "oferta": {
+          "puesto": "Data Scientist",
+          "empresa": "Vitalis",
+          "seniority": "mid",
+          "imprescindibles": ["Python", "SQL", "Modelos de clasificación"],
+          "deseables": ["Visualización de datos"],
+          "responsabilidades": ["Analizar el comportamiento de clientes", "Presentar hallazgos a negocio"],
+          "idiomas": ["Español", "Inglés B2"],
+          "modalidad": "remoto"
+        },
+        "encaje": {
+          "encaje_global": "alto",
+          "imprescindibles_cumplidos": ["Python", "SQL", "Modelos de clasificación"],
+          "imprescindibles_que_faltan": [],
+          "deseables_cumplidos": ["Visualización de datos"],
+          "puntos_fuertes": [
+            "Su TFM analizó los hábitos alimentarios de un país entero y lo contó de forma que se entendiera",
+            "Viene de hostelería: sabe traducir un hallazgo técnico a una decisión de negocio",
+            "Ha construido dashboards que se usaron de verdad para decidir"
+          ],
+          "veredicto": "Encaje alto: cubre los imprescindibles y aporta perfil de comunicación."
+        }
+      }
+    },
+
+    {
+      "id": "of_bug_rango_python_o",
+      "herramienta": "analizar_oferta",
+      "tipo": "bug",
+      "origen": "Artefacto 5 · corrida #12 · '2 o 3 años o más' es una redundancia lógica",
+      "mide": "'2 o 3 años o más' equivale a '2 o más años' (el '3' sobra). Mide si el analizador VE la redundancia y la colapsa (deja un mínimo de 2, sin el '3'), en vez de transcribir el rango como un loro. Es el 'of_bug_alternativa_o' llevado a terreno numérico: el 'o' ya no une dos tecnologías sino un rango de años.",
+      "repeticiones": 5,
+      "entrada": {
+        "texto": "AI Engineer (Mid) · Valencia\n\nQué harás:\n- Integrar modelos de lenguaje en el producto.\n- Mantener los endpoints de inferencia.\n\nImprescindible:\n- Experiencia con Python de 2 o 3 años o más.\n- Docker.\n- Inglés fluido.\n\nSe valorará:\n- FastAPI.\n\nModalidad híbrida."
+      }
+    },
+    {
+      "id": "carta_bug_rango_numerologia",
+      "herramienta": "redactar_borrador",
+      "tipo": "bug",
+      "origen": "Artefacto 5 · corrida #12 · mismo '2 o 3 años o más', ahora en la carta",
+      "mide": "El segundo bloque de la misma prueba: ese requisito, cargado de '2', '3', 'años' y 'o más', entra en el encaje y en los puntos_fuertes como tentación. Mide que v3 no cuele NINGÚN número en el cuerpo. Trampa más dura que 'más de dos años': aquí van varias cifras seguidas. Comprobación reutilizada: check_carta_bug_numerologia (opera sobre 'cuerpo', da igual de qué caso venga).",
+      "repeticiones": 20,
+      "entrada": {
+        "oferta": {
+          "puesto": "AI Engineer",
+          "empresa": "Meridian",
+          "seniority": "mid",
+          "imprescindibles": ["Experiencia con Python de 2 o 3 años o más", "Docker", "Inglés fluido"],
+          "deseables": ["FastAPI"],
+          "responsabilidades": ["Integrar modelos de lenguaje en el producto", "Mantener endpoints de inferencia"],
+          "idiomas": ["Inglés fluido"],
+          "modalidad": "híbrido"
+        },
+        "encaje": {
+          "encaje_global": "alto",
+          "imprescindibles_cumplidos": ["Experiencia con Python de 2 o 3 años o más", "Docker", "Inglés fluido"],
+          "imprescindibles_que_faltan": [],
+          "deseables_cumplidos": ["FastAPI"],
+          "puntos_fuertes": [
+            "Programa en Python desde el máster y en varios proyectos propios: entre formación y práctica suma 2 o 3 años o más con el lenguaje",
+            "Ha desplegado un agente y un RAG en Cloud Run sirviendo peticiones reales",
+            "Máster en Data Science con GPA 8.57"
+          ],
+          "veredicto": "Encaje alto: cumple todos los imprescindibles."
+        }
+      }
+    }
+  ]
+}

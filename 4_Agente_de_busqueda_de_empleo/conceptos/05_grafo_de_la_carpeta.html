@@ -1,0 +1,453 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>El grafo de la carpeta · Artefacto 4</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root{
+    --sky:#0d1117; --sky2:#0a0e14;
+    --amber:#f0a500; --amber-soft:#f7c94b;
+    --ink:#e9edf3; --muted:#9aa6b2; --dim:#5b6673;
+    --pub:#5ad19b;      /* sube a git / público */
+    --priv:#f0a500;     /* blindado / privado */
+    --risk:#ff5d5d;     /* riesgo */
+    --ext:#8b9dff;      /* externo */
+    --img:#38bdf8;      /* entra en la imagen */
+    --line:rgba(255,255,255,.09);
+    --mono:'DM Mono',ui-monospace,monospace;
+    --sans:'DM Sans',system-ui,sans-serif;
+    --serif:'Fraunces',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#101c34;color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  body{min-height:100vh;background:linear-gradient(180deg,#16233f 0%,#0d162a 100%);background-attachment:fixed}
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 22px 90px}
+
+  header h1{font-family:var(--serif);font-weight:700;font-size:clamp(28px,4.4vw,44px);line-height:1.05;margin:0 0 10px;letter-spacing:-.01em}
+  header h1 .g{color:var(--amber)}
+  .lede{color:var(--muted);font-size:17px;line-height:1.6;max-width:70ch;margin:0 0 4px}
+  .path{font-family:var(--mono);font-size:12.5px;color:var(--dim);margin:14px 0 0}
+  .path b{color:var(--amber-soft);font-weight:500}
+
+  .idea{margin:26px 0 8px;border:1px solid rgba(240,165,0,.28);background:linear-gradient(180deg,rgba(240,165,0,.07),rgba(240,165,0,.02));border-radius:14px;padding:18px 20px}
+  .idea h2{font-family:var(--serif);font-size:20px;margin:0 0 8px;font-weight:600}
+  .idea p{margin:8px 0;color:#d8dee6;font-size:15px;line-height:1.62}
+  .idea .three{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .idea .three span{font-family:var(--mono);font-size:12.5px;padding:6px 11px;border-radius:8px;border:1px solid var(--line)}
+  .idea .three .a{color:var(--pub);border-color:rgba(90,209,155,.4)}
+  .idea .three .b{color:var(--img);border-color:rgba(56,189,248,.4)}
+  .idea .three .c{color:var(--amber-soft);border-color:rgba(240,165,0,.4)}
+
+  /* lens controls */
+  .lenses{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0 12px;align-items:center}
+  .lens-btn{font-family:var(--sans);font-weight:500;font-size:14px;color:var(--muted);background:#151b23;border:1px solid var(--line);
+    padding:10px 16px;border-radius:11px;cursor:pointer;transition:.16s;display:flex;gap:8px;align-items:center}
+  .lens-btn:hover{color:var(--ink);border-color:rgba(255,255,255,.22)}
+  .lens-btn.on{color:var(--sky);background:var(--amber);border-color:var(--amber);font-weight:700}
+  .lens-btn.on.git{background:var(--pub);border-color:var(--pub)}
+  .lens-btn.on.img{background:var(--img);border-color:var(--img)}
+  .lens-hint{margin-left:auto;color:var(--dim);font-size:12.5px;font-family:var(--mono)}
+
+  .stage{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+  .canvas-box{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:radial-gradient(120% 100% at 30% 0%,#2a4372 0%,#182c50 55%,#101c34 100%)}
+  canvas{display:block;width:100%;touch-action:none;cursor:grab}
+  canvas.drag{cursor:grabbing}
+  .legend{position:absolute;left:12px;bottom:10px;display:flex;gap:12px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--muted);pointer-events:none}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+
+  .panel{border:1px solid var(--line);border-radius:16px;background:#0f151d;padding:18px 20px 20px;min-height:150px}
+  .panel .tag{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+  .panel h3{font-family:var(--mono);font-size:16px;margin:6px 0 4px;color:var(--amber-soft);word-break:break-all}
+  .panel .role{color:var(--muted);font-size:13.5px;line-height:1.55;margin:6px 0 14px}
+  .panel .rows{display:flex;flex-direction:column;gap:9px}
+  .panel .row{display:flex;gap:10px;font-size:13px;align-items:baseline}
+  .panel .row .k{color:var(--dim);font-family:var(--mono);font-size:11px;min-width:74px;flex-shrink:0;padding-top:1px}
+  .panel .row .v{color:#d8dee6;line-height:1.45}
+  .chip{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--line)}
+  .chip.pub{color:var(--pub);border-color:rgba(90,209,155,.4)}
+  .chip.priv{color:var(--priv);border-color:rgba(240,165,0,.4)}
+  .chip.risk{color:var(--risk);border-color:rgba(255,93,93,.5)}
+  .chip.img{color:var(--img);border-color:rgba(56,189,248,.4)}
+  .chip.no{color:var(--dim)}
+  .panel .rel{font-size:12.5px;color:#c6cdd6;line-height:1.5;margin:3px 0}
+  .panel .rel b{color:var(--amber-soft);font-weight:500;font-family:var(--mono);font-size:11.5px}
+  .empty{color:var(--muted);font-size:14px;line-height:1.6}
+  .empty b{color:var(--ink);font-weight:600}
+
+  .reveal{margin-top:44px}
+  .reveal h2{font-family:var(--serif);font-size:24px;font-weight:600;margin:0 0 6px}
+  .reveal .sub{color:var(--muted);font-size:15px;margin:0 0 20px}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.cards{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);border-radius:13px;padding:16px 17px;background:#0f151d}
+  .card h4{font-family:var(--mono);font-size:13px;margin:0 0 9px;display:flex;gap:8px;align-items:center}
+  .card.f1 h4{color:var(--amber-soft)} .card.f2 h4{color:var(--pub)} .card.f3 h4{color:var(--img)}
+  .card p{margin:0;color:#cfd6de;font-size:13.5px;line-height:1.58}
+  .card code{font-family:var(--mono);font-size:12px;color:var(--ink);background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px}
+
+  .aha{margin-top:24px;border-left:3px solid var(--amber);background:rgba(240,165,0,.05);padding:16px 20px;border-radius:0 12px 12px 0}
+  .aha h3{font-family:var(--serif);font-size:19px;margin:0 0 8px;font-weight:600}
+  .aha p{margin:8px 0;color:#d8dee6;font-size:14.5px;line-height:1.62}
+  .aha .flow{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:10px}
+  .aha .flow b{color:var(--img)} .aha .flow s{color:var(--risk);text-decoration:none}
+
+  .cv{margin-top:24px;border:1px dashed rgba(90,209,155,.4);border-radius:12px;padding:16px 20px;background:rgba(90,209,155,.04)}
+  .cv h3{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--pub);margin:0 0 8px}
+  .cv p{margin:6px 0;color:#d3dbe3;font-size:14px;line-height:1.6}
+
+  footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);color:var(--dim);font-family:var(--mono);font-size:12px;text-align:center}
+
+  /* brightness / warm-night slider */
+  .warm{position:fixed;right:16px;top:16px;z-index:40;display:flex;gap:9px;align-items:center;background:rgba(15,21,29,.82);
+    backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .warm input{width:96px;accent-color:var(--amber)}
+  #veil{position:fixed;inset:0;pointer-events:none;z-index:30;background:#ff8a1e;opacity:0;mix-blend-mode:multiply;transition:opacity .2s}
+</style>
+
+<div id="veil"></div>
+<div class="warm" title="Filtra la luz azul — se recuerda en este navegador">
+  <span>☀️</span><input id="warm" type="range" min="0" max="100" value="0"><span>🌙</span>
+</div>
+
+<div class="wrap">
+  <header>
+    <h1>El <span class="g">grafo</span> de la carpeta</h1>
+    <p class="lede">Una carpeta de artefacto no es una lista de ficheros: es una red. Cada archivo <b style="color:#c6cdd6">importa</b>, <b style="color:#c6cdd6">lee</b>, <b style="color:#c6cdd6">produce</b> o <b style="color:#c6cdd6">bloquea</b> a otros. Aquí está tu Artefacto&nbsp;4 (el agente de empleo) dibujado de verdad, con tres lentes para ver las tres preguntas que siempre se confunden.</p>
+    <p class="path">📁 <b>4_Agente_de_busqueda_de_empleo/</b> · 4 módulos .py · 3 datos privados · Docker → Cloud&nbsp;Run · verificado contra el código real</p>
+  </header>
+
+  <div class="idea">
+    <h2>La idea que lo ordena todo</h2>
+    <p>Ves los mismos ficheros, pero hay <b>tres fronteras distintas</b> operando a la vez sobre ellos. Confundirlas es lo que hace que "¿por qué el agente funciona si el CV no está en GitHub?" parezca un misterio. Cada lente de abajo enciende <b>una</b> de esas fronteras:</p>
+    <div class="three">
+      <span class="a">⚙️ qué importa a qué (se ejecuta)</span>
+      <span class="b">🌐 qué sube a GitHub (.gitignore)</span>
+      <span class="c">🐳 qué entra en la imagen (.gcloudignore)</span>
+    </div>
+  </div>
+
+  <div class="lenses">
+    <button class="lens-btn on runtime" data-lens="runtime">⚙️ Cómo funciona</button>
+    <button class="lens-btn git" data-lens="git">🌐 Qué sube a GitHub</button>
+    <button class="lens-btn img" data-lens="img">🐳 Qué entra en la imagen</button>
+    <span class="lens-hint">arrastra los nodos · pásate por encima para ver el detalle</span>
+  </div>
+
+  <div class="stage">
+    <div class="canvas-box">
+      <canvas id="c" width="1040" height="720"></canvas>
+      <div class="legend" id="legend"></div>
+    </div>
+    <aside class="panel" id="panel">
+      <div class="empty">
+        <p><b>Pásate por encima de una estrella</b> (o tócala) para ver qué es, qué toca y de qué lado de cada frontera cae.</p>
+        <p style="margin-top:14px">Empieza con la lente <b style="color:var(--amber-soft)">⚙️ Cómo funciona</b>: sigue la flecha desde <code style="font-family:var(--mono);font-size:12px">api.py</code> hasta <code style="font-family:var(--mono);font-size:12px">OpenAI</code> y verás el camino completo de una consulta.</p>
+      </div>
+    </aside>
+  </div>
+
+  <section class="reveal">
+    <h2>Las tres lentes, en una frase cada una</h2>
+    <p class="sub">La misma carpeta contada tres veces. Ninguna es "la verdadera": son capas.</p>
+    <div class="cards">
+      <div class="card f1">
+        <h4>⚙️ Cómo funciona</h4>
+        <p>El <b style="color:#e9edf3">runtime</b>. <code>api.py</code> es la puerta → llama a <code>agente.py</code> (el bucle) → que usa las 3 herramientas de <code>herramientas.py</code> → que hablan con <b style="color:var(--ext)">OpenAI</b>. El <code>.env</code> reparte las claves; <code>cv_denys.md</code> es el conocimiento que el agente lee.</p>
+      </div>
+      <div class="card f2">
+        <h4>🌐 Qué sube a GitHub</h4>
+        <p>El <code>.gitignore</code> es el portero del repo público. Regla de oro: <b style="color:var(--pub)">la lógica sube, el dato no</b>. Suben los <code>.py</code> y los libros de conceptos; se quedan en tu Mac el <code>.env</code> y toda la carpeta <code>datos_personales/</code>.</p>
+      </div>
+      <div class="card f3">
+        <h4>🐳 Qué entra en la imagen</h4>
+        <p>El deploy <b style="color:#e9edf3">no viaja por GitHub</b>. El <code>.gcloudignore</code> + el <code>Dockerfile</code> deciden qué se mete en el contenedor de Cloud Run. Aquí <b style="color:var(--img)">sí entra el CV</b> (el agente lo necesita), pero <b style="color:var(--dim)">no</b> entran <code>cli.py</code> ni los <code>conceptos/</code>.</p>
+      </div>
+    </div>
+
+    <div class="aha">
+      <h3>El nudo que se deshace: el CV cruza una frontera pero no la otra</h3>
+      <p><code style="font-family:var(--mono);font-size:12.5px;color:#e9edf3">datos_personales/cv_denys.md</code> está <b style="color:var(--priv)">blindado en <code>.gitignore</code></b> → nunca aparece en tu repo público. Y sin embargo el agente desplegado lo lee y funciona. ¿Cómo?</p>
+      <p>Porque <b>son dos canales independientes</b>. GitHub Pages sirve tu web desde el repo (sin el CV). Cloud Run se construye desde un <b>upload aparte</b> que gobierna el <code>.gcloudignore</code> — y ese sí deja pasar el <code>.md</code> hacia dentro de la imagen. Dato privado en producción, sin pasar jamás por el repo público. Es exactamente el patrón que ya usaste en el <b>Artefacto&nbsp;2</b> (el corpus DOBE viajó igual).</p>
+      <p class="flow">git:  cv_denys.md  ⊘ <s>bloqueado</s>  ·  imagen:  cv_denys.md  →  <b>COPY dentro del contenedor</b>  ·  mismo fichero, dos fronteras</p>
+    </div>
+
+    <div class="cv">
+      <h3>Para tu CV / entrevista</h3>
+      <p>"Sé leer una carpeta de proyecto como un grafo de dependencias: distingo el <b>árbol de imports en runtime</b>, la <b>frontera de versionado</b> (<code>.gitignore</code>: la lógica se publica, el dato personal no) y la <b>frontera de despliegue</b> (<code>.gcloudignore</code>/<code>Dockerfile</code>: qué entra en la imagen)."</p>
+      <p>"Un secreto puede tener que estar <b>ausente del repo</b> y a la vez <b>presente en producción</b> — son canales distintos, y cada uno tiene su propio portero."</p>
+    </div>
+  </section>
+
+  <footer>protocolo ds-nexus · constante 2.51 · el grafo del artefacto 4 de 6</footer>
+</div>
+
+<script>
+/* ── warm-night slider: gradúa el cielo marino y filtra la luz azul (recuerda la elección) ── */
+window.NODE_FILL='rgb(14,26,50)';
+(function(){
+  const s=document.getElementById('warm'), v=document.getElementById('veil');
+  const box=document.querySelector('.canvas-box');
+  const KEY='a4-warmth';
+  const L=(a,b,t)=>Math.round(a+(b-a)*t);
+  const mix=(c1,c2,t)=>`rgb(${L(c1[0],c2[0],t)},${L(c1[1],c2[1],t)},${L(c1[2],c2[2],t)})`;
+  // día = marino claro y frío  →  noche = marino profundo y algo cálido
+  const dTop=[42,67,114],  nTop=[30,34,58];
+  const dMid=[24,44,80],   nMid=[17,22,40];
+  const dBot=[16,28,52],   nBot=[10,13,26];
+  const dNode=[16,28,52],  nNode=[10,13,24];
+  // fondo de la PÁGINA (algo más oscuro que el mapa, para que el mapa destaque)
+  const pTopD=[22,35,63], pTopN=[16,19,31];
+  const pBotD=[13,22,42], pBotN=[9,11,20];
+  function apply(x){
+    const t=x/100;
+    box.style.background=`radial-gradient(120% 100% at 30% 0%, ${mix(dTop,nTop,t)} 0%, ${mix(dMid,nMid,t)} 55%, ${mix(dBot,nBot,t)} 100%)`;
+    document.body.style.background=`linear-gradient(180deg, ${mix(pTopD,pTopN,t)} 0%, ${mix(pBotD,pBotN,t)} 100%)`;
+    document.body.style.backgroundAttachment='fixed';
+    window.NODE_FILL=mix(dNode,nNode,t);
+    v.style.opacity=(t*0.22).toFixed(3);
+    document.documentElement.style.filter=x>0?`brightness(${(1-x/320).toFixed(3)})`:'';
+  }
+  const saved=localStorage.getItem(KEY); if(saved!==null){ s.value=saved; }
+  apply(+s.value);
+  s.addEventListener('input',()=>{ apply(+s.value); localStorage.setItem(KEY,s.value); });
+})();
+
+/* ── the star-chart graph ── */
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const panel=document.getElementById('panel');
+const W=1040,H=720;
+let lens='runtime';
+
+// kind → colour
+const KC={code:'#f0a500',data:'#f0a500',doc:'#7d8896',ext:'#8b9dff',dest:'#38bdf8',gate:'#c6cdd6',risk:'#ff5d5d',junk:'#48515c',dep:'#5ad19b'};
+
+const nodes=[
+  {id:'openai', label:'OpenAI API', kind:'ext', x:895,y:78, r:26, tag:'servicio externo',
+    role:'El modelo gpt-4o-mini. Vive fuera de tu carpeta; tus herramientas le mandan cada llamada.', git:'-', img:'-'},
+  {id:'env', label:'.env', kind:'data', x:120,y:96, r:24, tag:'secretos · local',
+    role:'Guarda OPENAI_API_KEY y APP_TOKEN. Jamás sale de tu Mac: ni a GitHub ni a la imagen.', git:'blindado', img:'fuera'},
+  {id:'herr', label:'herramientas.py', kind:'code', x:300,y:300, r:30, tag:'módulo · 253 líneas',
+    role:'Las 3 herramientas del agente: analizar_oferta, match_cv, redactar_borrador. Crea el cliente OpenAI y fija MODELO.', git:'sube', img:'entra'},
+  {id:'cvmd', label:'cv_denys.md', kind:'data', x:150,y:470, r:23, tag:'conocimiento · privado',
+    role:'Tu CV en Markdown. herramientas.py lo lee entero (context stuffing, no RAG) para el match. Privado, pero necesario en producción.', git:'blindado', img:'entra'},
+  {id:'cvhtml', label:'cv_denys.html', kind:'data', x:150,y:600, r:18, tag:'copia fuente · privado',
+    role:'La copia HTML del CV. El código NO la usa (usa el .md); es tu fuente de verdad para editar. No sube ni entra en la imagen.', git:'blindado', img:'fuera'},
+  {id:'agente', label:'agente.py', kind:'code', x:545,y:300, r:32, tag:'el bucle · 257 líneas',
+    role:'El corazón: define TOOLS (esquemas JSON), el DISPATCH y _correr_bucle() (ReAct a mano). Dos envoltorios: agente()→str y procesar_oferta()→dict.', git:'sube', img:'entra'},
+  {id:'cli', label:'cli.py', kind:'code', x:520,y:530, r:22, tag:'interfaz de desarrollo',
+    role:'El REPL para probar en tu terminal. Importa agente(). Es andamiaje: NO se despliega (queda fuera de la imagen).', git:'sube', img:'fuera'},
+  {id:'api', label:'api.py', kind:'code', x:790,y:300, r:29, tag:'la puerta · FastAPI',
+    role:'El portero web. /salud abierto; /preguntar exige X-Token o devuelve 401 (fail-closed). Importa procesar_oferta() y sirve el frontend. Es el entrypoint de Cloud Run.', git:'sube', img:'entra'},
+  {id:'static', label:'static/index.html', kind:'code', x:930,y:452, r:22, tag:'frontend',
+    role:'La cara del agente: guarda el token en localStorage y pinta los pasos (analizar→match→redactar). api.py la sirve desde /.', git:'sube', img:'entra'},
+  {id:'req', label:'requirements.txt', kind:'dep', x:640,y:600, r:20, tag:'dependencias pineadas',
+    role:'Versiones exactas (openai 2.45, fastapi 0.139, uvicorn…). El Dockerfile las instala antes de copiar el código.', git:'sube', img:'entra'},
+  {id:'docker', label:'Dockerfile', kind:'dep', x:800,y:600, r:26, tag:'la receta de la imagen',
+    role:'python:3.13-slim. Instala requirements y COPIA por lista blanca: herramientas+agente+api+cv_denys.md+static. Arranca uvicorn api:app.', git:'sube', img:'entra'},
+  {id:'cloudrun', label:'☁️ Cloud Run', kind:'dest', x:935,y:640, r:24, tag:'destino · en vivo',
+    role:'Donde vive el agente desplegado (dobe-agente…run.app). Escala a cero, coste≈0. La imagen construida aterriza aquí.', git:'-', img:'-'},
+  {id:'gitignore', label:'.gitignore', kind:'gate', x:120,y:640, r:22, tag:'portero de GitHub',
+    role:'Decide qué sube al repo público. Regla: la lógica sí, el dato no. Bloquea .env, datos_personales/, .venv, basura.', git:'sube', img:'fuera'},
+  {id:'gcloud', label:'.gcloudignore', kind:'gate', x:340,y:665, r:22, tag:'portero de la imagen',
+    role:'Gobierna el upload al build de Cloud Run (con su gemelo .dockerignore). CRÍTICO: deja pasar cv_denys.md pero recorta conceptos/, cli.py, cv_denys.html y .env.', git:'sube', img:'fuera'},
+  {id:'token', label:'Token App.png', kind:'risk', x:545,y:82, r:22, tag:'⚠️ riesgo latente',
+    role:'Captura de tu token de producción. NO está en .gitignore → un git add -A lo publicaría. La última vez se libró solo por staging manual.', git:'RIESGO', img:'fuera'},
+  {id:'docs', label:'conceptos/ + diseño', kind:'doc', x:360,y:520, r:20, tag:'5 libros HTML',
+    role:'00_diseno + los 4 libros de conceptos (bucle, CLI, API, Docker) + este grafo. Se publican en Pages pero NO se despliegan (fuera de la imagen).', git:'sube', img:'fuera'},
+  {id:'junk', label:'basura local', kind:'junk', x:70,y:700, r:16, tag:'.venv · __pycache__ · .DS_Store',
+    role:'Entorno virtual, cachés de Python y basura de macOS. Bloqueada en las dos fronteras: ni sube a git ni entra en la imagen.', git:'blindado', img:'fuera'},
+];
+const N=Object.fromEntries(nodes.map(n=>[n.id,n]));
+
+// edges: {a,b,label,lens,type}  type: flow | block | risk
+const edges=[
+  // runtime
+  {a:'herr',b:'openai',label:'llama',lens:'runtime',type:'flow'},
+  {a:'herr',b:'env',label:'carga OPENAI_API_KEY',lens:'runtime',type:'flow'},
+  {a:'herr',b:'cvmd',label:'lee (conocimiento)',lens:'runtime',type:'flow'},
+  {a:'agente',b:'herr',label:'importa 3 tools + cliente',lens:'runtime',type:'flow'},
+  {a:'cli',b:'agente',label:'importa agente()',lens:'runtime',type:'flow'},
+  {a:'api',b:'agente',label:'importa procesar_oferta()',lens:'runtime',type:'flow'},
+  {a:'api',b:'env',label:'carga APP_TOKEN',lens:'runtime',type:'flow'},
+  {a:'api',b:'static',label:'sirve',lens:'runtime',type:'flow'},
+  // git — what .gitignore blocks
+  {a:'gitignore',b:'env',label:'bloquea',lens:'git',type:'block'},
+  {a:'gitignore',b:'cvmd',label:'bloquea',lens:'git',type:'block'},
+  {a:'gitignore',b:'cvhtml',label:'bloquea',lens:'git',type:'block'},
+  {a:'gitignore',b:'junk',label:'bloquea',lens:'git',type:'block'},
+  {a:'gitignore',b:'token',label:'¡NO lo bloquea!',lens:'git',type:'risk'},
+  // image — Dockerfile COPY + gcloudignore blocks
+  {a:'docker',b:'req',label:'instala',lens:'img',type:'flow'},
+  {a:'docker',b:'herr',label:'COPY',lens:'img',type:'flow'},
+  {a:'docker',b:'agente',label:'COPY',lens:'img',type:'flow'},
+  {a:'docker',b:'api',label:'COPY',lens:'img',type:'flow'},
+  {a:'docker',b:'cvmd',label:'COPY (cruza privacidad)',lens:'img',type:'flow'},
+  {a:'docker',b:'static',label:'COPY',lens:'img',type:'flow'},
+  {a:'docker',b:'cloudrun',label:'despliega uvicorn api:app',lens:'img',type:'flow'},
+  {a:'gcloud',b:'docs',label:'recorta',lens:'img',type:'block'},
+  {a:'gcloud',b:'cli',label:'recorta',lens:'img',type:'block'},
+  {a:'gcloud',b:'cvhtml',label:'recorta',lens:'img',type:'block'},
+  {a:'gcloud',b:'env',label:'recorta',lens:'img',type:'block'},
+];
+
+// which nodes are "active" (bright) per lens
+function nodeActive(n){
+  if(lens==='runtime') return ['openai','env','herr','cvmd','agente','cli','api','static'].includes(n.id);
+  if(lens==='git')     return n.git!=='-';
+  if(lens==='img')     return true; // all relevant to the image story
+  return true;
+}
+// per-lens node accent
+function lensColor(n){
+  if(lens==='git'){
+    if(n.git==='RIESGO') return KC.risk;
+    if(n.git==='sube')   return '#5ad19b';
+    if(n.git==='blindado') return '#f0a500';
+    return '#5b6673';
+  }
+  if(lens==='img'){
+    if(n.img==='entra') return '#38bdf8';
+    if(n.img==='fuera') return '#5b6673';
+    return '#8b9dff';
+  }
+  return KC[n.kind];
+}
+
+let stars=[]; for(let i=0;i<90;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.3+.2,tw:Math.random()*6.28});
+let hover=null, sel=null, drag=null, dragged=false, t=0;
+
+function edgesFor(){ return edges.filter(e=>e.lens===lens); }
+
+function draw(){
+  t+=0.016;
+  ctx.clearRect(0,0,W,H);
+  // starfield
+  for(const s of stars){ const a=.25+.2*Math.sin(t*1.4+s.tw); ctx.globalAlpha=a; ctx.fillStyle='#aab7ff'; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.28); ctx.fill(); }
+  ctx.globalAlpha=1;
+
+  // edges
+  for(const e of edgesFor()){
+    const A=N[e.a], B=N[e.b];
+    const lit = hover&&(hover.id===e.a||hover.id===e.b);
+    let col='rgba(255,255,255,.16)', wdt=1.4, dash=[];
+    if(e.type==='flow'){ col=lit?'rgba(247,201,75,.95)':'rgba(240,165,0,.42)'; wdt=lit?2.6:1.7; }
+    if(e.type==='block'){ col=lit?'rgba(150,160,172,.9)':'rgba(150,160,172,.34)'; wdt=1.5; dash=[5,5]; }
+    if(e.type==='risk'){ col='rgba(255,93,93,'+(0.55+0.35*Math.sin(t*3))+')'; wdt=2.4; dash=[6,5]; }
+    drawEdge(A,B,col,wdt,dash,e,lit);
+  }
+  // nodes
+  for(const n of nodes){
+    const act=nodeActive(n), col=lensColor(n);
+    const isH=hover&&hover.id===n.id;
+    ctx.globalAlpha=act?1:0.16;
+    // glow
+    const gr=ctx.createRadialGradient(n.x,n.y,1,n.x,n.y,n.r*2.4);
+    gr.addColorStop(0,col+ (act?'55':'22')); gr.addColorStop(1,col+'00');
+    ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*2.4,0,6.28); ctx.fill();
+    // body
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r*(isH?1.12:1),0,6.28);
+    ctx.fillStyle=window.NODE_FILL||'#0e1a32'; ctx.fill();
+    ctx.lineWidth=isH?3:2; ctx.strokeStyle=col; ctx.stroke();
+    // risk pulse ring
+    if(n.kind==='risk'&&(lens==='git'||act)){ ctx.globalAlpha=(0.5+0.4*Math.sin(t*3))*(act?1:.3); ctx.strokeStyle=KC.risk; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(n.x,n.y,n.r+6+2*Math.sin(t*3),0,6.28); ctx.stroke(); }
+    ctx.globalAlpha=act?1:0.28;
+    // label
+    ctx.font=(isH?'600 ':'500 ')+'12.5px "DM Mono",monospace';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillStyle=act?'#e9edf3':'#5b6673';
+    ctx.fillText(n.label, n.x, n.y+n.r+7);
+  }
+  ctx.globalAlpha=1;
+  requestAnimationFrame(draw);
+}
+
+function drawEdge(A,B,col,wdt,dash,e,lit){
+  const dx=B.x-A.x, dy=B.y-A.y, d=Math.hypot(dx,dy)||1;
+  const ux=dx/d, uy=dy/d;
+  const sx=A.x+ux*A.r, sy=A.y+uy*A.r, ex=B.x-ux*(B.r+7), ey=B.y-uy*(B.r+7);
+  ctx.save(); ctx.setLineDash(dash); ctx.strokeStyle=col; ctx.lineWidth=wdt;
+  ctx.beginPath(); ctx.moveTo(sx,sy);
+  const mx=(sx+ex)/2, my=(sy+ey)/2 - d*0.10; // gentle arc
+  ctx.quadraticCurveTo(mx,my,ex,ey); ctx.stroke();
+  // arrowhead
+  const ang=Math.atan2(ey-my,ex-mx);
+  ctx.setLineDash([]); ctx.fillStyle=col;
+  ctx.beginPath(); ctx.moveTo(ex,ey);
+  ctx.lineTo(ex-9*Math.cos(ang-.4),ey-9*Math.sin(ang-.4));
+  ctx.lineTo(ex-9*Math.cos(ang+.4),ey-9*Math.sin(ang+.4));
+  ctx.closePath(); ctx.fill();
+  // block "✕"
+  if(e.type==='block'){ ctx.fillStyle=window.NODE_FILL||'#0e1a32'; ctx.beginPath(); ctx.arc(mx,my,8,0,6.28); ctx.fill(); ctx.strokeStyle=col; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(mx-4,my-4); ctx.lineTo(mx+4,my+4); ctx.moveTo(mx+4,my-4); ctx.lineTo(mx-4,my+4); ctx.stroke(); }
+  // label when hovering an endpoint
+  if(lit){ ctx.setLineDash([]); ctx.font='500 11px "DM Mono",monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    const tw=ctx.measureText(e.label).width; ctx.fillStyle='rgba(9,16,32,.92)'; ctx.fillRect(mx-tw/2-6,my-9,tw+12,18);
+    ctx.fillStyle=e.type==='risk'?'#ff8a8a':(e.type==='block'?'#c6cdd6':'#f7c94b'); ctx.fillText(e.label,mx,my); }
+  ctx.restore();
+}
+
+/* panel */
+function chipGit(n){
+  if(n.git==='sube') return '<span class="chip pub">🌐 sube a git</span>';
+  if(n.git==='blindado') return '<span class="chip priv">🔒 blindado (.gitignore)</span>';
+  if(n.git==='RIESGO') return '<span class="chip risk">⚠️ NO bloqueado</span>';
+  return '<span class="chip no">— no aplica</span>';
+}
+function chipImg(n){
+  if(n.img==='entra') return '<span class="chip img">🐳 entra en la imagen</span>';
+  if(n.img==='fuera') return '<span class="chip no">fuera de la imagen</span>';
+  return '<span class="chip no">— no aplica</span>';
+}
+function relsOf(id){
+  const out=[];
+  for(const e of edges){
+    if(e.a===id){ out.push(`<div class="rel"><b>${e.label}</b> → ${N[e.b].label}</div>`); }
+    else if(e.b===id){ out.push(`<div class="rel">${N[e.a].label} <b>${e.label}</b> ↓</div>`); }
+  }
+  return out.length?out.join(''):'<div class="rel" style="color:var(--dim)">— sin aristas en el grafo —</div>';
+}
+function showPanel(n){
+  panel.innerHTML=`
+    <div class="tag">${n.tag}</div>
+    <h3>${n.label}</h3>
+    <div class="role">${n.role}</div>
+    <div class="rows">
+      <div class="row"><span class="k">GitHub</span><span class="v">${chipGit(n)}</span></div>
+      <div class="row"><span class="k">Imagen</span><span class="v">${chipImg(n)}</span></div>
+      <div class="row"><span class="k">Relaciones</span><span class="v">${relsOf(n.id)}</span></div>
+    </div>`;
+}
+function clearPanel(){
+  panel.innerHTML=`<div class="empty"><p><b>Pásate por encima de una estrella</b> (o tócala) para ver qué es, qué toca y de qué lado de cada frontera cae.</p><p style="margin-top:14px">Prueba las tres lentes de arriba: la misma carpeta cambia de significado según qué frontera enciendas.</p></div>`;
+}
+
+/* interaction */
+function pos(ev){ const r=cv.getBoundingClientRect(); const sx=W/r.width, sy=H/r.height;
+  const cx=(ev.touches?ev.touches[0].clientX:ev.clientX)-r.left; const cy=(ev.touches?ev.touches[0].clientY:ev.clientY)-r.top;
+  return {x:cx*sx,y:cy*sy}; }
+function hit(p){ for(let i=nodes.length-1;i>=0;i--){ const n=nodes[i]; if(Math.hypot(p.x-n.x,p.y-n.y)<=n.r+6) return n; } return null; }
+
+cv.addEventListener('mousemove',ev=>{ const p=pos(ev); if(drag){ drag.x=p.x; drag.y=p.y; dragged=true; return; } const h=hit(p); if(h!==hover){ hover=h; cv.style.cursor=h?'pointer':'grab'; if(h) showPanel(h); else if(!sel) clearPanel(); } });
+cv.addEventListener('mousedown',ev=>{ const p=pos(ev); const h=hit(p); if(h){ drag=h; dragged=false; cv.classList.add('drag'); } });
+window.addEventListener('mouseup',()=>{ if(drag&&!dragged){ sel=drag; showPanel(drag); } drag=null; cv.classList.remove('drag'); });
+cv.addEventListener('touchstart',ev=>{ const p=pos(ev); const h=hit(p); if(h){ drag=h; dragged=false; hover=h; showPanel(h); } },{passive:true});
+cv.addEventListener('touchmove',ev=>{ if(drag){ const p=pos(ev); drag.x=p.x; drag.y=p.y; dragged=true; ev.preventDefault(); } },{passive:false});
+cv.addEventListener('touchend',()=>{ drag=null; });
+
+/* lens buttons */
+document.querySelectorAll('.lens-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.lens-btn').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); lens=b.dataset.lens; buildLegend();
+    if(hover) showPanel(hover); else if(sel) showPanel(sel); else clearPanel();
+  });
+});
+
+/* legend per lens */
+function buildLegend(){
+  const L=document.getElementById('legend');
+  if(lens==='runtime') L.innerHTML=`<span><i style="background:#f0a500"></i>flujo de ejecución</span><span><i style="background:#8b9dff"></i>servicio externo</span>`;
+  if(lens==='git') L.innerHTML=`<span><i style="background:#5ad19b"></i>sube a GitHub</span><span><i style="background:#f0a500"></i>blindado (privado)</span><span><i style="background:#ff5d5d"></i>riesgo: no bloqueado</span>`;
+  if(lens==='img') L.innerHTML=`<span><i style="background:#38bdf8"></i>entra en la imagen</span><span><i style="background:#5b6673"></i>se queda fuera</span>`;
+}
+buildLegend(); draw();
+</script>

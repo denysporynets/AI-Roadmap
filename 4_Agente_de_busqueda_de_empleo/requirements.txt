@@ -4,3 +4,4 @@ openai==2.45.0
 python-dotenv==1.2.2
 fastapi==0.139.0
 uvicorn[standard]==0.51.0
+pydantic==2.10.3        # Fase 4 · moldes de structured outputs (antes venía solo de rebote con FastAPI)

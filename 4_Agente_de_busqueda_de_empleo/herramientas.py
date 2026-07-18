@@ -17,6 +17,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from openai import OpenAI
+from pydantic import BaseModel
+
+import prompts  # los prompts viven versionados ahí, no aquí
 
 # Carga OPENAI_API_KEY desde el .env (blindado, no sube a git).
 load_dotenv()
@@ -24,6 +27,70 @@ cliente = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 # Modelo barato y de sobra para extraer datos de un texto.
 MODELO = "gpt-4o-mini"
+
+
+# ─────────────────────────────────────────────────────────────
+# LOS MOLDES · el contrato de forma de cada salida (Fase 4 · structured outputs)
+# ─────────────────────────────────────────────────────────────
+# Antes confiábamos en que el modelo "suele" devolver el JSON bien y lo leíamos
+# con json.loads a ciegas: si faltaba una clave, el fallo aparecía tres funciones
+# más abajo (un .get() que devuelve None sin avisar). Estos moldes Pydantic son el
+# CONTRATO de forma. Se los pasamos al modelo con .parse(), que lo CONSTRIÑE a
+# devolver exactamente esta estructura (structured outputs: garantía del
+# decodificador, no una súplica en el prompt) y encima nos lo devuelve VALIDADO.
+
+class Oferta(BaseModel):
+    puesto: str
+    empresa: str | None            # null si la oferta no nombra empresa
+    seniority: str
+    imprescindibles: list[str]
+    deseables: list[str]
+    responsabilidades: list[str]
+    idiomas: list[str]
+    modalidad: str
+
+
+class Encaje(BaseModel):
+    encaje_global: str
+    imprescindibles_cumplidos: list[str]
+    imprescindibles_que_faltan: list[str]
+    deseables_cumplidos: list[str]
+    puntos_fuertes: list[str]
+    veredicto: str
+
+
+class Borrador(BaseModel):
+    # numeros_detectados va PRIMERO a propósito: es el CoT auditable de v3 (el
+    # modelo genera las claves en orden → razona las cifras ANTES de escribir el
+    # cuerpo). Se valida como parte del molde y se descarta antes de devolver.
+    numeros_detectados: list[str]
+    asunto: str
+    cuerpo: str
+    notas: list[str]
+
+
+def _parsear(molde: type[BaseModel], temperatura: float, mensajes: list[dict]) -> BaseModel:
+    """Llama al modelo con structured outputs y devuelve el objeto ya validado.
+
+    .parse() constriñe la salida al esquema de `molde` y la valida contra él. Si
+    el modelo REHÚSA (contenido que no puede o no quiere producir), `.parsed` viene
+    vacío y el motivo está en `.refusal`: reventamos aquí a propósito (fail-closed),
+    en vez de seguir con un None que rompería silenciosamente más adelante.
+    """
+    completion = cliente.chat.completions.parse(
+        model=MODELO,
+        temperature=temperatura,
+        response_format=molde,
+        messages=mensajes,
+    )
+    mensaje = completion.choices[0].message
+    if mensaje.refusal:
+        raise RuntimeError(f"El modelo rehusó producir {molde.__name__}: {mensaje.refusal}")
+    if mensaje.parsed is None:
+        # Cinturón además de tirantes: el SDK ya lanza si la respuesta se truncó o
+        # la filtró; esto cierra cualquier otro hueco sin devolver un None mudo.
+        raise RuntimeError(f"El modelo no devolvió un {molde.__name__} válido.")
+    return mensaje.parsed
 
 
 # ─────────────────────────────────────────────────────────────
@@ -43,37 +110,13 @@ def analizar_oferta(texto: str) -> dict:
         dict con las claves: puesto, empresa, seniority, imprescindibles,
         deseables, responsabilidades, idiomas, modalidad.
     """
-    instruccion = (
-        "Eres un analista de selección. Extrae los datos clave de la oferta "
-        "de empleo que te den. Distingue bien entre requisitos IMPRESCINDIBLES "
-        "(los que exige de verdad) y DESEABLES (los que valora pero no exige). "
-        "IMPORTANTE sobre requisitos compuestos:\n"
-        "  - Si junta varias competencias con 'y'/'and' (todas necesarias, p.ej. "
-        "'APIs de LLMs y RAG'), sepáralas en elementos independientes.\n"
-        "  - Si ofrece ALTERNATIVAS con 'o'/'or' (basta una, p.ej. 'GCP o AWS'), "
-        "NO la separes: déjala como UN solo elemento, p.ej. 'Cloud (GCP o AWS)'.\n"
-        "No inventes: si un campo no aparece en la oferta, déjalo vacío ([] o null). "
-        "Responde SOLO con un objeto JSON con exactamente estas claves:\n"
-        "  puesto            (str)  título del puesto\n"
-        "  empresa           (str|null) nombre de la empresa si aparece\n"
-        "  seniority         (str)  junior / mid / senior / lead / no indicado\n"
-        "  imprescindibles   (list[str]) requisitos exigidos\n"
-        "  deseables         (list[str]) requisitos valorados pero no exigidos\n"
-        "  responsabilidades (list[str]) qué haría la persona en el puesto\n"
-        "  idiomas           (list[str]) idiomas pedidos y nivel si consta\n"
-        "  modalidad         (str)  remoto / híbrido / presencial / no indicado"
-    )
+    instruccion = prompts.obtener("analizar_oferta")
 
-    respuesta = cliente.chat.completions.create(
-        model=MODELO,
-        temperature=0,                              # determinista: extraer, no inventar
-        response_format={"type": "json_object"},    # obliga a devolver JSON válido
-        messages=[
-            {"role": "system", "content": instruccion},
-            {"role": "user", "content": texto},
-        ],
-    )
-    return json.loads(respuesta.choices[0].message.content)
+    oferta = _parsear(Oferta, 0, [          # temp 0: extraer, no inventar
+        {"role": "system", "content": instruccion},
+        {"role": "user", "content": texto},
+    ])
+    return oferta.model_dump()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -114,40 +157,18 @@ def match_cv(requisitos: dict) -> dict:
     """
     cv = _cargar_cv()
 
-    instruccion = (
-        "Eres un asesor de carrera honesto. Compara los requisitos de una oferta "
-        "contra el CV que te doy. Básate SOLO en lo que pone el CV: no supongas "
-        "experiencia que no aparezca. Un requisito imprescindible que falta es un "
-        "BLOQUEANTE y hay que marcarlo como tal. Sé realista, ni optimista ni "
-        "derrotista.\n"
-        "IDIOMAS — usa el Marco Común Europeo (CEFR), cuyos niveles están ORDENADOS: "
-        "A1 < A2 < B1 < B2 < C1 < C2. Un nivel IGUAL O SUPERIOR cumple el requisito "
-        "(p.ej. un CV con inglés C1 CUMPLE una oferta que pide inglés B2; NO lo marques "
-        "como faltante). Trata 'nativo' o 'bilingüe' como C2.\n"
-        "Responde SOLO con un objeto JSON con estas claves:\n"
-        "  encaje_global              (str)  alto / medio / bajo\n"
-        "  imprescindibles_cumplidos  (list[str]) exigidos que SÍ cumple\n"
-        "  imprescindibles_que_faltan (list[str]) exigidos que NO cumple (bloqueantes)\n"
-        "  deseables_cumplidos        (list[str]) valorados que ya tiene\n"
-        "  puntos_fuertes             (list[str]) dónde destaca para este puesto\n"
-        "  veredicto                  (str)  1-2 frases de conclusión"
-    )
+    instruccion = prompts.obtener("match_cv")
 
     contenido_usuario = (
         f"REQUISITOS DE LA OFERTA (JSON):\n{json.dumps(requisitos, ensure_ascii=False)}\n\n"
         f"CV DE LA PERSONA (texto):\n{cv}"
     )
 
-    respuesta = cliente.chat.completions.create(
-        model=MODELO,
-        temperature=0,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": instruccion},
-            {"role": "user", "content": contenido_usuario},
-        ],
-    )
-    return json.loads(respuesta.choices[0].message.content)
+    encaje = _parsear(Encaje, 0, [
+        {"role": "system", "content": instruccion},
+        {"role": "user", "content": contenido_usuario},
+    ])
+    return encaje.model_dump()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -173,28 +194,7 @@ def redactar_borrador(oferta: dict, encaje: dict) -> dict:
     """
     cv = _cargar_cv()
 
-    instruccion = (
-        "Eres Denys Porynets escribiendo, en primera persona, un mensaje breve "
-        "de candidatura (cover letter corta) para una oferta concreta. Tono "
-        "cercano y profesional, en el idioma de la oferta. Objetivo: que quien "
-        "lo lea quiera conocerte, no que recite tu CV.\n\n"
-        "REGLAS DE ESTILO (obligatorias):\n"
-        "  - NARRATIVA CUALITATIVA. Cuenta QUÉ resolviste y por qué importó, "
-        "no listas de tecnologías ni cifras. Ejemplo: en vez de 'reduje el "
-        "tiempo un 87%', di 'automaticé un reporte que antes comía horas cada "
-        "semana'.\n"
-        "  - NO satures de métricas ni de acrónimos. El ÚNICO número que puedes "
-        "usar es el GPA del máster (8.57). Ningún porcentaje, ningún R², nada más.\n"
-        "  - Apóyate en los 'puntos_fuertes' del encaje: son los que de verdad "
-        "conectan con esta oferta. No prometas experiencia que el CV no sostiene.\n"
-        "  - Breve: 130-180 palabras de cuerpo. Sin relleno de plantilla "
-        "('Me dirijo a ustedes para...'). Empieza fuerte y personal.\n\n"
-        "Responde SOLO con un objeto JSON con estas claves:\n"
-        "  asunto  (str)  línea de asunto para el email\n"
-        "  cuerpo  (str)  el mensaje completo, listo para revisar y enviar\n"
-        "  notas   (list[str]) 2-3 apuntes para Denys: qué personalizaste y "
-        "qué debería revisar antes de mandarlo"
-    )
+    instruccion = prompts.obtener("redactar_borrador")
 
     contenido_usuario = (
         f"OFERTA (JSON):\n{json.dumps(oferta, ensure_ascii=False)}\n\n"
@@ -202,16 +202,17 @@ def redactar_borrador(oferta: dict, encaje: dict) -> dict:
         f"CV COMPLETO (para sacar ejemplos concretos, NO para copiar cifras):\n{cv}"
     )
 
-    respuesta = cliente.chat.completions.create(
-        model=MODELO,
-        temperature=0.7,                             # escribir, no extraer: dale voz
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": instruccion},
-            {"role": "user", "content": contenido_usuario},
-        ],
-    )
-    return json.loads(respuesta.choices[0].message.content)
+    # temp 0.7: escribir, no extraer → dale voz. El molde Borrador sigue exigiendo
+    # 'numeros_detectados' primero, así que el CoT auditable de v3 no se pierde.
+    borrador = _parsear(Borrador, 0.7, [
+        {"role": "system", "content": instruccion},
+        {"role": "user", "content": contenido_usuario},
+    ]).model_dump()
+    # 'numeros_detectados' es el CoT auditable de v2/v3: obliga al modelo a escanear
+    # las cifras ANTES de escribir. Cumplida su función, lo descartamos aquí para que
+    # ese andamiaje interno no pueda colarse en el borrador que ve el usuario.
+    borrador.pop("numeros_detectados", None)
+    return borrador
 
 
 # ─────────────────────────────────────────────────────────────

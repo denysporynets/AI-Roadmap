@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concepto 11 · El molde de la respuesta</title>
+<style>
+  :root{
+    --warmth: 0;
+    --h-bg: 40;  --s-bg: 30%;  --s-panel: 33%;
+    --h-ink: 30; --s-ink: 15%;
+    --h-acc: 38; --s-acc: 92%;
+
+    --bg: hsl(var(--h-bg) var(--s-bg) calc(98% - var(--warmth) * 12%));
+    --panel: hsl(var(--h-bg) var(--s-panel) calc(100% - var(--warmth) * 14%));
+    --ink: hsl(var(--h-ink) var(--s-ink) calc(18% + var(--warmth) * 4%));
+    --soft: hsl(var(--h-ink) 10% calc(42% + var(--warmth) * 6%));
+    --amber: hsl(var(--h-acc) var(--s-acc) calc(45% - var(--warmth) * 6%));
+    --line: hsl(var(--h-acc) 25% calc(86% - var(--warmth) * 12%));
+    --code-bg: hsl(var(--h-bg) 25% calc(95% - var(--warmth) * 13%));
+    --accent-soft: hsl(var(--h-acc) 60% calc(92% - var(--warmth) * 12%));
+    --blue-filter: sepia(calc(var(--warmth) * 0.35)) brightness(calc(1 - var(--warmth) * 0.04));
+  }
+  :root[data-paleta="azul"]{
+    --h-bg: 208; --s-bg: 26%; --s-panel: 30%;
+    --h-ink: 215; --s-ink: 16%;
+    --h-acc: 205; --s-acc: 72%;
+  }
+  :root[data-paleta="neutra"]{
+    --h-bg: 220; --s-bg: 6%; --s-panel: 7%;
+    --h-ink: 220; --s-ink: 9%;
+    --h-acc: 250; --s-acc: 38%;
+  }
+  *{box-sizing:border-box}
+  html{filter:var(--blue-filter);transition:filter .3s}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    line-height:1.65;font-size:18px;
+    padding:0 20px 120px;
+    transition:background .3s,color .3s;
+  }
+  .wrap{max-width:820px;margin:0 auto}
+  header{padding:54px 0 20px;border-bottom:2px solid var(--line);margin-bottom:36px}
+  .kicker{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--amber);font-weight:600}
+  h1{font-size:34px;line-height:1.15;margin:.35em 0 .15em;font-weight:600}
+  .sub{color:var(--soft);font-size:16px;font-style:italic}
+  h2{font-size:24px;margin:2.2em 0 .5em;font-weight:600;display:flex;align-items:baseline;gap:.5em}
+  h2 .n{font-family:"DM Mono",ui-monospace,monospace;font-size:14px;color:var(--amber);font-weight:600}
+  h3{font-size:18px;margin:1.6em 0 .4em;font-weight:600;font-family:system-ui,sans-serif}
+  p,li{font-size:18px}
+  strong{color:var(--ink);font-weight:600}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 24px;margin:20px 0}
+  .panel.amber{border-left:4px solid var(--amber);background:var(--accent-soft)}
+  pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;overflow-x:auto;font-family:"DM Mono",ui-monospace,Menlo,monospace;
+    font-size:14px;line-height:1.6;color:var(--ink)}
+  code{font-family:"DM Mono",ui-monospace,Menlo,monospace;font-size:.9em;
+    background:var(--code-bg);padding:.1em .35em;border-radius:5px}
+  pre code{background:none;padding:0}
+  .tabla-wrap{overflow-x:auto;margin:18px 0}
+  table{width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:15px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft)}
+  td.num{font-family:"DM Mono",monospace;text-align:center;white-space:nowrap}
+  ul{padding-left:1.2em}
+  li{margin:.35em 0}
+  .flow{font-family:"DM Mono",ui-monospace,monospace;font-size:13.5px;white-space:pre;
+    background:var(--code-bg);border:1px solid var(--line);border-radius:10px;
+    padding:18px;overflow-x:auto;line-height:1.5}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--soft);font-size:14px;font-family:"DM Mono",monospace}
+  .dial{position:fixed;top:14px;right:14px;z-index:99;background:var(--panel);
+    border:1px solid var(--line);border-radius:30px;padding:8px 14px;display:flex;
+    align-items:center;gap:10px;box-shadow:0 2px 14px hsl(30 20% 20% / .12);
+    font-family:system-ui,sans-serif;font-size:13px;color:var(--soft)}
+  .dial input[type=range]{width:110px;accent-color:var(--amber)}
+  .sep{width:1px;height:18px;background:var(--line)}
+  .pal{width:15px;height:15px;border-radius:50%;border:1px solid hsl(30 15% 45% / .5);
+    padding:0;cursor:pointer;transition:transform .15s}
+  .pal:hover{transform:scale(1.18)}
+  .pal[data-p="calida"]{background:hsl(38 92% 52%)}
+  .pal[data-p="azul"]{background:hsl(205 72% 52%)}
+  .pal[data-p="neutra"]{background:hsl(250 38% 58%)}
+  .pal[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+  @media print{.dial{display:none}}
+  .si{color:hsl(150 45% calc(32% - var(--warmth) * 4%));font-weight:600}
+  .no{color:hsl(5 60% calc(45% - var(--warmth) * 4%));font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="dial">
+  <span>☀️</span>
+  <input type="range" id="warmth" min="0" max="100" value="0" aria-label="Hora: día a noche">
+  <span>🌙</span>
+  <span class="sep"></span>
+  <button class="pal" data-p="calida" aria-pressed="true" title="Paleta cálida"></button>
+  <button class="pal" data-p="azul" aria-pressed="false" title="Paleta azul"></button>
+  <button class="pal" data-p="neutra" aria-pressed="false" title="Paleta neutra"></button>
+</div>
+
+<div class="wrap">
+
+<header>
+  <div class="kicker">Artefacto 5 · AI Engineering · Concepto 11</div>
+  <h1>El molde de la respuesta</h1>
+  <div class="sub">Durante todo el artefacto le hemos <em>pedido</em> al modelo que devuelva bien el JSON. Pedir no es garantizar. Este capítulo cambia la súplica por un contrato que el propio decodificador tiene que cumplir.</div>
+</header>
+
+<p>Este es el capítulo de la <strong>Fase 4</strong>, la segunda mitad del título del artefacto: «prompts + <strong>structured outputs</strong>». Las fases anteriores endurecieron <em>qué</em> dice el modelo (los prompts, medidos con la báscula). Esta endurece <em>la forma</em> en que lo dice: dejamos de leer el JSON a ojos cerrados y le ponemos un molde que valida cada salida. Y —lo bonito— lo hacemos <strong>sin tocar los prompts</strong>: solo cambia la fontanería, y el arnés que ya tienes se encarga de demostrar que la calidad no se resiente.</p>
+
+<h2><span class="n">01</span> El pecado original: <code>json.loads()</code> a ojos cerrados</h2>
+
+<p>Hasta ahora, las tres herramientas terminaban igual:</p>
+
+<pre><code>respuesta = cliente.chat.completions.create(
+    model=MODELO,
+    response_format={"type": "json_object"},   # «devuélveme JSON, por favor»
+    messages=[...],
+)
+return json.loads(respuesta.choices[0].message.content)   # y me fío</code></pre>
+
+<p>El <code>json_object</code> garantiza que el texto es <em>JSON válido</em> — que abre y cierra llaves. Pero <strong>no garantiza qué hay dentro</strong>. Si el modelo se salta la clave <code>empresa</code>, o devuelve <code>seniority</code> como número, o llama <code>titulo</code> a lo que tú esperabas en <code>puesto</code>, el <code>json.loads</code> lo traga sin rechistar. El fallo no aparece aquí: aparece <strong>tres funciones más abajo</strong>, cuando alguien hace <code>oferta.get("puesto")</code> y recibe un <code>None</code> que nadie pidió. El bug se ha alejado de su causa. Eso es lo caro de depurar.</p>
+
+<div class="panel amber">
+  <p style="margin:0">La regla del artefacto (concepto 07) era «prompt engineering sin evaluación es superstición». Su gemela para la forma es: <strong>confiar en que el modelo «suele» devolver bien el JSON también es superstición</strong>. «Suele» no es una garantía; es una probabilidad que un día te falla en producción.</p>
+</div>
+
+<h2><span class="n">02</span> Dos niveles: <em>validar</em> y <em>constreñir</em></h2>
+
+<p>Contra ese problema hay dos herramientas, y conviene saber que son distintas:</p>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Nivel</th><th>Qué hace</th><th>Límite</th></tr>
+  <tr><td><strong>Validación</strong> (a posteriori)</td><td>El modelo devuelve JSON, tú lo lees y <em>después</em> un molde comprueba la forma: <code>Modelo.model_validate(d)</code>.</td><td><strong>Caza</strong> la salida mala, pero no la <strong>evita</strong>: si el modelo se equivocó, ya pagaste la llamada.</td></tr>
+  <tr><td><strong>Structured outputs</strong> (a priori)</td><td>Le pasas el <em>esquema</em> al modelo; el decodificador queda <strong>constreñido</strong> a emitir solo tokens que encajen en esa forma.</td><td>La forma correcta deja de ser probable y pasa a ser <strong>segura por construcción</strong>.</td></tr>
+</table>
+</div>
+
+<p>El SDK de OpenAI nos deja tener <strong>los dos a la vez</strong> con una sola llamada. En vez de <code>create()</code>, se usa <code>parse()</code>, y en <code>response_format</code> va la clase Pydantic en persona:</p>
+
+<pre><code>oferta = cliente.chat.completions.parse(
+    model=MODELO,
+    response_format=Oferta,          # ← el molde, no {"type": "json_object"}
+    messages=[...],
+).choices[0].message.parsed          # ← ya es un objeto Oferta, validado</code></pre>
+
+<p>Por dentro, el SDK traduce la clase <code>Oferta</code> a un <em>JSON Schema estricto</em>, se lo manda al modelo para que lo obedezca, y al volver <strong>valida la respuesta contra ese mismo esquema</strong> antes de dártela. Constreñir y validar, en el mismo gesto.</p>
+
+<h2><span class="n">03</span> El molde es el contrato de forma</h2>
+
+<p>Los moldes son tres clases Pydantic, una por herramienta. Son pequeñas y se leen como lo que son: la lista de campos que esa salida <em>tiene</em> que traer.</p>
+
+<pre><code>class Oferta(BaseModel):
+    puesto: str
+    empresa: str | None            # null si la oferta no nombra empresa
+    seniority: str
+    imprescindibles: list[str]
+    deseables: list[str]
+    responsabilidades: list[str]
+    idiomas: list[str]
+    modalidad: str</code></pre>
+
+<p>El modo estricto de structured outputs impone dos reglas que conviene entender, porque son las que dan la garantía:</p>
+
+<ul>
+  <li><strong>Todos los campos son obligatorios.</strong> No hay «este a veces sí, a veces no». Un dato que puede no existir —la <code>empresa</code>— no se hace opcional: se declara <strong>nullable</strong> (<code>str | None</code>). El modelo <em>siempre</em> devuelve la clave; cuando no hay dato, la devuelve como <code>null</code>. La ausencia se vuelve explícita en vez de silenciosa.</li>
+  <li><strong>No se admiten claves de más</strong> (<code>additionalProperties: false</code>). El modelo no puede inventarse un campo que tu código no espera. La forma que declaras es la forma que recibes, ni un campo más ni uno menos.</li>
+</ul>
+
+<p>Y como las herramientas hablan con el resto del agente en <strong>diccionarios</strong> (el bucle serializa la salida con <code>json.dumps</code>), cada herramienta valida por dentro y devuelve <code>.model_dump()</code>: el objeto validado convertido de vuelta a <code>dict</code>. El molde protege la frontera; el interior del pipeline no se entera del cambio. La báscula, que lee claves de un dict, sigue funcionando sin tocar una línea.</p>
+
+<h2><span class="n">04</span> La tensión bonita, resuelta: pensar dentro del molde</h2>
+
+<p>El concepto 10 dejó anticipada una tensión: si el modelo <strong>solo</strong> puede emitir el JSON del molde, ¿dónde piensa? La <code>v3</code> de la carta necesita razonar las cifras <em>antes</em> de escribir el cuerpo (el CoT auditable). Con un molde estricto eso podría parecer imposible — pero la solución es la misma de antes, y ahora queda <strong>grabada en el propio contrato</strong>:</p>
+
+<pre><code>class Borrador(BaseModel):
+    numeros_detectados: list[str]   # ← PRIMERO: aquí razona las cifras
+    asunto: str
+    cuerpo: str                     # ← luego, ya sin ellas
+    notas: list[str]</code></pre>
+
+<p>El modelo genera el JSON <strong>clave por clave, de arriba abajo</strong>. Al colocar <code>numeros_detectados</code> como primer campo del molde, cuando llega a <code>cuerpo</code> ya ha nombrado y reescrito cada número. El razonamiento no es un añadido frágil que depende de que el prompt suene convincente: es <strong>parte de la estructura</strong>, y el orden del molde lo garantiza. Después de validar, ese campo se descarta antes de devolver el borrador —cumplió su función de andamio y no tiene por qué llegarle al usuario—. El CoT vive dentro del structured output, exactamente como lo dibujaba el capítulo anterior.</p>
+
+<h2><span class="n">05</span> Cuando el modelo dice que no: <em>fail-closed</em></h2>
+
+<p>Un molde te obliga a pensar en el caso raro. <code>parse()</code> puede volver <strong>sin</strong> objeto: si el modelo <em>rehúsa</em> producir la respuesta, <code>.parsed</code> viene vacío y el motivo está en <code>.refusal</code>. La tentación es ignorarlo y seguir. Eso es justo el <code>None</code> silencioso del que huimos:</p>
+
+<pre><code>mensaje = completion.choices[0].message
+if mensaje.refusal:
+    raise RuntimeError(f"El modelo rehusó producir {molde.__name__}: {mensaje.refusal}")
+return mensaje.parsed</code></pre>
+
+<p>Reventar aquí es una decisión, no un descuido: es <strong>fail-closed</strong> — ante la duda, parar en vez de seguir con datos a medias. Es la misma postura que el portero de la API (concepto 03): sin token válido, <code>401</code>; sin respuesta válida, excepción. Un sistema honesto falla ruidoso cerca de la causa, no callado y lejos.</p>
+
+<h2><span class="n">06</span> Cambiar la fontanería sin romper el contrato de calidad</h2>
+
+<p>Aquí es donde el Artefacto 5 se cierra sobre sí mismo. Acabamos de cambiar <strong>toda</strong> la salida de las tres herramientas —de <code>json.loads</code> crudo a <code>parse()</code> con molde—. Es un cambio de fontanería que <em>no debería</em> tocar la calidad… pero «no debería» es exactamente lo que el artefacto entero se niega a aceptar sin un número. Así que corrimos la báscula. Como los prompts no se tocaron (mismos hashes), la corrida es <strong>comparable</strong> con la anterior:</p>
+
+<div class="flow">                 bugs    controles   global
+  #12  json crudo    0.800    1.000      0.875
+  #13  structured    0.800    0.983      0.869
+                     =        −0.017     −0.006   → dentro del ruido</div>
+
+<div class="panel amber">
+  <p style="margin:0">Los bugs quedaron <strong>idénticos</strong>: todo lo que pasaba, sigue pasando. El único movimiento fue una carta que se salió del rango de palabras (<code>19/20</code> en el control de longitud), el mismo bamboleo de temperatura 0.7 que los conceptos 09 y 10 ya habían fichado como <strong>ruido de fondo</strong>, no como regresión. Traducido: <strong>cambiamos el motor de la salida y la calidad ni se inmutó</strong>. Sin la báscula, esto sería una promesa. Con ella, es un dato. Esa es la diferencia entre «endurecer» y «tocar y rezar».</p>
+</div>
+
+<h2><span class="n">07</span> Diccionario para el CV</h2>
+
+<div class="tabla-wrap">
+<table>
+  <tr><th>Término</th><th>Qué significa de verdad</th></tr>
+  <tr><td><strong>Structured outputs</strong></td><td>Constreñir al modelo a devolver exactamente un esquema dado. La forma correcta pasa de probable a garantizada por el decodificador.</td></tr>
+  <tr><td><strong>Validación de esquema</strong></td><td>Comprobar que la salida encaja en un contrato de tipos (Pydantic) antes de usarla. Caza el error en la frontera, no tres funciones después.</td></tr>
+  <tr><td><strong>Constreñir vs validar</strong></td><td>Constreñir <em>evita</em> la salida mala a priori; validar la <em>caza</em> a posteriori. <code>parse()</code> hace ambas de una vez.</td></tr>
+  <tr><td><strong>Campo <em>nullable</em> vs opcional</strong></td><td>En modo estricto todos los campos son obligatorios; un dato ausente se modela como <code>str | null</code> (siempre presente, a veces vacío), no como campo que puede faltar.</td></tr>
+  <tr><td><code>additionalProperties: false</code></td><td>El esquema prohíbe claves que no declaraste. Recibes la forma exacta, sin sorpresas que tu código no maneja.</td></tr>
+  <tr><td><strong>CoT dentro del esquema</strong></td><td>Reservar un campo de razonamiento y colocarlo <em>antes</em> de la respuesta. El orden del molde garantiza que el modelo piensa antes de escribir.</td></tr>
+  <tr><td><strong>Fail-closed</strong></td><td>Ante una respuesta ausente o inválida (una negativa del modelo), parar con un error, no seguir con datos a medias.</td></tr>
+  <tr><td><strong>Cambio de fontanería probado</strong></td><td>Refactorizar la mecánica sin tocar el comportamiento, y usar el eval-set para <em>demostrar</em> que la calidad se mantuvo. La red de seguridad convierte «no debería romper» en «no rompió».</td></tr>
+</table>
+</div>
+
+<footer>
+  Artefacto 5 · Endurecimiento · Concepto 11 — el molde de la respuesta, escrito el 18/07/2026.<br>
+  Cierra la Fase 4: las 3 herramientas pasan a structured outputs con moldes Pydantic (Oferta / Encaje / Borrador) vía <code>parse()</code>, fail-closed ante refusal.<br>
+  Corrida #13 (structured outputs, prompts sin tocar): bugs 0.800 · controles 0.983 · global 0.869 — sin regresión frente a #12 (dentro del ruido).<br>
+  Regla que deja: <em>no le pidas al modelo que devuelva bien la forma; oblígale con un molde, valídalo, y demuestra con el arnés que cambiar el cómo no cambió el qué.</em>
+</footer>
+
+</div>
+
+<script>
+  const dial = document.getElementById('warmth');
+  const CLAVE = 'a4-warmth';
+  function aplicarHora(v){
+    document.documentElement.style.setProperty('--warmth', v / 100);
+  }
+  const guardado = localStorage.getItem(CLAVE);
+  if (guardado !== null) { dial.value = guardado; }
+  aplicarHora(dial.value);
+  dial.addEventListener('input', () => {
+    aplicarHora(dial.value);
+    localStorage.setItem(CLAVE, dial.value);
+  });
+
+  const CLAVE_PAL = 'a4-paleta';
+  const botones = document.querySelectorAll('.pal');
+  function aplicarPaleta(p){
+    document.documentElement.setAttribute('data-paleta', p);
+    botones.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === p)));
+  }
+  aplicarPaleta(localStorage.getItem(CLAVE_PAL) || 'calida');
+  botones.forEach(b => b.addEventListener('click', () => {
+    aplicarPaleta(b.dataset.p);
+    localStorage.setItem(CLAVE_PAL, b.dataset.p);
+  }));
+</script>
+
+</body>
+</html>
