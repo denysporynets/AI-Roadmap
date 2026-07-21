@@ -343,7 +343,7 @@
   .btn:hover { text-decoration: none; }
   .btn-ghost { background: transparent; border-color: var(--line); color: var(--pine); }
   .btn-ghost:hover { background: var(--paper-3); border-color: var(--brass); }
-  .btn-row { margin: 4px 0 20px; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 20px; }
 
   /* ─── OPCIONAL + PRINCIPIO ─── */
   .aside-block { padding-block: clamp(38px, 6vw, 56px) 0; }
@@ -723,7 +723,10 @@
           <span class="no"> «Parece mejor» no cuenta.</span>
         </div>
         <p class="note-brass personal"><strong>El eval-set salió de bugs reales.</strong> Los tres fallos que el agente cometió de verdad (confundir GCP con AWS, marcar un nivel de idioma que sí estaba en el CV, saturar de cifras) se convirtieron en casos de prueba — cada uno emparejado con un <em>caso de control</em> que vigila que arreglarlo no rompa lo que ya funcionaba.</p>
-        <div class="btn-row personal"><a class="btn btn-ghost" href="artefacto-5/">Ver artefacto desplegado →</a></div>
+        <div class="btn-row personal">
+          <a class="btn btn-ghost" href="artefacto-5/">Ver artefacto desplegado →</a>
+          <a class="btn btn-ghost" href="artefacto-5/#anexo">⚑ El anexo CI/CD →</a>
+        </div>
 
         <div class="item-list">
           <div class="item" data-id="s5-1" role="checkbox" tabindex="0" aria-checked="false">

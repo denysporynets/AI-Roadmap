@@ -113,7 +113,7 @@
 
 <h2><span class="n">01</span> Guardar no es un gesto, son tres pasos</h2>
 
-<p>Piensa en <code>historial.json</code> como un cuaderno compartido donde cada evaluación anota su corrida al final. Añadir una fila no es una acción, son tres:</p>
+<p>Piensa en <code>historial.json</code> como un cuaderno compartido donde cada evaluación anota su ejecución al final. Añadir una fila no es una acción, son tres:</p>
 
 <pre><code>1. LEER    todo el cuaderno            → cargar la lista que ya hay
 2. AÑADIR  tu fila nueva al final       → en memoria, todavía no en disco
@@ -130,17 +130,17 @@
   escribe → [c1, c2, A]
                                      escribe → [c1, c2, B]  ← pisa a A
 
-  en disco queda: [c1, c2, B]        la corrida A ha desaparecido</div>
+  en disco queda: [c1, c2, B]        la ejecución A ha desaparecido</div>
 
 <p>Los dos leyeron el cuaderno <em>antes</em> de que el otro escribiera, así que ninguno vio la fila del otro, y el último en escribir aplastó al primero. Esto es una <strong>condición de carrera</strong> (<em>race condition</em>): el resultado depende de quién llega antes a la meta, y por eso cambia cada vez y es endiablado de reproducir.</p>
 
 <div class="panel amber">
-  <p style="margin:0">No es teórico en este proyecto. La memoria del Artefacto 5 ya registraba dos corridas de configuración idéntica que dieron <code>0.833</code> y <code>0.9</code>. Al depurar <em>eso</em> apareció esta carrera al escribir el historial. El bug se destapó solo.</p>
+  <p style="margin:0">No es teórico en este proyecto. La memoria del Artefacto 5 ya registraba dos ejecuciones de configuración idéntica que dieron <code>0.833</code> y <code>0.9</code>. Al depurar <em>eso</em> apareció esta carrera al escribir el historial. El bug se destapó solo.</p>
 </div>
 
 <h2><span class="n">02</span> Lo peligroso: no salta ningún error</h2>
 
-<p>Aquí está lo que hace este bug distinto de un <em>crash</em>. El fichero final —<code>[c1, c2, B]</code>— es un JSON <strong>perfectamente válido</strong>. Se abre, se parsea, tiene buena pinta. Solo que le falta una corrida. Nadie recibe una excepción, ningún log se pone rojo. Si no sabías que la corrida A existió, <strong>jamás te enteras de que la perdiste</strong>.</p>
+<p>Aquí está lo que hace este bug distinto de un <em>crash</em>. El fichero final —<code>[c1, c2, B]</code>— es un JSON <strong>perfectamente válido</strong>. Se abre, se parsea, tiene buena pinta. Solo que le falta una ejecución. Nadie recibe una excepción, ningún log se pone rojo. Si no sabías que la ejecución A existió, <strong>jamás te enteras de que la perdiste</strong>.</p>
 
 <p>Una fuente de verdad que pierde datos en silencio es peor que una que se rompe con estruendo: en la que se rompe, al menos te enteras. Por eso este pendiente estaba marcado como lo primero del día — no arregla una función, protege la pieza en la que se apoya todo lo demás.</p>
 

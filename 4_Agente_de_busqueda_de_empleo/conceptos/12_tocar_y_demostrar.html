@@ -135,7 +135,7 @@
 <div class="tabla-wrap">
 <table>
   <tr><th>Pieza</th><th>Qué aporta</th><th>Cap.</th></tr>
-  <tr><td><strong>Versionar</strong> los prompts</td><td>Los prompts salen de estar horneados en cada función a un módulo con catálogo (v1, v2, v3) y versión activa. Cada corrida guarda el <em>hash</em>: una versión publicada no se edita, y es comprobable.</td><td>07</td></tr>
+  <tr><td><strong>Versionar</strong> los prompts</td><td>Los prompts salen de estar horneados en cada función a un módulo con catálogo (v1, v2, v3) y versión activa. Cada ejecución guarda el <em>hash</em>: una versión publicada no se edita, y es comprobable.</td><td>07</td></tr>
   <tr><td><strong>Medir en parejas</strong></td><td>Cada <em>bug</em> (¿mejoras?) lleva su <em>control</em> (¿rompes?). Sin el control, la tabla miente con buena cara.</td><td>07</td></tr>
   <tr><td><strong>Calibrar</strong> la báscula</td><td>Temperatura 0 no es determinista; la misma entrada voltea de acierto a fallo. Se sube a varias pasadas y se registra sin carreras (un cerrojo).</td><td>08 · 09</td></tr>
   <tr><td><strong>Few-shot + CoT + juez</strong></td><td>Enseñar con ejemplos y hacer razonar antes de escribir domó la numerología (0.25 → 1.0). Y un <em>juez-LLM</em> puntúa lo que ningún <code>if</code> ve: si suena a persona o a plantilla.</td><td>10</td></tr>
@@ -143,7 +143,7 @@
 </table>
 </div>
 
-<p>El recorrido de las notas cuenta la historia sin adjetivos: numerología <span class="no">0.25</span> → <span class="si">1.0</span> con few-shot y CoT; y al migrar toda la salida a structured outputs, la báscula confirmó <strong>cero regresión</strong> — la calidad ni se movió del ruido. Trece corridas, cada una con su hash y su nota, en un historial que solo crece.</p>
+<p>El recorrido de las notas cuenta la historia sin adjetivos: numerología <span class="no">0.25</span> → <span class="si">1.0</span> con few-shot y CoT; y al migrar toda la salida a structured outputs, la báscula confirmó <strong>cero regresión</strong> — la calidad ni se movió del ruido. Trece ejecuciones, cada una con su hash y su nota, en un historial que solo crece.</p>
 
 <h2><span class="n">03</span> Los tres sustos que enseñaron más que los aciertos</h2>
 
@@ -175,7 +175,7 @@
 <footer>
   Artefacto 5 · Endurecimiento · Concepto 12 (capstone) — «tocar y demostrar», escrito el 18/07/2026.<br>
   Cierra el arco: versionar (07) · cerrojo (08) · calibrar la báscula (09) · juez y few-shot/CoT (10) · structured outputs (11).<br>
-  Estado: agente desplegado y endurecido en Cloud Run (v3 + structured outputs, corrida #13 sin regresión). Pendiente: CI/CD (la guinda).<br>
+  Estado: agente desplegado y endurecido en Cloud Run (v3 + structured outputs, ejecución #13 sin regresión). Pendiente: CI/CD (la guinda).<br>
   Regla que deja: <em>toca lo que quieras, pero no digas que mejoró hasta que un número lo firme.</em>
 </footer>
 

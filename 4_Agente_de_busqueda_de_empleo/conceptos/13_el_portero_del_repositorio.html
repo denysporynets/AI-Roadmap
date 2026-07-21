@@ -168,7 +168,7 @@ El plan original decía «asserts baratos en cada push, juez LLM caro por la noc
 
 <p>Un CI que falla por azar acaba ignorado, y un quality gate ignorado no sirve absolutamente para nada. Así que antes de elegir ningún número había que responder a una pregunta empírica: <strong>¿cuánto oscila esta báscula por puro azar?</strong></p>
 
-<p>Para saberlo hay que comparar mediciones de <strong>configuración idéntica</strong>. Si el prompt cambió entre dos corridas, la diferencia puede ser mejora real; si no cambió, toda diferencia es ruido. Y ahí salvó la partida una decisión tomada meses antes sin saber para qué serviría: <strong>cada fila del historial guarda el <code>hash_prompt</code></strong>. Agrupando por <code>(caso, hash, repeticiones)</code> se aíslan grupos de configuración exacta.</p>
+<p>Para saberlo hay que comparar mediciones de <strong>configuración idéntica</strong>. Si el prompt cambió entre dos ejecuciones, la diferencia puede ser mejora real; si no cambió, toda diferencia es ruido. Y ahí salvó la partida una decisión tomada meses antes sin saber para qué serviría: <strong>cada fila del historial guarda el <code>hash_prompt</code></strong>. Agrupando por <code>(caso, hash, repeticiones)</code> se aíslan grupos de configuración exacta.</p>
 
 <div class="tabla-caja"><table>
 <tr><th>caso</th><th>herramienta</th><th class="n">temp</th><th class="n">oscila</th></tr>
@@ -177,7 +177,7 @@ El plan original decía «asserts baratos en cada push, juez LLM caro por la noc
 <tr><td><code>carta_control_sigue_siendo_carta</code></td><td>redactar_borrador</td><td class="n">0.7</td><td class="n no">0.05–0.20</td></tr>
 </table></div>
 
-<p>El ruido no era un fantasma estadístico repartido por toda la báscula: <strong>era exactamente el caso que corre a temperatura 0.7</strong>. Los de temperatura 0 dan lo mismo corrida tras corrida.</p>
+<p>El ruido no era un fantasma estadístico repartido por toda la báscula: <strong>era exactamente el caso que corre a temperatura 0.7</strong>. Los de temperatura 0 dan lo mismo ejecución tras ejecución.</p>
 
 <p>Y de propina, una segunda lección salió del mismo cuadro:</p>
 <pre><i>mismo caso, mismo prompt, distinto muestreo</i>
@@ -196,7 +196,7 @@ la carta se desvía: <b>128</b> palabras (su contrato dice 130-180)</pre>
 <p>Nunca faltaba el asunto. Nunca se perdían las notas. Nunca se pasaba de largo. <strong>Siempre era la carta quedándose corta por unas pocas palabras</strong>, rozando el borde de abajo. Y la historia del artefacto se leía entera en esa columna:</p>
 
 <div class="tabla-caja"><table>
-<tr><th>corrida</th><th>versión</th><th class="n">fallos /20</th><th>qué pasó</th></tr>
+<tr><th>ejecución</th><th>versión</th><th class="n">fallos /20</th><th>qué pasó</th></tr>
 <tr><td class="n">#4</td><td class="n">v1</td><td class="n">0</td><td>baseline</td></tr>
 <tr><td class="n">#5–#6</td><td class="n">v2</td><td class="n no">15, 16</td><td>el few-shot acortó las cartas — <strong>el control cazó la regresión</strong></td></tr>
 <tr><td class="n">#9–#13</td><td class="n">v3</td><td class="n ok">0, 1, 0, 0, 1</td><td>arreglado, con roce ocasional</td></tr>
@@ -217,15 +217,15 @@ Una carta corta no significa nada. Dieciséis de veinte significa que el prompt 
 
 <p>El plan original medía la puerta sobre la <strong>media de los controles</strong> con un margen de ruido. Los datos lo desmontaron: esa media mezcla dos controles deterministas (que nunca fallan) con uno estocástico. El resultado es que el ruido de uno obliga a aflojar el listón de los tres, y a la vez difumina la señal cuando el ruidoso se rompe de verdad.</p>
 
-<p>La alternativa: <strong>cada caso declara lo que se le exige</strong>. Ambos diseños se pusieron a prueba con el mismo método — pasar las 13 corridas históricas por la puerta y comparar su veredicto con lo que sabemos que pasó realmente:</p>
+<p>La alternativa: <strong>cada caso declara lo que se le exige</strong>. Ambos diseños se pusieron a prueba con el mismo método — pasar las 13 ejecuciones históricas por la puerta y comparar su veredicto con lo que sabemos que pasó realmente:</p>
 
 <div class="tabla-caja"><table>
 <tr><th>diseño</th><th class="n">aciertos</th><th>dónde falla</th></tr>
-<tr><td><strong>A</strong> · media + margen</td><td class="n no">5/7</td><td>bloquea las corridas #10 y #13 — código bueno, y la #13 <strong>está en producción</strong></td></tr>
+<tr><td><strong>A</strong> · media + margen</td><td class="n no">5/7</td><td>bloquea las ejecuciones #10 y #13 — código bueno, y la #13 <strong>está en producción</strong></td></tr>
 <tr><td><strong>B</strong> · listón por caso</td><td class="n ok">7/7</td><td>ninguno</td></tr>
 </table></div>
 
-<p>B caza las dos regresiones de v2 <em>y</em> aprueba las cinco corridas buenas. Un detalle que parece un fallo suyo y no lo es: también bloquea las corridas de <strong>v1</strong>, porque en v1 el bug de numerología seguía sin arreglar. Correcto — la puerta protege <strong>el estándar de hoy</strong>, y v1 no lo alcanza.</p>
+<p>B caza las dos regresiones de v2 <em>y</em> aprueba las cinco ejecuciones buenas. Un detalle que parece un fallo suyo y no lo es: también bloquea las ejecuciones de <strong>v1</strong>, porque en v1 el bug de numerología seguía sin arreglar. Correcto — la puerta protege <strong>el estándar de hoy</strong>, y v1 no lo alcanza.</p>
 
 <h2><span class="num">06</span>Los tres diales</h2>
 
@@ -243,10 +243,10 @@ Una carta corta no significa nada. Dieciséis de veinte significa que el prompt 
 <p>El motivo de fondo es lingüístico, no estadístico: cerrar una frase con sentido no cuadra con un recuento exacto. Si el modelo va por 124 y tiene que llegar a 130, lo que hace es meter relleno — y entonces la carta cumple el contrato y <em>es peor</em>. El contrato compitiendo contra la calidad.</p>
 
 <h3>¿Y no nos deja ciegos ante v2?</h3>
-<p>Comprobable, porque el historial guarda el recuento de palabras de <strong>cada intento</strong>, también de los que pasaron. Se pudieron re-puntuar las 13 corridas enteras con reglas distintas <strong>sin llamar a la API ni una vez</strong>:</p>
+<p>Comprobable, porque el historial guarda el recuento de palabras de <strong>cada intento</strong>, también de los que pasaron. Se pudieron re-puntuar las 13 ejecuciones enteras con reglas distintas <strong>sin llamar a la API ni una vez</strong>:</p>
 
 <div class="tabla-caja"><table>
-<tr><th>corrida</th><th class="n">aceptar ≥130</th><th class="n">aceptar ≥125</th><th class="n">aceptar ≥120</th><th class="n">aceptar ≥115</th></tr>
+<tr><th>ejecución</th><th class="n">aceptar ≥130</th><th class="n">aceptar ≥125</th><th class="n">aceptar ≥120</th><th class="n">aceptar ≥115</th></tr>
 <tr><td>#5 · v2 🔴</td><td class="n">0.25</td><td class="n ok">0.55</td><td class="n">0.80</td><td class="n no">0.90</td></tr>
 <tr><td>#6 · v2 🔴</td><td class="n">0.20</td><td class="n ok">0.45</td><td class="n">0.50</td><td class="n no">0.95</td></tr>
 <tr><td>#10 · v3 ✅</td><td class="n no">0.95</td><td class="n ok">1.00</td><td class="n">1.00</td><td class="n">1.00</td></tr>
@@ -279,7 +279,7 @@ umbral.json       juzgar   carta_control ≥ <b>0.90</b>   <i>(2 roces de 20)</i
 <ul>
 <li><strong>Fase 3</strong> — escribir el <code>workflow.yml</code> y guardar <code>OPENAI_API_KEY</code> en GitHub Secrets. Primera fase que toca algo publicado. Cabo de higiene previo: <code>historial.json.lock</code> al <code>.gitignore</code>.</li>
 <li><strong>Fase 4</strong> — <em>verla fallar a propósito</em>. Una puerta que nunca se ha visto cerrar no está verificada, solo supuesta.</li>
-<li><strong>Fase 5</strong> — el juez de estilo en la corrida nocturna, donde su coste y su latencia no molestan.</li>
+<li><strong>Fase 5</strong> — el juez de estilo en la ejecución nocturna, donde su coste y su latencia no molestan.</li>
 <li><strong>Cabo aparte</strong> — la banda de longitud del <em>producto</em>: ¿cuántas palabras quieres tú en tus cartas? Decisión de producto, no de CI, y ahora barata de cambiar.</li>
 </ul>
 

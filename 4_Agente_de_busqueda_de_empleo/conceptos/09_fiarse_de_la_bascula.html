@@ -114,13 +114,13 @@
 
 <h2><span class="n">01</span> El experimento aburrido: correr lo mismo dos veces</h2>
 
-<p>El concepto 07 ya nos había enseñado una lección incómoda: dos corridas de configuración <strong>idéntica</strong> dieron <code>0.833</code> y <code>0.9</code>. De ahí salió el <em>margen de ruido</em>: una diferencia menor de <code>~0.07</code> no significa nada, es el temblor de fondo. Bien. Pero eso lo achacábamos a la temperatura alta de la carta (temp <code>0.7</code>), donde el modelo escribe distinto cada vez.</p>
+<p>El concepto 07 ya nos había enseñado una lección incómoda: dos ejecuciones de configuración <strong>idéntica</strong> dieron <code>0.833</code> y <code>0.9</code>. De ahí salió el <em>margen de ruido</em>: una diferencia menor de <code>~0.07</code> no significa nada, es el temblor de fondo. Bien. Pero eso lo achacábamos a la temperatura alta de la carta (temp <code>0.7</code>), donde el modelo escribe distinto cada vez.</p>
 
-<p>Así que repetimos la corrida de <code>v2</code> sin tocar <strong>ni una coma</strong> —mismo prompt, mismo hash <code>e78ee59cdd06</code>— solo para confirmar que los resultados aguantaban. Y aguantaron... casi todos. Uno no:</p>
+<p>Así que repetimos la ejecución de <code>v2</code> sin tocar <strong>ni una coma</strong> —mismo prompt, mismo hash <code>e78ee59cdd06</code>— solo para confirmar que los resultados aguantaban. Y aguantaron... casi todos. Uno no:</p>
 
 <div class="tabla-wrap">
 <table>
-  <tr><th>Caso</th><th>Temp.</th><th class="num">Corrida #5</th><th class="num">Corrida #6</th><th>¿Igual?</th></tr>
+  <tr><th>Caso</th><th>Temp.</th><th class="num">Ejecución #5</th><th class="num">Ejecución #6</th><th>¿Igual?</th></tr>
   <tr><td><code>carta_bug_numerologia</code></td><td class="num">0.7</td><td class="num">20/20</td><td class="num">20/20</td><td class="si">sí, sólido</td></tr>
   <tr><td><code>carta_control</code> (longitud)</td><td class="num">0.7</td><td class="num">5/20</td><td class="num">4/20</td><td class="si">≈ (dentro del ruido)</td></tr>
   <tr><td><code>cv_bug_cefr_b2</code></td><td class="num">0</td><td class="num"><span class="si">1/1 ✓</span></td><td class="num"><span class="no">0/1 ✗</span></td><td class="no">VOLTEÓ</td></tr>
@@ -143,10 +143,10 @@
 
 <p>El daño de <code>n=1</code> no se queda en su casilla. Nuestra báscula resume todo en tres números: nota de bugs, de controles y global. <code>cv_bug_cefr_b2</code> es <strong>1 de los 3 bugs</strong>. Mira lo que le hizo al titular al voltear:</p>
 
-<div class="flow">  corrida #5 (v2)          cv_bug = 1/1 = 1.0
+<div class="flow">  ejecución #5 (v2)          cv_bug = 1/1 = 1.0
                            media de bugs = (1.0 + 1.0 + 1.0) / 3 = <span class="si">1.000</span>
 
-  corrida #6 (v2 igual)    cv_bug = 0/1 = 0.0   ← una mala tirada
+  ejecución #6 (v2 igual)    cv_bug = 0/1 = 0.0   ← una mala tirada
                            media de bugs = (1.0 + 1.0 + 0.0) / 3 = <span class="no">0.667</span>
 
   el «global» cayó de 0.875 a 0.7 — sin que nada cambiara</div>
@@ -155,7 +155,7 @@
 
 <h2><span class="n">04</span> El arreglo: dar más pasadas a los casos frágiles</h2>
 
-<p>La solución es la misma que ya usábamos en la carta, ahora aplicada a todos: <strong>si una pasada es una moneda al aire, tira la moneda varias veces</strong> y quédate con la fracción. Subimos los cuatro casos de temp 0 de <strong>1 a 5 pasadas</strong>. El coste es ridículo (unos céntimos más por corrida); la fiabilidad, otra liga.</p>
+<p>La solución es la misma que ya usábamos en la carta, ahora aplicada a todos: <strong>si una pasada es una moneda al aire, tira la moneda varias veces</strong> y quédate con la fracción. Subimos los cuatro casos de temp 0 de <strong>1 a 5 pasadas</strong>. El coste es ridículo (unos céntimos más por ejecución); la fiabilidad, otra liga.</p>
 
 <pre><code>// evaluacion/casos.json  —  en los 4 casos de temperatura 0
 - "repeticiones": 1,
@@ -173,7 +173,7 @@
 
 <div class="tabla-wrap">
 <table>
-  <tr><th>Caso (temp 0, ahora 5 pasadas)</th><th class="num">Corrida #7</th><th class="num">Corrida #8</th><th>¿Estable?</th></tr>
+  <tr><th>Caso (temp 0, ahora 5 pasadas)</th><th class="num">Ejecución #7</th><th class="num">Ejecución #8</th><th>¿Estable?</th></tr>
   <tr><td><code>of_bug_alternativa_o</code></td><td class="num">5/5 = 1.0</td><td class="num">5/5 = 1.0</td><td class="si">sí</td></tr>
   <tr><td><code>of_control_compuesto_y</code></td><td class="num">5/5 = 1.0</td><td class="num">5/5 = 1.0</td><td class="si">sí</td></tr>
   <tr><td><code>cv_bug_cefr_b2</code></td><td class="num">5/5 = 1.0</td><td class="num">5/5 = 1.0</td><td class="si">sí</td></tr>
@@ -184,7 +184,7 @@
 <p>Clavados. Y fíjate en <code>cv_bug_cefr_b2</code>, el que nos había asustado con su <code>0/1</code>: con 5 pasadas sale <strong>5/5, las dos veces</strong>. Veredicto: el prompt <code>v1</code> de <code>match_cv</code> siempre estuvo bien; lo que fallaba era el <em>instrumento</em>, que con una sola pasada nos mostró una mala tirada como si fuera una regresión. <strong>Instrumento calibrado.</strong></p>
 
 <div class="panel amber">
-  <p style="margin:0"><strong>Regalo escondido en la misma corrida:</strong> como las cartas de la #7/#8 usaban el prompt <code>v1</code>, de paso obtuvimos un <strong>re-baseline limpio</strong> del baseline con la báscula buena. Y reveló un matiz: el control de longitud con <code>v1</code> ya rozaba a veces (<code>0.80</code>–<code>0.95</code>), no era perfecto. Es decir, la <code>v2</code> no <em>rompió</em> algo intacto: <strong>agravó</strong> (hasta <code>~0.20</code>) un punto que ya era flojo. La <code>v3</code> que viene ahora no repara un destrozo nuestro; mejora una debilidad que llevaba ahí desde el principio.</p>
+  <p style="margin:0"><strong>Regalo escondido en la misma ejecución:</strong> como las cartas de la #7/#8 usaban el prompt <code>v1</code>, de paso obtuvimos un <strong>re-baseline limpio</strong> del baseline con la báscula buena. Y reveló un matiz: el control de longitud con <code>v1</code> ya rozaba a veces (<code>0.80</code>–<code>0.95</code>), no era perfecto. Es decir, la <code>v2</code> no <em>rompió</em> algo intacto: <strong>agravó</strong> (hasta <code>~0.20</code>) un punto que ya era flojo. La <code>v3</code> que viene ahora no repara un destrozo nuestro; mejora una debilidad que llevaba ahí desde el principio.</p>
 </div>
 
 <h2><span class="n">06</span> La regla de oro que deja este capítulo</h2>
@@ -215,7 +215,7 @@
 <footer>
   Artefacto 5 · Endurecimiento · Concepto 09 — fiarse de la báscula, escrito el 18/07/2026.<br>
   Nace del run de reproducibilidad que pidió parar antes de la v3. Cambio aplicado: casos temp 0 de 1 → 5 pasadas.<br>
-  Calibración verificada: corridas #7 y #8, los 4 casos temp 0 clavados a 5/5.<br>
+  Calibración verificada: ejecuciones #7 y #8, los 4 casos temp 0 clavados a 5/5.<br>
   Regla que deja: <em>antes de fiarte de una comparación, fíate del instrumento. Primero calibras, luego mides.</em>
 </footer>
 

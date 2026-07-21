@@ -199,7 +199,7 @@ return mensaje.parsed</code></pre>
 
 <h2><span class="n">06</span> Cambiar la fontanería sin romper el contrato de calidad</h2>
 
-<p>Aquí es donde el Artefacto 5 se cierra sobre sí mismo. Acabamos de cambiar <strong>toda</strong> la salida de las tres herramientas —de <code>json.loads</code> crudo a <code>parse()</code> con molde—. Es un cambio de fontanería que <em>no debería</em> tocar la calidad… pero «no debería» es exactamente lo que el artefacto entero se niega a aceptar sin un número. Así que corrimos la báscula. Como los prompts no se tocaron (mismos hashes), la corrida es <strong>comparable</strong> con la anterior:</p>
+<p>Aquí es donde el Artefacto 5 se cierra sobre sí mismo. Acabamos de cambiar <strong>toda</strong> la salida de las tres herramientas —de <code>json.loads</code> crudo a <code>parse()</code> con molde—. Es un cambio de fontanería que <em>no debería</em> tocar la calidad… pero «no debería» es exactamente lo que el artefacto entero se niega a aceptar sin un número. Así que corrimos la báscula. Como los prompts no se tocaron (mismos hashes), la ejecución es <strong>comparable</strong> con la anterior:</p>
 
 <div class="flow">                 bugs    controles   global
   #12  json crudo    0.800    1.000      0.875
@@ -229,7 +229,7 @@ return mensaje.parsed</code></pre>
 <footer>
   Artefacto 5 · Endurecimiento · Concepto 11 — el molde de la respuesta, escrito el 18/07/2026.<br>
   Cierra la Fase 4: las 3 herramientas pasan a structured outputs con moldes Pydantic (Oferta / Encaje / Borrador) vía <code>parse()</code>, fail-closed ante refusal.<br>
-  Corrida #13 (structured outputs, prompts sin tocar): bugs 0.800 · controles 0.983 · global 0.869 — sin regresión frente a #12 (dentro del ruido).<br>
+  Ejecución #13 (structured outputs, prompts sin tocar): bugs 0.800 · controles 0.983 · global 0.869 — sin regresión frente a #12 (dentro del ruido).<br>
   Regla que deja: <em>no le pidas al modelo que devuelva bien la forma; oblígale con un molde, valídalo, y demuestra con el arnés que cambiar el cómo no cambió el qué.</em>
 </footer>
 

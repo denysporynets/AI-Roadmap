@@ -230,14 +230,14 @@
 <div class="flow">  evaluar_prompts.py          historial.json            render_historial.py
   ──────────────────          ──────────────            ───────────────────
   corre los casos      ──►    añade (append) una  ──►   lee el JSON y pinta
-  contra prompts vX           corrida entera             la tabla + la gráfica
+  contra prompts vX           ejecución entera             la tabla + la gráfica
                               nunca se edita a mano
   ● CUESTA API                ▲ FUENTE DE VERDAD        ○ GRATIS, mil veces
 </div>
 
 <p>
   Así la trazabilidad es real: cada fila tiene versión, fecha, caso, puntuación y el cambio que la
-  provocó — y <strong>ninguna fila existe sin una corrida que la respalde</strong>. Si la tabla dice
+  provocó — y <strong>ninguna fila existe sin una ejecución que la respalde</strong>. Si la tabla dice
   que v2 gana, es porque hay un JSON que lo demuestra. La gráfica de evolución del final sale del
   mismo fichero, así que no puede contradecir a la tabla.
 </p>
@@ -316,7 +316,7 @@
   Antes de tocar nada se saca el <strong>hash</strong> de las tres cadenas <code>instruccion</code>
   actuales. Después del refactor, el hash de lo que produce <code>prompts.py</code>. Si coinciden,
   el refactor es no-op <strong>demostrado</strong>, no <em>supuesto</em> — y sin gastar un céntimo
-  de API. Luego una corrida real del agente para confirmar que los imports no rompen nada.
+  de API. Luego una ejecución real del agente para confirmar que los imports no rompen nada.
 </p>
 <p class="dod">
   (Ojo a la tentación: en cuanto abramos el fichero van a apetecer arreglos. Hay que aguantarse.

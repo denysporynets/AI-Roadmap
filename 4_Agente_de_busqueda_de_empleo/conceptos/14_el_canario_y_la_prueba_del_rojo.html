@@ -125,7 +125,7 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
   <p class="kicker">Anexo CI/CD · Fases 3–4</p>
   <h1>El canario y la prueba del rojo</h1>
   <p class="lede">El guardia del libro anterior existía, pero había que llamarlo a mano. Aquí pasa a vivir en el repositorio y a trabajar solo — y por el camino aparecen las dos cosas que nadie te cuenta: que el CI no tiene tus datos, y que sus registros son públicos.</p>
-  <p class="meta">21 de julio de 2026 · agente de búsqueda de empleo · 3 corridas reales · ~24 céntimos</p>
+  <p class="meta">21 de julio de 2026 · agente de búsqueda de empleo · 3 ejecuciones reales · ~24 céntimos</p>
 </header>
 
 <h2><span class="num">01</span>Qué cambia exactamente</h2>
@@ -159,7 +159,7 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
 
 <p>La salida obvia sería inventar un CV falso, sin datos personales, y guardarlo en el repositorio. Es más limpio, más reproducible y no exige secretos. Y aun así se descartó, por una razón que no es de seguridad sino de <strong>medición</strong>:</p>
 
-<blockquote>Los listones de <code>umbral.json</code> se calibraron sobre trece corridas hechas con <em>ese</em> CV. Si el CI mide otro CV, ya no mide lo mismo — y una puerta calibrada contra una realidad distinta de la que vigila no vigila nada.</blockquote>
+<blockquote>Los listones de <code>umbral.json</code> se calibraron sobre trece ejecuciones hechas con <em>ese</em> CV. Si el CI mide otro CV, ya no mide lo mismo — y una puerta calibrada contra una realidad distinta de la que vigila no vigila nada.</blockquote>
 
 <p>Así que el CV viaja como <strong>secreto del repositorio</strong>: cifrado, invisible en la interfaz una vez guardado, materializado en el runner al empezar y muerto con la máquina al terminar. El paso que lo escribe imprime solo el tamaño en bytes, jamás el contenido. Y si el secreto falta, el trabajo se detiene ahí con un error explícito en vez de correr a medias: <strong>fail-closed</strong>, el mismo criterio que el portero del token en la API.</p>
 
@@ -192,7 +192,7 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
 
 <p>Antes de publicar nada, una precaución aprendida a golpes. En la Fase 1 el <code>Dockerfile</code> copiaba ficheros por lista blanca y <code>prompts.py</code> no estaba en la lista: en el Mac todo funcionaba, en la nube habría reventado. La forma de la trampa se repite aquí, con otro disfraz — <em>lo que funciona en tu máquina puede estar apoyándose en algo que tu máquina tiene y el repositorio no</em>.</p>
 
-<p>Así que se reconstruyó el punto de vista del runner: exportar <strong>solo lo que git conoce</strong> a una carpeta aparte y arrancar ahí el evaluador en seco. Si arranca, lo que hay en el repositorio basta. Si no, mejor descubrirlo en dos segundos que en el minuto tres de una corrida pagada.</p>
+<p>Así que se reconstruyó el punto de vista del runner: exportar <strong>solo lo que git conoce</strong> a una carpeta aparte y arrancar ahí el evaluador en seco. Si arranca, lo que hay en el repositorio basta. Si no, mejor descubrirlo en dos segundos que en el minuto tres de una ejecución pagada.</p>
 
 <h2><span class="num">05</span>El permiso que GitHub te niega a propósito</h2>
 
@@ -216,7 +216,7 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
 
 <blockquote>Una puerta que solo has visto pasar es una puerta en la que confías por fe.</blockquote>
 
-<p>Que el código diga <code>sys.exit(1)</code> no demuestra que GitHub vaya a pintar la corrida en rojo, ni que el fallo vaya a ser visible. Entre la intención y el efecto hay una plataforma entera. Así que se provocó el fallo a propósito: subir el listón de un caso a <strong>1.1</strong>, un valor inalcanzable por construcción, porque la nota máxima posible es 1.0.</p>
+<p>Que el código diga <code>sys.exit(1)</code> no demuestra que GitHub vaya a pintar la ejecución en rojo, ni que el fallo vaya a ser visible. Entre la intención y el efecto hay una plataforma entera. Así que se provocó el fallo a propósito: subir el listón de un caso a <strong>1.1</strong>, un valor inalcanzable por construcción, porque la nota máxima posible es 1.0.</p>
 
 <pre>  ✓ of_bug_alternativa_o: 1.0 ≥ 1.0
   <b>✗ of_control_compuesto_y: 1.0 &lt; 1.1  (5/5)</b>
@@ -231,11 +231,11 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
 
 <p>El detalle más elocuente está entre paréntesis: <strong>(5/5)</strong>. El caso salió perfecto —cinco de cinco— y la puerta lo bloqueó igualmente. Eso demuestra que quien decide es <code>umbral.json</code> y no el resultado, que es justo lo que se le pide a un guardia calibrado: obedecer al criterio, no a la impresión.</p>
 
-<p>La corrida siguiente revierte el sabotaje y vuelve a verde. Las dos quedan en el historial del repositorio, una al lado de la otra: la prueba de que el guardia sabe hacer las dos cosas.</p>
+<p>La ejecución siguiente revierte el sabotaje y vuelve a verde. Las dos quedan en el historial del repositorio, una al lado de la otra: la prueba de que el guardia sabe hacer las dos cosas.</p>
 
 <h3>Un regalo que no se buscaba</h3>
 
-<p>Tres corridas seguidas dieron <strong>exactamente</strong> <code>bugs 0.8 · controles 1.0 · global 0.875</code>, en máquinas distintas y en momentos distintos. Conviene recordar de dónde se venía: dos corridas de configuración idéntica llegaron a dar 0.833 y 0.9, y ese hueco fue lo que enseñó a no leer diferencias pequeñas como si fueran señales.</p>
+<p>Tres ejecuciones seguidas dieron <strong>exactamente</strong> <code>bugs 0.8 · controles 1.0 · global 0.875</code>, en máquinas distintas y en momentos distintos. Conviene recordar de dónde se venía: dos ejecuciones de configuración idéntica llegaron a dar 0.833 y 0.9, y ese hueco fue lo que enseñó a no leer diferencias pequeñas como si fueran señales.</p>
 
 <p>La diferencia entre entonces y ahora son las <strong>repeticiones</strong>: 5 antes, 20 ahora en los casos estocásticos. Subirlas parecía burocracia. Se ve aquí que no lo era: <em>medir más veces no cambia el modelo, cambia lo que puedes afirmar sobre él.</em></p>
 
@@ -245,7 +245,7 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
 
 <p>Un prompt no es código compilado: son instrucciones en castellano interpretadas por un modelo que <strong>no es una constante</strong>. OpenAI actualiza <code>gpt-4o-mini</code> sin avisar. El mismo commit de siempre, sin una línea tocada, puede empezar a producir peores resultados. Y como nadie ha empujado nada, la puerta no llega a abrirse.</p>
 
-<p>De ahí el <strong>canario</strong>: una corrida programada que se ejecuta sola, sin que nadie toque nada. Su valor está precisamente en medir cuando <em>no</em> ha cambiado nada, porque entonces cualquier movimiento en las notas tiene un solo culpable posible.</p>
+<p>De ahí el <strong>canario</strong>: una ejecución programada que se ejecuta sola, sin que nadie toque nada. Su valor está precisamente en medir cuando <em>no</em> ha cambiado nada, porque entonces cualquier movimiento en las notas tiene un solo culpable posible.</p>
 
 <div class="clave">
   <span class="et">Dos vigilantes, dos preguntas</span>
@@ -261,7 +261,7 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
 
 <h3>Semanal, no nocturna</h3>
 
-<p>La cadencia también es una decisión de coste. Cada corrida del canario son 85 llamadas al modelo pequeño más 60 al juez, que es más caro: unos doce minutos. Diaria, en un repositorio que se toca un par de veces por semana, es pagar siete veces por medir lo mismo. Semanal cubre la deriva de sobra y cuesta la séptima parte.</p>
+<p>La cadencia también es una decisión de coste. Cada ejecución del canario son 85 llamadas al modelo pequeño más 60 al juez, que es más caro: unos doce minutos. Diaria, en un repositorio que se toca un par de veces por semana, es pagar siete veces por medir lo mismo. Semanal cubre la deriva de sobra y cuesta la séptima parte.</p>
 
 <div class="nota">
   <span class="et">Trampa conocida</span>
@@ -270,7 +270,7 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
 
 <h2><span class="num">08</span>Cuándo se pide una justificación</h2>
 
-<p>Un arreglo pequeño que enseña algo mayor. El evaluador exigía <code>--nota</code> —la frase que explica <em>qué cambiaste</em>— siempre que lo corrías tú. También en las corridas en seco, que no llegan a ejecutar nada.</p>
+<p>Un arreglo pequeño que enseña algo mayor. El evaluador exigía <code>--nota</code> —la frase que explica <em>qué cambiaste</em>— siempre que lo corrías tú. También en las ejecuciones en seco, que no llegan a ejecutar nada.</p>
 
 <p>Es lo que se llama un <strong>papercut</strong>: no rompe nada, pero incordia cada vez que lo tocas. Una puerta que abre bien y chirría. Distinguirlo de un fallo importa: un fallo da un resultado incorrecto; un papercut da el resultado correcto obligándote a un rodeo — en este caso, colar un <code>--ci</code> que no venía a cuento solo para esquivar la exigencia.</p>
 
@@ -278,7 +278,7 @@ a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:
 
 <div class="clave">
   <span class="et">Por qué el CI está exento</span>
-  Una máquina no cambió nada: solo vigila. No tiene nada que contar, y su corrida <strong>no escribe en el historial</strong>. Esa bitácora es de Denys —una fila por decisión suya— y un automatismo de los lunes la llenaría de ruido que nadie decidió.
+  Una máquina no cambió nada: solo vigila. No tiene nada que contar, y su ejecución <strong>no escribe en el historial</strong>. Esa bitácora es de Denys —una fila por decisión suya— y un automatismo de los lunes la llenaría de ruido que nadie decidió.
 </div>
 
 <h2><span class="num">09</span>Lo que queda abierto</h2>

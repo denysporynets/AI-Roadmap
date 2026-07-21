@@ -174,17 +174,17 @@ resultado: no-op DEMOSTRADO, no supuesto.   coste: 0 €</div>
 </div>
 
 <h3>Lo estocástico se mide varias veces</h3>
-<p><code>redactar_borrador</code> corre a temperatura 0.7: <strong>no da la misma respuesta dos veces</strong>. Medir eso una sola vez es tirar una moneda y llamarlo dato. Por eso ese caso corre cinco veces y su nota es la fracción que pasa. En la primera corrida ya salvó la sesión: pasó 2 de 5. Con una sola pasada había un 40% de verlo verde y salir de aquí creyendo que el parche funcionaba.</p>
+<p><code>redactar_borrador</code> corre a temperatura 0.7: <strong>no da la misma respuesta dos veces</strong>. Medir eso una sola vez es tirar una moneda y llamarlo dato. Por eso ese caso corre cinco veces y su nota es la fracción que pasa. En la primera ejecución ya salvó la sesión: pasó 2 de 5. Con una sola pasada había un 40% de verlo verde y salir de aquí creyendo que el parche funcionaba.</p>
 
 <div class="panel">
-  <p style="margin:0"><strong>Y una pieza que cierra un cabo de la Fase 1.</strong> Cada fila guarda el <em>hash</em> del prompt que se usó de verdad, y la respuesta entera del modelo. Lo primero convierte la regla «una versión publicada no se edita nunca» de comentario en <strong>comprobable</strong>: si alguien edita la v1 en vez de crear una v2, el hash cambia y las corridas viejas dejan de cuadrar. Lo segundo es la columna «respuesta obtenida»: un veredicto sin la respuesta que lo provocó no es trazabilidad, es una nota al pie.</p>
+  <p style="margin:0"><strong>Y una pieza que cierra un cabo de la Fase 1.</strong> Cada fila guarda el <em>hash</em> del prompt que se usó de verdad, y la respuesta entera del modelo. Lo primero convierte la regla «una versión publicada no se edita nunca» de comentario en <strong>comprobable</strong>: si alguien edita la v1 en vez de crear una v2, el hash cambia y las ejecuciones viejas dejan de cuadrar. Lo segundo es la columna «respuesta obtenida»: un veredicto sin la respuesta que lo provocó no es trazabilidad, es una nota al pie.</p>
 </div>
 
 <h2><span class="n">03</span> Lo que dijo la báscula</h2>
 
 <p><strong>Baseline v1 — bugs 0.667 · controles 1.0 · global 0.833.</strong></p>
 
-<p>Dos de los tres parches «a ojo» del Artefacto 4 <span class="si">funcionan de verdad</span>: la alternativa con «o» queda entera y el CEFR ya no marca el B2. Los cuatro controles aguantan. Eso ya no es una impresión: es un número con una corrida detrás.</p>
+<p>Dos de los tres parches «a ojo» del Artefacto 4 <span class="si">funcionan de verdad</span>: la alternativa con «o» queda entera y el CEFR ya no marca el B2. Los cuatro controles aguantan. Eso ya no es una impresión: es un número con una ejecución detrás.</p>
 
 <p>El tercero <span class="no">no funciona en absoluto</span>. Y no falla «a veces»: las cinco cartas escribieron la misma frase.</p>
 
@@ -195,7 +195,7 @@ resultado: no-op DEMOSTRADO, no supuesto.   coste: 0 €</div>
 <h2><span class="n">04</span> Las tres sorpresas</h2>
 
 <h3>1 · La báscula se midió a sí misma primero</h3>
-<p>En su primera corrida marcó <code>['34','644','164','145']</code> como «números colados». Es tu teléfono: el modelo firmaba la carta. Pero el bug es <em>usar cifras como argumento</em>, y una firma no argumenta nada. <strong>El instrumento medía «¿hay dígitos?» cuando la regla dice «¿usa métricas para convencer?».</strong></p>
+<p>En su primera ejecución marcó <code>['34','644','164','145']</code> como «números colados». Es tu teléfono: el modelo firmaba la carta. Pero el bug es <em>usar cifras como argumento</em>, y una firma no argumenta nada. <strong>El instrumento medía «¿hay dígitos?» cuando la regla dice «¿usa métricas para convencer?».</strong></p>
 <p>Corregido leyendo los teléfonos <em>del CV</em> en tiempo de ejecución, no copiando el número en el evaluador: un dato personal vive en un sitio y solo uno. Y verificado en los dos sentidos — tu teléfono pasa, un teléfono inventado sigue fallando.</p>
 <div class="panel amber">
   <p style="margin:0"><strong>La frontera fina.</strong> «El número no me gusta, aflojo el criterio y sube» es el autoengaño. «El instrumento mide otra cosa distinta de la que dice medir» es una corrección. La diferencia es real, pero es estrecha, y solo se sostiene si la escribes y la defiendes en voz alta. Por eso está aquí.</p>
@@ -205,11 +205,11 @@ resultado: no-op DEMOSTRADO, no supuesto.   coste: 0 €</div>
 <p>El agente escribía que seguías cursando el máster. Tu CV dice, literalmente, <em>«now <strong>completing</strong> a Master's in DS & AI»</em>. El modelo leyó exactamente eso. <strong>Antes de acusar al prompt, mira la entrada.</strong> Corregido a «with a Master's…» en el <code>.md</code> y en el <code>.html</code> del que se regenera — si no, el arreglo se perdía en la próxima regeneración.</p>
 
 <h3>3 · El accidente que hizo el mejor experimento del día</h3>
-<p>Una corrida que di por muerta seguía viva y terminó siete minutos después de la buena. Resultado: <strong>dos corridas de la misma configuración exacta</strong> — mismo código, mismos prompts, mismo CV.</p>
+<p>Una ejecución que di por muerta seguía viva y terminó siete minutos después de la buena. Resultado: <strong>dos ejecuciones de la misma configuración exacta</strong> — mismo código, mismos prompts, mismo CV.</p>
 
 <div class="tabla-wrap">
 <table>
-  <tr><th>corrida</th><th>numerología</th><th>bugs</th><th>global</th></tr>
+  <tr><th>ejecución</th><th>numerología</th><th>bugs</th><th>global</th></tr>
   <tr><td>#2</td><td>0/5</td><td>0.667</td><td>0.833</td></tr>
   <tr><td>#3</td><td>2/5</td><td>0.8</td><td>0.9</td></tr>
 </table>
@@ -221,24 +221,24 @@ resultado: no-op DEMOSTRADO, no supuesto.   coste: 0 €</div>
   <p style="margin:0"><strong>La consecuencia, que va al corazón del artefacto:</strong> una diferencia de 0.067 en tu báscula <em>no significa nada</em>. Si en la Fase 3 escribes una v2, sale 0.9 contra 0.833 y lo celebras, habrás celebrado azar con formato de tabla. El eco del umbral 0.40 del Artefacto 3, otra vez: las medias verdes no te salvan de una decisión rota.</p>
 </div>
 
-<p>Lo bueno: las dos corridas juntas dan <strong>diez muestras</strong>, y dicen que la numerología pasa <strong>2 de cada 10 veces</strong>. Ese es el baseline honesto, y es peor que cualquiera de los dos números por separado.</p>
+<p>Lo bueno: las dos ejecuciones juntas dan <strong>diez muestras</strong>, y dicen que la numerología pasa <strong>2 de cada 10 veces</strong>. Ese es el baseline honesto, y es peor que cualquiera de los dos números por separado.</p>
 
 <h2><span class="n">05</span> Fase 2 · cerrada</h2>
 
 <p>Lo que en la primera versión de este capítulo eran «pendientes del próximo día» ya está hecho y verificado. Se cierran aquí, en orden.</p>
 
 <div class="panel amber">
-  <p style="margin:0 0 .6em"><strong>El cerrojo del historial.</strong> <code>evaluar_prompts.py</code> hacía <em>leer → añadir → escribir</em> sin protección: dos corridas a la vez podían pisarse y perder una fila sin que saltara ningún error. Cerrado con <code>flock</code> (exclusión mutua) + escritura atómica (<code>.tmp</code> y renombrado), y probado a lo bruto: <strong>30 escritores en paralelo, 0 pérdidas</strong>. Tiene su propio capítulo: <code>08_el_cerrojo_del_historial.html</code>.</p>
-  <p style="margin:0 0 .6em"><strong>Repeticiones 5 → 20.</strong> Solo en los dos casos de temperatura 0.7, que es donde vive el ruido; los de temp 0 se quedan en 1. Cuadruplicar muestras parte la banda de ruido a la mitad. Una corrida completa son ahora 44 llamadas — calderilla.</p>
-  <p style="margin:0"><strong>La corrida #3, anotada.</strong> No se borró: el historial es append-only y ese par #2/#3 es la evidencia del ruido. Lleva un campo <code>nota_revision</code> que la marca como duplicada accidental, sin tocar una sola de sus mediciones.</p>
+  <p style="margin:0 0 .6em"><strong>El cerrojo del historial.</strong> <code>evaluar_prompts.py</code> hacía <em>leer → añadir → escribir</em> sin protección: dos ejecuciones a la vez podían pisarse y perder una fila sin que saltara ningún error. Cerrado con <code>flock</code> (exclusión mutua) + escritura atómica (<code>.tmp</code> y renombrado), y probado a lo bruto: <strong>30 escritores en paralelo, 0 pérdidas</strong>. Tiene su propio capítulo: <code>08_el_cerrojo_del_historial.html</code>.</p>
+  <p style="margin:0 0 .6em"><strong>Repeticiones 5 → 20.</strong> Solo en los dos casos de temperatura 0.7, que es donde vive el ruido; los de temp 0 se quedan en 1. Cuadruplicar muestras parte la banda de ruido a la mitad. Una ejecución completa son ahora 44 llamadas — calderilla.</p>
+  <p style="margin:0"><strong>La ejecución #3, anotada.</strong> No se borró: el historial es append-only y ese par #2/#3 es la evidencia del ruido. Lleva un campo <code>nota_revision</code> que la marca como duplicada accidental, sin tocar una sola de sus mediciones.</p>
 </div>
 
 <h3>El re-baseline honesto</h3>
-<p>Subir a 20 repeticiones <strong>rompe la comparación</strong> con las corridas medidas a 5, así que la primera con la báscula nueva es un baseline nuevo — mismos prompts v1, sin tocar nada. Es la corrida #4:</p>
+<p>Subir a 20 repeticiones <strong>rompe la comparación</strong> con las ejecuciones medidas a 5, así que la primera con la báscula nueva es un baseline nuevo — mismos prompts v1, sin tocar nada. Es la ejecución #4:</p>
 
 <div class="tabla-wrap">
 <table>
-  <tr><th>corrida</th><th>numerología</th><th>bugs</th><th>global</th></tr>
+  <tr><th>ejecución</th><th>numerología</th><th>bugs</th><th>global</th></tr>
   <tr><td>#4 · re-baseline (20 rep)</td><td>5/20 = 0.25</td><td>0.75</td><td>0.875</td></tr>
 </table>
 </div>
@@ -246,7 +246,7 @@ resultado: no-op DEMOSTRADO, no supuesto.   coste: 0 €</div>
 <p>Con 5 pasadas la numerología saltaba entre 0/5 y 2/5 — parecía cualquier cosa. Con 20 se asienta: <strong>pasa 1 de cada 4 veces</strong>, y ese número ya es de fiar. Mejor aún, el fallo es <em>siempre el mismo</em>: la palabra <code>dos</code>, de convertir «2+ años» en «más de dos años». La Fase 3 no dispara a ciegas: tiene una diana de un solo píxel.</p>
 
 <h3><code>render_historial.py</code> · el espejo</h3>
-<p>Lee <code>historial.json</code> y pinta <code>historial.html</code>: la gráfica de evolución (SVG a mano, sin librerías) y dos tablas — una por corrida y otra caso a caso. <strong>Se genera, no se escribe a mano</strong>: ninguna fila existe sin una corrida detrás. Y hornea la lección del ruido en la propia tabla: un salto menor que ±0.07 no sale como «mejora», sale como <em>«≈ ruido»</em>. Es gratis y no llama a nada.</p>
+<p>Lee <code>historial.json</code> y pinta <code>historial.html</code>: la gráfica de evolución (SVG a mano, sin librerías) y dos tablas — una por ejecución y otra caso a caso. <strong>Se genera, no se escribe a mano</strong>: ninguna fila existe sin una ejecución detrás. Y hornea la lección del ruido en la propia tabla: un salto menor que ±0.07 no sale como «mejora», sale como <em>«≈ ruido»</em>. Es gratis y no llama a nada.</p>
 
 <div class="pend">
   <div class="quien">sigue abierto · necesita tu criterio</div>
