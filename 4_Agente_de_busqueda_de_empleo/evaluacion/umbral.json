@@ -4,7 +4,7 @@
   "_como_se_calibro": "Se agruparon las filas del historial por (caso, hash_prompt, repeticiones) = configuracion identica. Lo que oscila dentro de un grupo es RUIDO. Resultado: los casos a temp 0 no oscilan nada; el unico ruidoso es la carta (temp 0.7). El diseno por caso acierta 7/7 sobre las corridas de veredicto conocido; la media+margen acertaba 5/7 (bloqueaba la #13, que esta en produccion y funciona).",
 
   "listones": {
-    "of_control_compuesto_y": 1.1,
+    "of_control_compuesto_y": 1.0,
     "cv_control_bloqueante_real": 1.0,
     "carta_control_sigue_siendo_carta": 0.9,
     "of_bug_alternativa_o": 1.0,
