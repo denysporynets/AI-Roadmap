@@ -40,6 +40,7 @@ from herramientas import MODELO, _cargar_cv
 RUTA_CASOS = AQUI / "casos.json"
 RUTA_HISTORIAL = AQUI / "historial.json"
 RUTA_CERROJO = AQUI / "historial.json.lock"
+RUTA_UMBRAL = AQUI / "umbral.json"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -155,8 +156,17 @@ def check_carta_control_sigue_siendo_carta(salida) -> tuple[bool, str]:
     fallos = []
     if not asunto:
         fallos.append("asunto vacío")
-    if not (130 <= palabras <= 180):
-        fallos.append(f"{palabras} palabras (su contrato dice 130-180)")
+    # DOS DIALES DISTINTOS (decisión de Denys, 21/07):
+    #   · lo que PEDIMOS  → el prompt sigue exigiendo 130-180. No se toca: si le
+    #     bajas la petición, el modelo recentra su puntería y aterriza más abajo.
+    #   · lo que ACEPTAMOS → 125. Cerrar una frase con sentido no cuadra con un
+    #     recuento exacto; forzar las últimas 5 palabras mete relleno y empeora la
+    #     carta. Se perdona el roce gramatical, no el desmadre.
+    # Verificado sobre las 13 corridas del historial (re-puntuadas sin llamar a la
+    # API): con aceptación 125 la regresión de v2 marca 0.55/0.45 y sigue cayendo
+    # muy por debajo de su listón 0.90. A partir de 115 sí quedaríamos ciegos.
+    if not (125 <= palabras <= 180):
+        fallos.append(f"{palabras} palabras (aceptamos 125-180; el prompt pide 130-180)")
     if not (2 <= len(notas) <= 3):
         fallos.append(f"{len(notas)} notas (el contrato dice 2-3)")
 
@@ -307,11 +317,54 @@ def _anadir_al_historial(corrida: dict) -> int:
         return len(historial)
 
 
+# ─────────────────────────────────────────────────────────────
+# LA PUERTA (solo en --ci)
+# ─────────────────────────────────────────────────────────────
+# Un CI no lee tablas: lee el código de salida. 0 = pasa, ≠0 = bloquea.
+# La puerta compara la corrida contra los listones de umbral.json.
+#
+# Por qué NO se exige igualdad exacta con el baseline: dos corridas de
+# configuración IDÉNTICA ya dieron 0.833 y 0.9 (corridas #2 y #3). Ese hueco
+# es RUIDO del modelo, no una regresión. Un listón exacto haría fallar el CI
+# por azar, y un CI que falla por azar se acaba ignorando — que es la única
+# forma de que un quality gate no sirva para nada.
+
+def _puerta(corrida: dict) -> tuple[bool, list[str]]:
+    """Devuelve (pasa, motivos). Los motivos explican SIEMPRE, pase o falle.
+
+    Un listón POR CASO, no una media global: promediar casos deterministas con uno
+    estocástico difumina la señal. Ver el razonamiento completo en umbral.json.
+    """
+    listones = json.loads(RUTA_UMBRAL.read_text(encoding="utf-8"))["listones"]
+    motivos, pasa = [], True
+
+    for f in corrida["resultados"]:
+        if f["id"] not in listones:
+            # Fail-closed: un caso nuevo no entra de tapadillo sin listón declarado.
+            pasa = False
+            motivos.append(f"✗ {f['id']}: sin listón en umbral.json — decláralo")
+            continue
+        liston = listones[f["id"]]
+        if f["nota"] < liston:
+            pasa = False
+            motivos.append(f"✗ {f['id']}: {f['nota']} < {liston}  ({f['pasadas']}/{f['repeticiones']})")
+        else:
+            marca = "·" if liston == 0.0 else "✓"      # 0.0 = fuera de la puerta
+            motivos.append(f"{marca} {f['id']}: {f['nota']} ≥ {liston}")
+
+    return pasa, motivos
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Corre el eval-set y lo añade al historial.")
-    p.add_argument("--nota", required=True,
+    p.add_argument("--nota",
                    help="QUÉ cambió respecto a la corrida anterior. Es la columna "
-                        "'cambio aplicado' de la tabla: sin ella la fila no se explica.")
+                        "'cambio aplicado' de la tabla: sin ella la fila no se explica. "
+                        "Obligatoria salvo en --ci (una máquina no tiene nada que contar).")
+    p.add_argument("--ci", action="store_true",
+                   help="Modo máquina: NO escribe en el historial y sale con código 1 "
+                        "si la corrida no pasa la puerta de umbral.json. El historial es "
+                        "tu bitácora, escrita a mano; el CI no la ensucia.")
     p.add_argument("--version", action="append", default=[], metavar="HERR=vN",
                    help="Fuerza una versión (repetible). Por defecto, la activa.")
     p.add_argument("--seco", action="store_true",
@@ -321,6 +374,8 @@ def main() -> None:
                         "(gpt-4o): arranque/voz/enganche, 1-5. Cuesta una llamada extra "
                         "por carta; opt-in a propósito (asserts siempre, juez a demanda).")
     args = p.parse_args()
+    if not args.ci and not args.nota:
+        p.error("--nota es obligatoria cuando corres tú (usa --ci para el modo máquina)")
 
     casos = json.loads(RUTA_CASOS.read_text(encoding="utf-8"))["casos"]
 
@@ -350,8 +405,14 @@ def main() -> None:
     for f in filas:
         estado = "OK  " if f["nota"] == 1 else "FALLA"
         print(f"{estado} [{f['tipo']:7}] {f['id']:34} {f['pasadas']}/{f['repeticiones']}")
-        for i in f["intentos"]:
-            print(f"        {'✓' if i['pasa'] else '✗'} {i['motivo']}")
+        # El motivo de cada intento cita la salida del modelo, y esa salida lleva
+        # dentro el CV (la firma de una carta trae teléfono y email). En tu Mac eso
+        # es diagnóstico; en un runner de GitHub es un log PÚBLICO. En modo máquina
+        # se calla: la puerta ya imprime "caso: nota ≥ listón", que es lo único que
+        # un CI necesita para decidir. Si una fila cae, la reproduces aquí sin --ci.
+        if not args.ci:
+            for i in f["intentos"]:
+                print(f"        {'✓' if i['pasa'] else '✗'} {i['motivo']}")
         if "juez_medias" in f:
             jm = " · ".join(f"{c.split('_')[0]}={v}" for c, v in f["juez_medias"].items())
             print(f"        JUEZ (gpt-4o, 1-5): {jm}")
@@ -373,10 +434,20 @@ def main() -> None:
         "resultados": filas,
     }
 
-    total = _anadir_al_historial(corrida)
-
     print(f"\nbugs {corrida['nota_bugs']} · controles {corrida['nota_controles']} "
           f"· global {corrida['nota_global']}")
+
+    if args.ci:
+        # El historial es la bitácora de Denys: una fila por decisión suya, con su
+        # nota. El CI corre en cada push y no decide nada, así que NO escribe.
+        pasa, motivos = _puerta(corrida)
+        print("\n── puerta de regresión ──")
+        for m in motivos:
+            print("  " + m)
+        print("PASA ✅" if pasa else "BLOQUEA ❌")
+        sys.exit(0 if pasa else 1)
+
+    total = _anadir_al_historial(corrida)
     print(f"corrida #{total} añadida a {RUTA_HISTORIAL.name}")
 
 

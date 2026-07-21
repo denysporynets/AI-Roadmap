@@ -77,3 +77,6 @@ material-visual/
 **/*Token*.png
 **/*token*.png
 **/*secret*.png
+
+# Cerrojo del historial: fichero de sincronizacion local, no es contenido
+**/historial.json.lock

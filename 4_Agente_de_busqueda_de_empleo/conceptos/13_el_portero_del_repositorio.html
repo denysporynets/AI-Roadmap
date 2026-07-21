@@ -1,0 +1,313 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Integración continua sobre prompts: por qué un quality gate se calibra con el ruido medido y no con la intuición.">
+<meta name="color-scheme" content="light dark">
+<title>13 · El portero del repositorio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%9A%A6%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#DEDCD5; --paper-2:#E5E4DE; --paper-3:#D6D3C8;
+  --ink:#20272A; --pine:#1E3A34; --signal:#C8502A; --signal-ink:#A83E1E;
+  --brass:#9A7420; --sage:#6E7A6F;
+  --line:rgba(30,58,52,.16); --line-2:rgba(30,58,52,.09);
+  --font-display:"Spectral",Georgia,serif;
+  --font-body:"IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --measure:68ch; --pad:clamp(20px,5vw,40px);
+}
+:root[data-theme="dark"]{
+  --paper:#161F1C; --paper-2:#1D2724; --paper-3:#26302C;
+  --ink:#E4E0D5; --pine:#A9C6B8; --signal:#D6603C; --signal-ink:#E8825C;
+  --brass:#CBA24D; --sage:#93A096;
+  --line:rgba(196,214,204,.16); --line-2:rgba(196,214,204,.09);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--font-body); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease,color .4s ease;
+}
+/* filtro cálido del mando de hora */
+#velo{position:fixed; inset:0; pointer-events:none; z-index:9999;
+      background:#FF8A1E; mix-blend-mode:multiply; opacity:0; transition:opacity .3s ease}
+
+.wrap{max-width:var(--measure); margin:0 auto; padding:0 var(--pad) 100px}
+
+/* ── mandos ── */
+.mandos{position:sticky; top:0; z-index:50; background:color-mix(in srgb,var(--paper) 92%,transparent);
+        backdrop-filter:blur(8px); border-bottom:1px solid var(--line-2); margin-bottom:56px}
+.mandos-in{max-width:var(--measure); margin:0 auto; padding:10px var(--pad);
+           display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.mandos .tag{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+             text-transform:uppercase; color:var(--sage); margin-right:auto}
+.mandos label{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+              text-transform:uppercase; color:var(--sage)}
+input[type=range]{width:110px; accent-color:var(--brass); vertical-align:middle}
+.tbtn{font:500 12px/1 var(--font-mono); letter-spacing:.08em; text-transform:uppercase;
+      background:transparent; color:var(--ink); border:1px solid var(--line);
+      border-radius:999px; padding:7px 14px; cursor:pointer; transition:all .2s ease}
+.tbtn:hover{border-color:var(--brass); color:var(--brass)}
+
+/* ── cabecera ── */
+header{padding:26px 0 12px}
+.kicker{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.18em;
+        text-transform:uppercase; color:var(--signal); margin:0 0 14px}
+h1{font-family:var(--font-display); font-weight:600; font-size:clamp(30px,6vw,44px);
+   line-height:1.14; letter-spacing:-.015em; margin:0 0 16px}
+.lede{font-size:19px; color:color-mix(in srgb,var(--ink) 78%,var(--paper));
+      border-left:2px solid var(--brass); padding-left:18px; margin:0 0 8px}
+.meta{font-family:var(--font-mono); font-size:12px; color:var(--sage); margin-top:26px}
+
+h2{font-family:var(--font-display); font-weight:600; font-size:26px; line-height:1.25;
+   letter-spacing:-.01em; margin:64px 0 4px; padding-top:22px; border-top:1px solid var(--line-2)}
+h2 .num{font-family:var(--font-mono); font-size:12px; color:var(--brass);
+        letter-spacing:.14em; display:block; margin-bottom:9px; font-weight:500}
+h3{font-family:var(--font-body); font-weight:600; font-size:17px; margin:34px 0 6px; color:var(--pine)}
+:root[data-theme="dark"] h3{color:var(--pine)}
+p{margin:14px 0}
+strong{font-weight:600}
+em{font-family:var(--font-display); font-style:italic}
+code{font-family:var(--font-mono); font-size:.88em; background:var(--paper-3);
+     padding:1px 5px; border-radius:3px}
+:root[data-theme="dark"] code{background:var(--paper-3)}
+
+pre{font-family:var(--font-mono); font-size:13px; line-height:1.6; background:var(--paper-2);
+    border:1px solid var(--line-2); border-left:2px solid var(--brass);
+    padding:16px 18px; border-radius:4px; overflow-x:auto; margin:20px 0}
+pre b{color:var(--signal); font-weight:500}
+pre i{color:var(--sage); font-style:normal}
+
+.tabla-caja{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+   color:var(--sage); font-weight:500; border-bottom:1px solid var(--line)}
+td.n{font-family:var(--font-mono); white-space:nowrap}
+.ok{color:var(--pine); font-weight:600}
+.no{color:var(--signal-ink); font-weight:600}
+:root[data-theme="dark"] .no{color:var(--signal-ink)}
+
+.nota{background:var(--paper-2); border:1px solid var(--line-2);
+      border-left:3px solid var(--signal); padding:16px 20px; border-radius:4px; margin:26px 0}
+.nota .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--signal); display:block; margin-bottom:7px}
+.clave{background:var(--paper-2); border:1px solid var(--line-2);
+       border-left:3px solid var(--brass); padding:16px 20px; border-radius:4px; margin:26px 0}
+.clave .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--brass); display:block; margin-bottom:7px}
+blockquote{font-family:var(--font-display); font-size:21px; line-height:1.45; font-style:italic;
+           margin:34px 0; padding-left:20px; border-left:2px solid var(--brass); color:var(--pine)}
+ul{padding-left:20px} li{margin:8px 0}
+hr{border:0; border-top:1px solid var(--line-2); margin:56px 0}
+.marca{text-align:center; color:var(--brass); font-family:var(--font-mono);
+       font-size:12px; letter-spacing:.5em; margin:56px 0}
+footer{border-top:1px solid var(--line); margin-top:64px; padding-top:22px;
+       font-family:var(--font-mono); font-size:12px; color:var(--sage)}
+a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+</style>
+
+<div id="velo"></div>
+
+<div class="mandos"><div class="mandos-in">
+  <span class="tag">Libro 13 · Artefacto 5</span>
+  <label for="hora">Hora</label>
+  <input type="range" id="hora" min="0" max="100" value="0" aria-label="Filtro de luz cálida">
+  <button class="tbtn" id="tema">Noche</button>
+</div></div>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">Anexo CI/CD · Fases 0–2</p>
+  <h1>El portero del repositorio</h1>
+  <p class="lede">Cómo se pone un guardia a la puerta de <code>main</code> que sepa distinguir una regresión de verdad del ruido de un modelo estocástico — y por qué ese guardia se calibra con datos medidos, nunca con la intuición.</p>
+  <p class="meta">21 de julio de 2026 · agente de búsqueda de empleo · coste en llamadas a la API: 0 €</p>
+</header>
+
+<h2><span class="num">01</span>El problema que resuelve</h2>
+
+<p>El Artefacto 5 dejó cuatro prompts versionados y una báscula que los mide. El flujo es: cambias un prompt, corres la báscula, miras si mejora, decides. Funciona <em>mientras te acuerdes de correrla</em>.</p>
+
+<p>Ese es exactamente el punto débil. Un cambio de prompt puede parecer inofensivo — reordenar dos frases, añadir un ejemplo — y romper algo tres herramientas más allá. Ya pasó: la <strong>v2</strong> del prompt de la carta introdujo un few-shot que, sin querer, <strong>acortó todas las cartas</strong>. No se vio leyendo el prompt. Se vio porque la báscula lo midió.</p>
+
+<p>La integración continua convierte ese «acuérdate de medir» en «no puedes no medir». Un programa que corre solo en cada <code>push</code> y que tiene autoridad para <strong>rechazar el cambio</strong>.</p>
+
+<div class="clave"><span class="et">El concepto, en una frase</span>
+<strong>Quality gate</strong> (puerta de calidad): una comprobación automática que se ejecuta antes de que el código entre en la rama principal y que puede bloquearlo. Aquí lo llamamos <em>prueba de regresión</em> porque lo que vigila no es que el código funcione, sino que <strong>no haya empeorado respecto a lo que ya funcionaba</strong>.</div>
+
+<h2><span class="num">02</span>El único idioma que entiende un CI</h2>
+
+<p>Todo programa, al terminar, devuelve un número al sistema operativo: el <strong>código de salida</strong>. <code>0</code> significa «todo bien»; cualquier otro número, «algo falló». GitHub Actions no lee tablas ni informes bonitos: <strong>mira ese número y nada más</strong>.</p>
+
+<pre>$ python evaluar_prompts.py --nota "..."
+bugs 0.75 · controles 1.0 · global 0.875
+$ echo $?
+<b>0</b>   <i>← "todo bien"... aunque los bugs hubieran empeorado</i></pre>
+
+<p>La báscula <em>informaba</em> pero no <em>juzgaba</em>. Nació para que la corriera una persona que mira los números y decide. Para que la corra una máquina hacía falta darle una boca con la que decir que no.</p>
+
+<h3>Los tres obstáculos reales</h3>
+<div class="tabla-caja"><table>
+<tr><th>obstáculo</th><th>por qué importa</th><th>arreglo</th></tr>
+<tr><td>Siempre salía con <code>0</code></td><td>Sin código de salida distinto no hay puerta posible, solo un informe</td><td><code>sys.exit(0/1)</code> según la puerta</td></tr>
+<tr><td>Siempre escribía en <code>historial.json</code></td><td>El historial es una bitácora humana: una fila por decisión, con su nota. El CI corre en cada push y no decide nada — la llenaría de ruido</td><td>En <code>--ci</code> no escribe</td></tr>
+<tr><td><code>--nota</code> obligatoria</td><td>Una máquina no tiene nada que contar</td><td>Obligatoria solo fuera de <code>--ci</code></td></tr>
+</table></div>
+
+<div class="nota"><span class="et">Suposición derribada</span>
+El plan original decía «asserts baratos en cada push, juez LLM caro por la noche». Suena razonable y <strong>está mal planteado</strong>: los asserts son gratis, sí, pero para tener una salida que assertear hay que hacer <strong>85 llamadas al modelo primero</strong>. Lo caro no es juzgar la salida — es conseguirla. El eje real no es <em>asserts vs juez</em>, es <em>cuántas llamadas haces</em>.</div>
+
+<h2><span class="num">03</span>Medir el ruido antes de poner el listón</h2>
+
+<p>Un CI que falla por azar acaba ignorado, y un quality gate ignorado no sirve absolutamente para nada. Así que antes de elegir ningún número había que responder a una pregunta empírica: <strong>¿cuánto oscila esta báscula por puro azar?</strong></p>
+
+<p>Para saberlo hay que comparar mediciones de <strong>configuración idéntica</strong>. Si el prompt cambió entre dos corridas, la diferencia puede ser mejora real; si no cambió, toda diferencia es ruido. Y ahí salvó la partida una decisión tomada meses antes sin saber para qué serviría: <strong>cada fila del historial guarda el <code>hash_prompt</code></strong>. Agrupando por <code>(caso, hash, repeticiones)</code> se aíslan grupos de configuración exacta.</p>
+
+<div class="tabla-caja"><table>
+<tr><th>caso</th><th>herramienta</th><th class="n">temp</th><th class="n">oscila</th></tr>
+<tr><td><code>of_control_compuesto_y</code></td><td>analizar_oferta</td><td class="n">0</td><td class="n ok">0.00</td></tr>
+<tr><td><code>cv_control_bloqueante_real</code></td><td>match_cv</td><td class="n">0</td><td class="n ok">0.00</td></tr>
+<tr><td><code>carta_control_sigue_siendo_carta</code></td><td>redactar_borrador</td><td class="n">0.7</td><td class="n no">0.05–0.20</td></tr>
+</table></div>
+
+<p>El ruido no era un fantasma estadístico repartido por toda la báscula: <strong>era exactamente el caso que corre a temperatura 0.7</strong>. Los de temperatura 0 dan lo mismo corrida tras corrida.</p>
+
+<p>Y de propina, una segunda lección salió del mismo cuadro:</p>
+<pre><i>mismo caso, mismo prompt, distinto muestreo</i>
+cv_bug_cefr_b2   con  <b>1</b> repetición   → oscila <b>1.00</b>   (0.0 ↔ 1.0)
+cv_bug_cefr_b2   con  <b>5</b> repeticiones → oscila <b>0.20</b></pre>
+<p>Más repeticiones, menos ruido. Es la misma medida, mejor muestreada.</p>
+
+<h2><span class="num">04</span>Los 38 fallos que eran el mismo fallo</h2>
+
+<p>Siguiente pregunta: ¿los fallos del control ruidoso son de tipos distintos o siempre el mismo? Al desplegar los motivos guardados, los <strong>38 fallos históricos</strong> resultaron ser, sin una sola excepción, idénticos en naturaleza:</p>
+
+<pre>la carta se desvía: <b>126</b> palabras (su contrato dice 130-180)
+la carta se desvía: <b>122</b> palabras (su contrato dice 130-180)
+la carta se desvía: <b>128</b> palabras (su contrato dice 130-180)</pre>
+
+<p>Nunca faltaba el asunto. Nunca se perdían las notas. Nunca se pasaba de largo. <strong>Siempre era la carta quedándose corta por unas pocas palabras</strong>, rozando el borde de abajo. Y la historia del artefacto se leía entera en esa columna:</p>
+
+<div class="tabla-caja"><table>
+<tr><th>corrida</th><th>versión</th><th class="n">fallos /20</th><th>qué pasó</th></tr>
+<tr><td class="n">#4</td><td class="n">v1</td><td class="n">0</td><td>baseline</td></tr>
+<tr><td class="n">#5–#6</td><td class="n">v2</td><td class="n no">15, 16</td><td>el few-shot acortó las cartas — <strong>el control cazó la regresión</strong></td></tr>
+<tr><td class="n">#9–#13</td><td class="n">v3</td><td class="n ok">0, 1, 0, 0, 1</td><td>arreglado, con roce ocasional</td></tr>
+</table></div>
+
+<p>Pero lo decisivo apareció al comparar las dos versiones de cerca:</p>
+
+<pre>v2 <i>(regresión real)</i> → cartas cortas de <b>110–129</b> palabras · <b>16</b> de 20
+v3 <i>(buena, en prod)</i> → cartas cortas de <b>122–128</b> palabras · <b>1</b> de 20
+                             <i>↑ los rangos se solapan</i></pre>
+
+<blockquote>Coges una carta corta suelta de v2 y otra de v3 y son indistinguibles. La regresión nunca estuvo en la carta individual: estaba en la <em>frecuencia</em>.</blockquote>
+
+<div class="clave"><span class="et">El principio</span>
+Una carta corta no significa nada. Dieciséis de veinte significa que el prompt se ha roto. <strong>La tolerancia va en la tasa, no en el caso individual.</strong></div>
+
+<h2><span class="num">05</span>Un listón por caso, no una media</h2>
+
+<p>El plan original medía la puerta sobre la <strong>media de los controles</strong> con un margen de ruido. Los datos lo desmontaron: esa media mezcla dos controles deterministas (que nunca fallan) con uno estocástico. El resultado es que el ruido de uno obliga a aflojar el listón de los tres, y a la vez difumina la señal cuando el ruidoso se rompe de verdad.</p>
+
+<p>La alternativa: <strong>cada caso declara lo que se le exige</strong>. Ambos diseños se pusieron a prueba con el mismo método — pasar las 13 corridas históricas por la puerta y comparar su veredicto con lo que sabemos que pasó realmente:</p>
+
+<div class="tabla-caja"><table>
+<tr><th>diseño</th><th class="n">aciertos</th><th>dónde falla</th></tr>
+<tr><td><strong>A</strong> · media + margen</td><td class="n no">5/7</td><td>bloquea las corridas #10 y #13 — código bueno, y la #13 <strong>está en producción</strong></td></tr>
+<tr><td><strong>B</strong> · listón por caso</td><td class="n ok">7/7</td><td>ninguno</td></tr>
+</table></div>
+
+<p>B caza las dos regresiones de v2 <em>y</em> aprueba las cinco corridas buenas. Un detalle que parece un fallo suyo y no lo es: también bloquea las corridas de <strong>v1</strong>, porque en v1 el bug de numerología seguía sin arreglar. Correcto — la puerta protege <strong>el estándar de hoy</strong>, y v1 no lo alcanza.</p>
+
+<h2><span class="num">06</span>Los tres diales</h2>
+
+<p>Aquí llegó la aportación que reescribió el diseño. Al discutir si aflojar el recuento de palabras, aparecieron <strong>dos cosas que yo estaba tratando como una sola</strong>:</p>
+
+<div class="tabla-caja"><table>
+<tr><th>dial</th><th>dónde vive</th><th>qué hace</th></tr>
+<tr><td><strong>pedir</strong></td><td><code>prompts.py</code></td><td>la instrucción al modelo: «130–180 palabras»</td></tr>
+<tr><td><strong>aceptar</strong></td><td>el assert de <code>evaluar_prompts.py</code></td><td>la regla con la que juzgamos la salida</td></tr>
+<tr><td><strong>juzgar</strong></td><td><code>umbral.json</code></td><td>cuántos fallos toleramos antes de bloquear</td></tr>
+</table></div>
+
+<p>Estaban los tres clavados en el mismo sitio. El razonamiento que los separó: <strong>si le bajas la petición al modelo, recentra su puntería</strong> — pídele 120 y aterrizará en 112. Bajar la exigencia no compra tolerancia, la gasta. Lo que hay que hacer es <strong>seguir pidiendo 130 y medir con una regla que perdone cinco palabras</strong>.</p>
+
+<p>El motivo de fondo es lingüístico, no estadístico: cerrar una frase con sentido no cuadra con un recuento exacto. Si el modelo va por 124 y tiene que llegar a 130, lo que hace es meter relleno — y entonces la carta cumple el contrato y <em>es peor</em>. El contrato compitiendo contra la calidad.</p>
+
+<h3>¿Y no nos deja ciegos ante v2?</h3>
+<p>Comprobable, porque el historial guarda el recuento de palabras de <strong>cada intento</strong>, también de los que pasaron. Se pudieron re-puntuar las 13 corridas enteras con reglas distintas <strong>sin llamar a la API ni una vez</strong>:</p>
+
+<div class="tabla-caja"><table>
+<tr><th>corrida</th><th class="n">aceptar ≥130</th><th class="n">aceptar ≥125</th><th class="n">aceptar ≥120</th><th class="n">aceptar ≥115</th></tr>
+<tr><td>#5 · v2 🔴</td><td class="n">0.25</td><td class="n ok">0.55</td><td class="n">0.80</td><td class="n no">0.90</td></tr>
+<tr><td>#6 · v2 🔴</td><td class="n">0.20</td><td class="n ok">0.45</td><td class="n">0.50</td><td class="n no">0.95</td></tr>
+<tr><td>#10 · v3 ✅</td><td class="n no">0.95</td><td class="n ok">1.00</td><td class="n">1.00</td><td class="n">1.00</td></tr>
+<tr><td>#13 · v3 ✅</td><td class="n no">0.95</td><td class="n ok">0.95</td><td class="n">1.00</td><td class="n">1.00</td></tr>
+</table></div>
+
+<p>Con el listón del control en <strong>0.90</strong>: aceptando <strong>≥125</strong>, v2 marca 0.55 y 0.45 — bloquea con muchísimo margen — y v3 se limpia casi del todo. Aceptando <strong>≥115</strong>, v2 marca 0.90 y 0.95 y <strong>pasaría la puerta</strong>. Ahí está el precipicio, y 125 cae dos escalones antes.</p>
+
+<div class="nota"><span class="et">Corrección honesta</span>
+Durante la discusión afirmé que tocar el assert obligaría a repetir el baseline (85 llamadas) por perder la comparabilidad con el histórico. <strong>Era falso.</strong> Como el historial guarda las salidas crudas y sus recuentos, la historia entera se puede re-puntuar con reglas nuevas gratis. Esa es la recompensa diferida de haber guardado los datos crudos en su día — no los resúmenes.</div>
+
+<h2><span class="num">07</span>Lo que quedó construido</h2>
+
+<pre><i># el prompt exige, el assert perdona, la puerta juzga la tasa</i>
+prompts.py        pedir    <b>130–180</b>  <i>sin tocar</i>
+evaluar_prompts   aceptar  <b>125–180</b>
+umbral.json       juzgar   carta_control ≥ <b>0.90</b>   <i>(2 roces de 20)</i></pre>
+
+<p>Y una decisión de ingeniería horneada en la puerta: si mañana se añade un caso a <code>casos.json</code> <strong>sin declararle listón, la puerta bloquea</strong>. Es <em>fail-closed</em> — un caso nuevo no entra de tapadillo sin que alguien haya decidido qué se le exige.</p>
+
+<div class="clave"><span class="et">Para el CV — traducción al mundo real</span>
+<ul>
+<li><strong>Regression testing sobre prompts</strong> — tratar un prompt como código: versionado, medido, y con una puerta que impide que empeore sin que nadie se entere.</li>
+<li><strong>Calibración de un quality gate con ruido medido</strong> — agrupar mediciones de configuración idéntica para separar varianza del modelo de regresión real, en vez de fijar umbrales a ojo.</li>
+<li><strong>Separar la especificación de la métrica de aceptación</strong> — lo que se le exige al modelo y lo que se acepta al evaluarlo no tienen por qué ser el mismo número.</li>
+<li><strong>Fail-closed por defecto</strong> — ante una configuración incompleta, bloquear en vez de dejar pasar.</li>
+</ul></div>
+
+<h2><span class="num">08</span>Lo que queda</h2>
+<ul>
+<li><strong>Fase 3</strong> — escribir el <code>workflow.yml</code> y guardar <code>OPENAI_API_KEY</code> en GitHub Secrets. Primera fase que toca algo publicado. Cabo de higiene previo: <code>historial.json.lock</code> al <code>.gitignore</code>.</li>
+<li><strong>Fase 4</strong> — <em>verla fallar a propósito</em>. Una puerta que nunca se ha visto cerrar no está verificada, solo supuesta.</li>
+<li><strong>Fase 5</strong> — el juez de estilo en la corrida nocturna, donde su coste y su latencia no molestan.</li>
+<li><strong>Cabo aparte</strong> — la banda de longitud del <em>producto</em>: ¿cuántas palabras quieres tú en tus cartas? Decisión de producto, no de CI, y ahora barata de cambiar.</li>
+</ul>
+
+<p class="marca">· · ·</p>
+
+<footer>
+Libro 13 · Artefacto 5 · Anexo CI/CD (Fases 0–2) · 21 jul 2026<br>
+Sigue a <a href="12_tocar_y_demostrar.html">12 · Tocar y demostrar</a> · protocolo ds-nexus
+</footer>
+</div>
+
+<script>
+(function(){
+  var raiz=document.documentElement, btn=document.getElementById('tema');
+  function pinta(t){ raiz.setAttribute('data-theme',t); btn.textContent = t==='dark' ? 'Día' : 'Noche';
+                     try{localStorage.setItem('a5ci-tema',t)}catch(e){} }
+  var g=null; try{g=localStorage.getItem('a5ci-tema')}catch(e){}
+  pinta(g || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  btn.addEventListener('click',function(){
+    pinta(raiz.getAttribute('data-theme')==='dark'?'light':'dark');
+  });
+
+  var hora=document.getElementById('hora'), velo=document.getElementById('velo');
+  function calor(v){ velo.style.opacity=(v/100*0.42).toFixed(3);
+                     try{localStorage.setItem('a5ci-hora',v)}catch(e){} }
+  var h=null; try{h=localStorage.getItem('a5ci-hora')}catch(e){}
+  if(h!==null){ hora.value=h; }
+  calor(hora.value);
+  hora.addEventListener('input',function(){ calor(this.value); });
+})();
+</script>

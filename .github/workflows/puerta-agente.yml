@@ -1,0 +1,77 @@
+# ─────────────────────────────────────────────────────────────
+# LA PUERTA DEL AGENTE · regresión de prompts en cada push
+# ─────────────────────────────────────────────────────────────
+# Qué hace: cada vez que tocas el agente, GitHub levanta una máquina limpia,
+# instala las dependencias, corre el eval-set contra la API y compara cada caso
+# con su listón de umbral.json. Si algo cae por debajo, el push queda marcado
+# en rojo. Es el mismo quality gate del Artefacto 3, mudado de código a prompts.
+#
+# Por qué importa: un prompt no tiene compilador. Nada te avisa de que la v4 que
+# escribiste anoche resucitó el bug de la numerología — salvo esto.
+
+name: Puerta del agente
+
+on:
+  push:
+    branches: [main]
+    # Filtro de rutas: si el push solo toca el portafolio o un HTML de conceptos,
+    # no hay nada que medir y no se gasta ni un céntimo de API.
+    paths:
+      - '4_Agente_de_busqueda_de_empleo/**.py'
+      - '4_Agente_de_busqueda_de_empleo/evaluacion/casos.json'
+      - '4_Agente_de_busqueda_de_empleo/evaluacion/umbral.json'
+      - '4_Agente_de_busqueda_de_empleo/requirements.txt'
+      - '.github/workflows/puerta-agente.yml'
+  workflow_dispatch:        # botón de disparo manual, desde la pestaña Actions
+
+# Si empujas dos veces seguidas, la corrida vieja se cancela: son 85 llamadas a
+# la API cada una, y medir un commit que ya has reemplazado no sirve de nada.
+concurrency:
+  group: puerta-agente
+  cancel-in-progress: true
+
+jobs:
+  regresion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25        # 85 llamadas secuenciales ≈ 6-10 min; el resto es margen
+
+    defaults:
+      run:
+        working-directory: 4_Agente_de_busqueda_de_empleo
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: 4_Agente_de_busqueda_de_empleo/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      # El CV es un dato personal: está gitignorado a propósito, así que en el
+      # runner NO existe. Se materializa aquí desde un secreto y muere con la
+      # máquina. Sin esto, 5 de los 8 casos reventarían al no encontrar el fichero.
+      - name: Materializar el CV desde el secreto
+        env:
+          CV_MARKDOWN: ${{ secrets.CV_MARKDOWN }}
+        run: |
+          if [ -z "$CV_MARKDOWN" ]; then
+            echo "::error::Falta el secreto CV_MARKDOWN. Sin CV no se puede medir match_cv ni redactar_borrador."
+            exit 1
+          fi
+          mkdir -p datos_personales
+          printf '%s' "$CV_MARKDOWN" > datos_personales/cv_denys.md
+          # Solo el tamaño: el contenido NO se imprime jamás en un log público.
+          echo "CV materializado ($(wc -c < datos_personales/cv_denys.md) bytes)"
+
+      - name: Correr la puerta de regresión
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # --ci: no escribe en el historial (esa bitácora es de Denys, la escribe
+        # él con su --nota) y sale con código 1 si algún caso cae bajo su listón.
+        # El juez de estilo (gpt-4o) NO entra aquí: es caro y subjetivo, y su
+        # sitio es una corrida a demanda, no una puerta que bloquea.
+        run: python evaluacion/evaluar_prompts.py --ci
