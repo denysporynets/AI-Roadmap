@@ -1,0 +1,319 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Poner la puerta a correr sola en GitHub Actions: el dato que el CI no tenía, el log que era público, y por qué hay que ver fallar a un guardia antes de confiar en él.">
+<meta name="color-scheme" content="light dark">
+<title>14 · El canario y la prueba del rojo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%90%A4%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#DEDCD5; --paper-2:#E5E4DE; --paper-3:#D6D3C8;
+  --ink:#20272A; --pine:#1E3A34; --signal:#C8502A; --signal-ink:#A83E1E;
+  --brass:#9A7420; --sage:#6E7A6F;
+  --line:rgba(30,58,52,.16); --line-2:rgba(30,58,52,.09);
+  --font-display:"Spectral",Georgia,serif;
+  --font-body:"IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --measure:68ch; --pad:clamp(20px,5vw,40px);
+}
+:root[data-theme="dark"]{
+  --paper:#161F1C; --paper-2:#1D2724; --paper-3:#26302C;
+  --ink:#E4E0D5; --pine:#A9C6B8; --signal:#D6603C; --signal-ink:#E8825C;
+  --brass:#CBA24D; --sage:#93A096;
+  --line:rgba(196,214,204,.16); --line-2:rgba(196,214,204,.09);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--font-body); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease,color .4s ease;
+}
+#velo{position:fixed; inset:0; pointer-events:none; z-index:9999;
+      background:#FF8A1E; mix-blend-mode:multiply; opacity:0; transition:opacity .3s ease}
+
+.wrap{max-width:var(--measure); margin:0 auto; padding:0 var(--pad) 100px}
+
+.mandos{position:sticky; top:0; z-index:50; background:color-mix(in srgb,var(--paper) 92%,transparent);
+        backdrop-filter:blur(8px); border-bottom:1px solid var(--line-2); margin-bottom:56px}
+.mandos-in{max-width:var(--measure); margin:0 auto; padding:10px var(--pad);
+           display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.mandos .tag{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+             text-transform:uppercase; color:var(--sage); margin-right:auto}
+.mandos label{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+              text-transform:uppercase; color:var(--sage)}
+input[type=range]{width:110px; accent-color:var(--brass); vertical-align:middle}
+.tbtn{font:500 12px/1 var(--font-mono); letter-spacing:.08em; text-transform:uppercase;
+      background:transparent; color:var(--ink); border:1px solid var(--line);
+      border-radius:999px; padding:7px 14px; cursor:pointer; transition:all .2s ease}
+.tbtn:hover{border-color:var(--brass); color:var(--brass)}
+
+header{padding:26px 0 12px}
+.kicker{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.18em;
+        text-transform:uppercase; color:var(--signal); margin:0 0 14px}
+h1{font-family:var(--font-display); font-weight:600; font-size:clamp(30px,6vw,44px);
+   line-height:1.14; letter-spacing:-.015em; margin:0 0 16px}
+.lede{font-size:19px; color:color-mix(in srgb,var(--ink) 78%,var(--paper));
+      border-left:2px solid var(--brass); padding-left:18px; margin:0 0 8px}
+.meta{font-family:var(--font-mono); font-size:12px; color:var(--sage); margin-top:26px}
+
+h2{font-family:var(--font-display); font-weight:600; font-size:26px; line-height:1.25;
+   letter-spacing:-.01em; margin:64px 0 4px; padding-top:22px; border-top:1px solid var(--line-2)}
+h2 .num{font-family:var(--font-mono); font-size:12px; color:var(--brass);
+        letter-spacing:.14em; display:block; margin-bottom:9px; font-weight:500}
+h3{font-family:var(--font-body); font-weight:600; font-size:17px; margin:34px 0 6px; color:var(--pine)}
+:root[data-theme="dark"] h3{color:var(--pine)}
+p{margin:14px 0}
+strong{font-weight:600}
+em{font-family:var(--font-display); font-style:italic}
+code{font-family:var(--font-mono); font-size:.88em; background:var(--paper-3);
+     padding:1px 5px; border-radius:3px}
+:root[data-theme="dark"] code{background:var(--paper-3)}
+
+pre{font-family:var(--font-mono); font-size:13px; line-height:1.6; background:var(--paper-2);
+    border:1px solid var(--line-2); border-left:2px solid var(--brass);
+    padding:16px 18px; border-radius:4px; overflow-x:auto; margin:20px 0}
+pre b{color:var(--signal); font-weight:500}
+pre i{color:var(--sage); font-style:normal}
+
+.tabla-caja{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+   color:var(--sage); font-weight:500; border-bottom:1px solid var(--line)}
+td.n{font-family:var(--font-mono); white-space:nowrap}
+.ok{color:var(--pine); font-weight:600}
+.no{color:var(--signal-ink); font-weight:600}
+:root[data-theme="dark"] .no{color:var(--signal-ink)}
+
+.nota{background:var(--paper-2); border:1px solid var(--line-2);
+      border-left:3px solid var(--signal); padding:16px 20px; border-radius:4px; margin:26px 0}
+.nota .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--signal); display:block; margin-bottom:7px}
+.clave{background:var(--paper-2); border:1px solid var(--line-2);
+       border-left:3px solid var(--brass); padding:16px 20px; border-radius:4px; margin:26px 0}
+.clave .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--brass); display:block; margin-bottom:7px}
+blockquote{font-family:var(--font-display); font-size:21px; line-height:1.45; font-style:italic;
+           margin:34px 0; padding-left:20px; border-left:2px solid var(--brass); color:var(--pine)}
+ul{padding-left:20px} li{margin:8px 0}
+hr{border:0; border-top:1px solid var(--line-2); margin:56px 0}
+.marca{text-align:center; color:var(--brass); font-family:var(--font-mono);
+       font-size:12px; letter-spacing:.5em; margin:56px 0}
+footer{border-top:1px solid var(--line); margin-top:64px; padding-top:22px;
+       font-family:var(--font-mono); font-size:12px; color:var(--sage)}
+a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+</style>
+
+<div id="velo"></div>
+
+<div class="mandos"><div class="mandos-in">
+  <span class="tag">Libro 14 · Artefacto 5</span>
+  <label for="hora">Hora</label>
+  <input type="range" id="hora" min="0" max="100" value="0" aria-label="Filtro de luz cálida">
+  <button class="tbtn" id="tema">Noche</button>
+</div></div>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">Anexo CI/CD · Fases 3–4</p>
+  <h1>El canario y la prueba del rojo</h1>
+  <p class="lede">El guardia del libro anterior existía, pero había que llamarlo a mano. Aquí pasa a vivir en el repositorio y a trabajar solo — y por el camino aparecen las dos cosas que nadie te cuenta: que el CI no tiene tus datos, y que sus registros son públicos.</p>
+  <p class="meta">21 de julio de 2026 · agente de búsqueda de empleo · 3 corridas reales · ~24 céntimos</p>
+</header>
+
+<h2><span class="num">01</span>Qué cambia exactamente</h2>
+
+<p>Hasta hoy la báscula era un comando. Tú decidías cuándo correrlo, y por tanto también decidías —sin quererlo— cuándo <em>no</em> correrlo: justo los días de prisa, que son los días en que se rompen las cosas.</p>
+
+<p>Un CI (<strong>integración continua</strong>) le quita esa decisión a la persona. El repositorio observa lo que empujas y, si toca lo que le importa, levanta una máquina limpia, instala todo desde cero, corre la medición y marca el commit en verde o en rojo. No se cansa, no tiene prisa y no se le olvida.</p>
+
+<p>La pieza que lo hace posible ya estaba construida en el libro 13: el modo <code>--ci</code>, que devuelve un <strong>código de salida</strong> — 0 si pasa, 1 si bloquea. Es el único idioma que entiende una máquina. Lo que queda aquí es darle un cuerpo donde vivir.</p>
+
+<h2><span class="num">02</span>El CI no tenía CV</h2>
+
+<p>Primer tropiezo, y de los buenos, porque no aparece hasta que lo intentas de verdad.</p>
+
+<p>El agente lee el CV de <code>datos_personales/cv_denys.md</code>. Esa carpeta está <strong>fuera del control de versiones a propósito</strong>: lleva teléfono y dirección, y el repositorio es público. En tu Mac el fichero está ahí desde siempre, así que el agente nunca se ha quejado. Pero un runner de GitHub arranca de una copia limpia del repositorio — y en el repositorio ese fichero no existe.</p>
+
+<p>Cuántos casos dependían de él:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Casos</th><th>Herramienta</th><th>¿Necesita el CV?</th></tr>
+  <tr><td>3 casos de ofertas</td><td class="n">analizar_oferta</td><td class="ok">no</td></tr>
+  <tr><td>2 casos de encaje</td><td class="n">match_cv</td><td class="no">sí</td></tr>
+  <tr><td>3 casos de carta</td><td class="n">redactar_borrador</td><td class="no">sí</td></tr>
+</table>
+</div>
+
+<p><strong>Cinco de ocho.</strong> Sin resolverlo, el CI habría nacido reventando justo en los casos que más costó arreglar — el CEFR y la numerología.</p>
+
+<h3>Por qué un secreto y no un CV de mentira</h3>
+
+<p>La salida obvia sería inventar un CV falso, sin datos personales, y guardarlo en el repositorio. Es más limpio, más reproducible y no exige secretos. Y aun así se descartó, por una razón que no es de seguridad sino de <strong>medición</strong>:</p>
+
+<blockquote>Los listones de <code>umbral.json</code> se calibraron sobre trece corridas hechas con <em>ese</em> CV. Si el CI mide otro CV, ya no mide lo mismo — y una puerta calibrada contra una realidad distinta de la que vigila no vigila nada.</blockquote>
+
+<p>Así que el CV viaja como <strong>secreto del repositorio</strong>: cifrado, invisible en la interfaz una vez guardado, materializado en el runner al empezar y muerto con la máquina al terminar. El paso que lo escribe imprime solo el tamaño en bytes, jamás el contenido. Y si el secreto falta, el trabajo se detiene ahí con un error explícito en vez de correr a medias: <strong>fail-closed</strong>, el mismo criterio que el portero del token en la API.</p>
+
+<h2><span class="num">03</span>Un log público es un log público</h2>
+
+<p>Este es el filo que de verdad importa, y es fácil no verlo.</p>
+
+<p>El evaluador imprimía, por cada intento, el motivo de su veredicto. En tu portátil eso es diagnóstico puro: te dice <em>por qué</em> falló un caso citando lo que el modelo escribió. Pero esos motivos citan la salida del modelo — y una carta de presentación lleva dentro la firma del CV, con teléfono y correo.</p>
+
+<p>En un repositorio público, los registros de las ejecuciones también son públicos.</p>
+
+<div class="nota">
+  <span class="et">El matiz que se escapa</span>
+  GitHub enmascara los secretos en los registros: donde aparezca el valor exacto de la clave, escribe <code>***</code>. Pero solo enmascara <strong>el valor literal</strong>. Lo que el programa <em>derive</em> de ese secreto —una carta generada a partir del CV— es texto nuevo que la plataforma no reconoce, y sale tal cual.
+</div>
+
+<p>El arreglo es de una línea y de criterio: en modo máquina, el detalle por intento se calla. La puerta ya emite <code>caso: nota ≥ listón</code>, que es todo lo que un CI necesita para decidir. Si una fila cae, la reproduces en tu Mac sin <code>--ci</code> y tienes el diagnóstico completo. <strong>El diagnóstico es para el humano; el veredicto, para la máquina.</strong></p>
+
+<h3>Verificarlo sin gastar un céntimo</h3>
+
+<p>Se comprobó con una sonda: interceptar la función que corre cada caso, hacer que devuelva resultados inventados cuyo motivo contiene un teléfono señuelo, y ejecutar el programa dos veces —con y sin <code>--ci</code>— capturando lo que imprime.</p>
+
+<pre>✓ --ci NO filtra el dato del CV
+✓ sin --ci SÍ conservas el diagnóstico
+✓ la puerta sigue emitiendo su veredicto</pre>
+
+<p>Cero llamadas a la API. Es el mismo truco del espía de la Fase 1: para comprobar una decisión de programa no hace falta pagar el trabajo real, basta con falsificar el entorno alrededor.</p>
+
+<h2><span class="num">04</span>El simulacro del checkout limpio</h2>
+
+<p>Antes de publicar nada, una precaución aprendida a golpes. En la Fase 1 el <code>Dockerfile</code> copiaba ficheros por lista blanca y <code>prompts.py</code> no estaba en la lista: en el Mac todo funcionaba, en la nube habría reventado. La forma de la trampa se repite aquí, con otro disfraz — <em>lo que funciona en tu máquina puede estar apoyándose en algo que tu máquina tiene y el repositorio no</em>.</p>
+
+<p>Así que se reconstruyó el punto de vista del runner: exportar <strong>solo lo que git conoce</strong> a una carpeta aparte y arrancar ahí el evaluador en seco. Si arranca, lo que hay en el repositorio basta. Si no, mejor descubrirlo en dos segundos que en el minuto tres de una corrida pagada.</p>
+
+<h2><span class="num">05</span>El permiso que GitHub te niega a propósito</h2>
+
+<p>El primer intento de publicar fue rechazado:</p>
+
+<pre><b>refusing to allow an OAuth App to create or update workflow</b>
+<i>`.github/workflows/puerta-agente.yml` without `workflow` scope</i></pre>
+
+<p>Traducido: <em>tu credencial puede escribir código, pero no puede crear tareas automáticas.</em></p>
+
+<p>No es un capricho. Un workflow se ejecuta <strong>con acceso a tus secretos</strong>. Quien pueda crear uno puede escribir un workflow que imprima tu clave de API y quedarse con ella. Por eso GitHub trata «hacer push» y «crear un automatismo» como dos privilegios distintos, aunque ambos sean escribir un fichero en el repositorio.</p>
+
+<div class="clave">
+  <span class="et">La idea que se lleva uno</span>
+  Los permisos no se reparten por <em>dónde</em> escribes, sino por <em>qué consigues</em> escribiendo ahí. Un fichero en <code>.github/workflows/</code> no es un fichero más: es código que la plataforma ejecutará con tus llaves en la mano.
+</div>
+
+<h2><span class="num">06</span>La prueba del rojo</h2>
+
+<p>La puerta se estrenó en verde. Podría haberse dado por buena ahí, y habría sido un error:</p>
+
+<blockquote>Una puerta que solo has visto pasar es una puerta en la que confías por fe.</blockquote>
+
+<p>Que el código diga <code>sys.exit(1)</code> no demuestra que GitHub vaya a pintar la corrida en rojo, ni que el fallo vaya a ser visible. Entre la intención y el efecto hay una plataforma entera. Así que se provocó el fallo a propósito: subir el listón de un caso a <strong>1.1</strong>, un valor inalcanzable por construcción, porque la nota máxima posible es 1.0.</p>
+
+<pre>  ✓ of_bug_alternativa_o: 1.0 ≥ 1.0
+  <b>✗ of_control_compuesto_y: 1.0 &lt; 1.1  (5/5)</b>
+  ✓ cv_bug_cefr_b2: 1.0 ≥ 0.8
+  ✓ cv_control_bloqueante_real: 1.0 ≥ 1.0
+  ✓ carta_bug_numerologia: 1.0 ≥ 0.8
+  ✓ carta_control_sigue_siendo_carta: 1.0 ≥ 0.9
+  · of_bug_rango_python_o: 0.0 ≥ 0.0
+  ✓ carta_bug_rango_numerologia: 1.0 ≥ 0.8
+<b>BLOQUEA ❌</b>
+<i>##[error]Process completed with exit code 1.</i></pre>
+
+<p>El detalle más elocuente está entre paréntesis: <strong>(5/5)</strong>. El caso salió perfecto —cinco de cinco— y la puerta lo bloqueó igualmente. Eso demuestra que quien decide es <code>umbral.json</code> y no el resultado, que es justo lo que se le pide a un guardia calibrado: obedecer al criterio, no a la impresión.</p>
+
+<p>La corrida siguiente revierte el sabotaje y vuelve a verde. Las dos quedan en el historial del repositorio, una al lado de la otra: la prueba de que el guardia sabe hacer las dos cosas.</p>
+
+<h3>Un regalo que no se buscaba</h3>
+
+<p>Tres corridas seguidas dieron <strong>exactamente</strong> <code>bugs 0.8 · controles 1.0 · global 0.875</code>, en máquinas distintas y en momentos distintos. Conviene recordar de dónde se venía: dos corridas de configuración idéntica llegaron a dar 0.833 y 0.9, y ese hueco fue lo que enseñó a no leer diferencias pequeñas como si fueran señales.</p>
+
+<p>La diferencia entre entonces y ahora son las <strong>repeticiones</strong>: 5 antes, 20 ahora en los casos estocásticos. Subirlas parecía burocracia. Se ve aquí que no lo era: <em>medir más veces no cambia el modelo, cambia lo que puedes afirmar sobre él.</em></p>
+
+<h2><span class="num">07</span>El canario: lo que la puerta no puede ver</h2>
+
+<p>La puerta corre cuando empujas algo. Protege de <strong>tus</strong> cambios. Pero hay una forma de romperse que no llega nunca por un push tuyo.</p>
+
+<p>Un prompt no es código compilado: son instrucciones en castellano interpretadas por un modelo que <strong>no es una constante</strong>. OpenAI actualiza <code>gpt-4o-mini</code> sin avisar. El mismo commit de siempre, sin una línea tocada, puede empezar a producir peores resultados. Y como nadie ha empujado nada, la puerta no llega a abrirse.</p>
+
+<p>De ahí el <strong>canario</strong>: una corrida programada que se ejecuta sola, sin que nadie toque nada. Su valor está precisamente en medir cuando <em>no</em> ha cambiado nada, porque entonces cualquier movimiento en las notas tiene un solo culpable posible.</p>
+
+<div class="clave">
+  <span class="et">Dos vigilantes, dos preguntas</span>
+  <strong>La puerta</strong> pregunta: <em>¿ha roto algo lo que acabo de escribir?</em><br>
+  <strong>El canario</strong> pregunta: <em>¿sigue siendo cierto lo que medí ayer?</em>
+</div>
+
+<h3>Aquí sí entra el juez</h3>
+
+<p>El juez de estilo —un modelo que lee la carta y puntúa arranque, voz y enganche— se quedó fuera de la puerta a propósito: es caro y es subjetivo, y nadie debería quedarse bloqueado porque a un modelo le pareciera que su carta tenía poco gancho.</p>
+
+<p>Pero en el canario tiene todo el sentido, porque la deriva de un modelo se manifiesta antes en el estilo que en las reglas. Una carta puede seguir pasando todos los asserts —longitud correcta, sin numerología, firma bien puesta— y aun así <strong>haber dejado de sonar a Denys</strong>. Eso no lo caza una regla; lo caza un lector. Y aquí el juez informa sin bloquear a nadie.</p>
+
+<h3>Semanal, no nocturna</h3>
+
+<p>La cadencia también es una decisión de coste. Cada corrida del canario son 85 llamadas al modelo pequeño más 60 al juez, que es más caro: unos doce minutos. Diaria, en un repositorio que se toca un par de veces por semana, es pagar siete veces por medir lo mismo. Semanal cubre la deriva de sobra y cuesta la séptima parte.</p>
+
+<div class="nota">
+  <span class="et">Trampa conocida</span>
+  Las tareas programadas de GitHub solo corren en la rama principal, pueden retrasarse en horas punta, y <strong>se desactivan solas tras 60 días sin actividad en el repositorio</strong>. Si el canario deja de cantar, hay que mirar por qué antes de celebrarlo.
+</div>
+
+<h2><span class="num">08</span>Cuándo se pide una justificación</h2>
+
+<p>Un arreglo pequeño que enseña algo mayor. El evaluador exigía <code>--nota</code> —la frase que explica <em>qué cambiaste</em>— siempre que lo corrías tú. También en las corridas en seco, que no llegan a ejecutar nada.</p>
+
+<p>Es lo que se llama un <strong>papercut</strong>: no rompe nada, pero incordia cada vez que lo tocas. Una puerta que abre bien y chirría. Distinguirlo de un fallo importa: un fallo da un resultado incorrecto; un papercut da el resultado correcto obligándote a un rodeo — en este caso, colar un <code>--ci</code> que no venía a cuento solo para esquivar la exigencia.</p>
+
+<p>La regla honesta se ve al preguntar <em>para qué existe</em> la nota. No es un comentario decorativo: es la columna «cambio aplicado» de la bitácora. Existe para justificar <strong>una fila del historial</strong>. Luego se pide exactamente cuando va a escribirse una fila, y no antes.</p>
+
+<div class="clave">
+  <span class="et">Por qué el CI está exento</span>
+  Una máquina no cambió nada: solo vigila. No tiene nada que contar, y su corrida <strong>no escribe en el historial</strong>. Esa bitácora es de Denys —una fila por decisión suya— y un automatismo de los lunes la llenaría de ruido que nadie decidió.
+</div>
+
+<h2><span class="num">09</span>Lo que queda abierto</h2>
+
+<ul>
+  <li><strong>El CV vive fuera del control de versiones.</strong> Es la única entrada de la báscula que no dispara nada al cambiar: actualizar el secreto no es un push, así que las notas podrían moverse sin aviso. El canario lo cazaría, con hasta siete días de retraso.</li>
+  <li><strong>La banda de longitud de las cartas</strong> sigue siendo una decisión de producto pendiente — cuántas palabras se quieren, no cuántas tolera el assert. Es barata de cambiar: el historial guarda el recuento de cada intento, así que se puede repuntuar entero sin llamar a la API.</li>
+  <li><strong>La sonda de redundancia</strong> (<code>of_bug_rango_python_o</code>) sigue fuera de la puerta con listón 0.0. Es una observación abierta, no un estándar alcanzado. El día que se arregle, sube.</li>
+</ul>
+
+<p class="marca">· · ·</p>
+
+<footer>
+Libro 14 · Artefacto 5 · Anexo CI/CD (Fases 3–4) · 21 jul 2026<br>
+Sigue a <a href="13_el_portero_del_repositorio.html">13 · El portero del repositorio</a> · protocolo ds-nexus
+</footer>
+</div>
+
+<script>
+(function(){
+  var raiz=document.documentElement, btn=document.getElementById('tema');
+  function pinta(t){ raiz.setAttribute('data-theme',t); btn.textContent = t==='dark' ? 'Día' : 'Noche';
+                     try{localStorage.setItem('a5ci-tema',t)}catch(e){} }
+  var g=null; try{g=localStorage.getItem('a5ci-tema')}catch(e){}
+  pinta(g || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  btn.addEventListener('click',function(){
+    pinta(raiz.getAttribute('data-theme')==='dark'?'light':'dark');
+  });
+
+  var hora=document.getElementById('hora'), velo=document.getElementById('velo');
+  function calor(v){ velo.style.opacity=(v/100*0.42).toFixed(3);
+                     try{localStorage.setItem('a5ci-hora',v)}catch(e){} }
+  var h=null; try{h=localStorage.getItem('a5ci-hora')}catch(e){}
+  if(h!==null){ hora.value=h; }
+  calor(hora.value);
+  hora.addEventListener('input',function(){ calor(this.value); });
+})();
+</script>
