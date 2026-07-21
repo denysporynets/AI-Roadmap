@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────
+# EL CANARIO DEL MODELO · corrida programada, con juez de estilo
+# ─────────────────────────────────────────────────────────────
+# NO es la puerta. La puerta (puerta-agente.yml) corre en cada push y te protege
+# de TUS cambios. Esto corre sola, sin que nadie toque nada, y vigila algo que la
+# puerta no puede ver: que el modelo se mueva bajo tus pies.
+#
+# gpt-4o-mini no es una constante. OpenAI lo actualiza sin avisarte, y tus prompts
+# —que son instrucciones en castellano, no código compilado— pueden degradarse en
+# silencio con el mismo commit de siempre. Si un día esto amanece en rojo sin que
+# hayas tocado una línea, el cambio no es tuyo: es del modelo. Eso es justo lo que
+# se quiere saber, y es un dato que solo se consigue midiendo cuando NO cambias nada.
+#
+# Aquí SÍ entra el juez de estilo (--juez, gpt-4o), que en la puerta se queda fuera:
+# una carta puede pasar todos los asserts y aun así dejar de sonar a Denys. Esa
+# deriva no la cazan las reglas, la caza un lector. Es caro y subjetivo, así que su
+# sitio es este —una corrida tranquila que no bloquea a nadie— y no un push.
+
+name: Canario del modelo
+
+on:
+  schedule:
+    # Lunes 06:00 UTC. SEMANAL, no nocturna, a propósito: cada corrida son 85
+    # llamadas + 60 al juez (gpt-4o, más caro que el mini) ≈ 12 min. Diaria, en un
+    # repo que se toca un par de veces por semana, es pagar siete veces por medir
+    # lo mismo. Si algún día se quiere más fina, es esta línea.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:        # y cuando quieras mirarlo tú
+
+# Aviso de GitHub: los workflows programados solo corren en la rama por defecto, no
+# son puntuales (pueden retrasarse en horas punta) y se DESACTIVAN solos tras 60
+# días sin actividad en el repo. Si el canario deja de cantar, míralo antes de
+# celebrarlo.
+
+jobs:
+  canario:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40        # 145 llamadas secuenciales; el resto es margen
+
+    defaults:
+      run:
+        working-directory: 4_Agente_de_busqueda_de_empleo
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: 4_Agente_de_busqueda_de_empleo/requirements.txt
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Materializar el CV desde el secreto
+        env:
+          CV_MARKDOWN: ${{ secrets.CV_MARKDOWN }}
+        run: |
+          if [ -z "$CV_MARKDOWN" ]; then
+            echo "::error::Falta el secreto CV_MARKDOWN."
+            exit 1
+          fi
+          mkdir -p datos_personales
+          printf '%s' "$CV_MARKDOWN" > datos_personales/cv_denys.md
+          echo "CV materializado ($(wc -c < datos_personales/cv_denys.md) bytes)"
+
+      - name: Correr la báscula con juez de estilo
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # --ci por dos motivos, no uno: sale con código de salida (así el canario
+        # puede ponerse rojo) y NO escribe en el historial. Esa bitácora es de
+        # Denys, una fila por decisión suya; una corrida automática de los lunes
+        # la llenaría de ruido que nadie decidió.
+        #
+        # El juez solo INFORMA: sus notas 1-5 se imprimen, pero la puerta de
+        # umbral.json sigue mirando únicamente los asserts. Nadie se queda en rojo
+        # porque a un modelo le pareciera que la carta tenía menos gancho.
+        run: python evaluacion/evaluar_prompts.py --ci --juez

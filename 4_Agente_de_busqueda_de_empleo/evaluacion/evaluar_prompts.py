@@ -374,8 +374,14 @@ def main() -> None:
                         "(gpt-4o): arranque/voz/enganche, 1-5. Cuesta una llamada extra "
                         "por carta; opt-in a propósito (asserts siempre, juez a demanda).")
     args = p.parse_args()
-    if not args.ci and not args.nota:
-        p.error("--nota es obligatoria cuando corres tú (usa --ci para el modo máquina)")
+    # --nota justifica una FILA DEL HISTORIAL: es la columna "cambio aplicado".
+    # Así que se exige exactamente cuando va a escribirse una fila, y no antes.
+    # No la escriben: --ci (una máquina no cambió nada, solo vigila) ni --seco
+    # (no llega a correr nada). Pedirla ahí es pedir que justifiques algo que no
+    # va a pasar — y te obliga a colar un --ci que no viene a cuento.
+    if not args.ci and not args.seco and not args.nota:
+        p.error("--nota es obligatoria cuando la corrida va a escribir en el historial "
+                "(no hace falta con --ci ni con --seco)")
 
     casos = json.loads(RUTA_CASOS.read_text(encoding="utf-8"))["casos"]
 
