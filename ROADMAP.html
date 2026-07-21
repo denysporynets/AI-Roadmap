@@ -1,992 +1,1063 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Ruta de Data Science a AI Engineering: seis artefactos en producción, su definición de hecho y el material de apoyo. Bitácora de Denys Porynets.">
+<meta name="author" content="Denys Porynets">
 <meta name="color-scheme" content="light dark">
 <title>Ruta AI Engineering — Bitácora de artefactos</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<noscript><style>.reveal{opacity:1;filter:none;transform:none}.phase-body{display:block!important}</style></noscript>
 <script>
-  // Aplica el tema guardado antes del primer pintado (evita parpadeo)
-  (function() {
+  // Aplica el tema guardado ANTES del primer pintado: si esto se deja para el
+  // script del final del <body>, el navegador ya ha pintado la paleta clara y
+  // quien abre en modo noche ve un destello blanco en cada carga.
+  (function () {
     try {
-      var t = localStorage.getItem('ai-eng-roadmap-theme');
-      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-    } catch(e) {}
+      var CLAVE = "portfolio-tema", ANTIGUA = "ai-eng-roadmap-theme";
+      var t = localStorage.getItem(CLAVE);
+      if (t !== "light" && t !== "dark") {
+        // Migración: quien ya eligió tema en la versión anterior de esta página
+        // guardó su preferencia bajo otra clave; se respeta en vez de ignorarla.
+        var viejo = localStorage.getItem(ANTIGUA);
+        if (viejo === "light" || viejo === "dark") { t = viejo; localStorage.setItem(CLAVE, t); }
+      }
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    } catch (e) {}
   })();
 </script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg:        #0d1117;
-    --bg-card:   #151b23;
-    --bg-card-hover: #1a2230;
-    --ink:       #e6edf3;
-    --muted:     #7d8590;
-    --border:    #2a3340;
-    --amber:     #f0a500;
-    --amber-dim: #5c4419;
-    --green:     #3fb950;
-    --green-dim: #1d3a23;
-    --blue:      #4a8cff;
-    --warn:      #d29922;
-    /* tokens conmutables día/noche */
-    --hover:      rgba(255,255,255,0.03);
-    --dod-bg:     rgba(255,255,255,0.02);
-    --grad-start: #1a1410;
-    --warn-ink:   #d8c08a;
-    --faint:      #2a3340;
+    /* — latón sobre papel (idéntico a la home) — */
+    --paper:    #DEDCD5;
+    --paper-2:  #E5E4DE;
+    --paper-3:  #D6D3C8;
+    --ink:      #20272A;
+    --pine:     #1E3A34;
+    --signal:   #C8502A;
+    --signal-ink:#A83E1E;
+    --brass:    #9A7420;
+    --sage:     #6E7A6F;
+    --line:     rgba(30,58,52,0.16);
+    --line-2:   rgba(30,58,52,0.09);
+
+    --font-display: "Spectral", Georgia, "Times New Roman", serif;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --measure: 65ch;
+    --pad: clamp(20px, 5vw, 40px);
   }
 
-  /* ── TEMA CLARO ── paleta reutilizada por el modo auto y el manual ── */
-  /* Auto: aplica claro si el sistema lo prefiere Y no has forzado oscuro */
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      --bg:        #f7f4ee;
-      --bg-card:   #ffffff;
-      --bg-card-hover: #f1ede4;
-      --ink:       #1c2127;
-      --muted:     #5c6470;
-      --border:    #e3ddd0;
-      --amber:     #a86a05;
-      --amber-dim: #f3e7c8;
-      --green:     #1f8a3b;
-      --green-dim: #d7efdc;
-      --blue:      #1f5fc0;
-      --warn:      #9a6700;
-      --hover:      rgba(0,0,0,0.035);
-      --dod-bg:     rgba(0,0,0,0.025);
-      --grad-start: #fbf2dd;
-      --warn-ink:   #7a5a00;
-      --faint:      #cfc8ba;
-    }
-  }
-  /* Manual: claro forzado por el botón, gane lo que diga el sistema */
-  :root[data-theme="light"] {
-    --bg:        #f7f4ee;
-    --bg-card:   #ffffff;
-    --bg-card-hover: #f1ede4;
-    --ink:       #1c2127;
-    --muted:     #5c6470;
-    --border:    #e3ddd0;
-    --amber:     #a86a05;
-    --amber-dim: #f3e7c8;
-    --green:     #1f8a3b;
-    --green-dim: #d7efdc;
-    --blue:      #1f5fc0;
-    --warn:      #9a6700;
-    --hover:      rgba(0,0,0,0.035);
-    --dod-bg:     rgba(0,0,0,0.025);
-    --grad-start: #fbf2dd;
-    --warn-ink:   #7a5a00;
-    --faint:      #cfc8ba;
+  :root[data-theme="dark"] {
+    --paper:    #161F1C;
+    --paper-2:  #1D2724;
+    --paper-3:  #26302C;
+    --ink:      #E4E0D5;
+    --pine:     #A9C6B8;
+    --signal:   #D6603C;
+    --signal-ink:#E8825C;
+    --brass:    #CBA24D;
+    --sage:     #93A096;
+    --line:     rgba(196,214,204,0.16);
+    --line-2:   rgba(196,214,204,0.09);
   }
 
-  html, body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 74px; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--paper);
     color: var(--ink);
-    min-height: 100vh;
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    transition: background .4s ease, color .4s ease;
   }
 
-  .wrap {
-    max-width: 880px;
-    margin: 0 auto;
-    padding: 48px 24px 80px;
+  :root[data-theme="dark"] .bg-grain { mix-blend-mode: screen; opacity: 0.05; }
+  :root[data-theme="dark"] .bg-contours { opacity: 0.12; }
+  :root[data-theme="dark"] .btn-primary { background: #C24A20; color: #FDF4EC; }
+  :root[data-theme="dark"] .btn-primary:hover { background: #A83E1E; }
+
+  a { color: var(--signal-ink); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 2px; }
+
+  /* ─── FONDO: carta náutica ─── */
+  .bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .bg-grain {
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.16; mix-blend-mode: multiply;
   }
+  .bg-contours { position: absolute; left: 0; right: 0; top: -20vh; height: 160vh; width: 100%; opacity: 0.07; will-change: transform; }
+  .bg-contours path { fill: none; stroke: var(--pine); }
 
-  /* ── HEADER ────────────────────────────────────────── */
-  .hero { margin-bottom: 40px; }
+  main, header.nav { position: relative; z-index: 1; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding-inline: var(--pad); }
 
-  .hero-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--amber);
-    margin-bottom: 10px;
+  .tag {
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--sage);
   }
+  .num { font-variant-numeric: tabular-nums; }
 
-  .hero-title {
-    font-family: 'Fraunces', serif;
-    font-weight: 300;
-    font-size: clamp(32px, 5vw, 46px);
-    line-height: 1.05;
-    letter-spacing: -0.5px;
-    margin-bottom: 14px;
+  /* ─── NAV (misma que la home + vuelta al portfolio) ─── */
+  header.nav {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
   }
-  .hero-title strong { font-weight: 600; color: var(--amber); }
-
-  .hero-sub {
-    font-size: 14.5px;
-    color: var(--muted);
-    line-height: 1.6;
-    max-width: 600px;
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 58px; }
+  .brand { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em; color: var(--pine); }
+  .brand b { color: var(--signal-ink); font-weight: 600; }
+  .back {
+    font-family: var(--font-mono); font-size: 0.78rem; color: var(--sage);
+    display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
   }
-  .hero-sub strong { color: var(--ink); font-weight: 600; }
-
-  /* ── PROGRESS BAR (signature element) ─────────────────── */
-  .progress-panel {
-    margin-top: 28px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px 22px;
+  .back:hover { color: var(--ink); text-decoration: none; }
+  .back .arw { transition: transform .16s ease; display: inline-block; }
+  .back:hover .arw { transform: translateX(-3px); }
+  .nav-right { display: flex; align-items: center; gap: 18px; }
+  .theme-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%; flex: none;
+    border: 1px solid var(--line); background: transparent; color: var(--pine); cursor: pointer;
+    transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
   }
+  .theme-toggle:hover { background: var(--paper-3); border-color: var(--brass); color: var(--brass); transform: rotate(-12deg); }
+  .theme-toggle svg { width: 17px; height: 17px; display: block; }
+  .theme-toggle .ico-sun { display: none; }
+  :root[data-theme="dark"] .theme-toggle .ico-sun { display: block; }
+  :root[data-theme="dark"] .theme-toggle .ico-moon { display: none; }
+  @media (max-width: 560px) { .brand { display: none; } }
 
-  .progress-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 12px;
+  /* ─── HERO ─── */
+  .hero { padding-block: clamp(48px, 9vw, 84px) clamp(28px, 5vw, 44px); }
+  .hero .eyebrow { display: block; margin-bottom: 22px; }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(2.2rem, 5.8vw, 4rem); line-height: 1.06; letter-spacing: -0.015em;
+    text-wrap: balance; margin: 0 0 20px; color: var(--pine);
   }
+  .hero h1 em { font-style: italic; color: var(--signal); }
+  .hero .lede { max-width: 58ch; font-size: 1.04rem; margin: 0; }
+  .hero .lede strong { font-weight: 600; color: var(--pine); }
 
-  .progress-label {
-    font-size: 12px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    font-weight: 600;
+  /* ─── ESCALA DE SONDA (el progreso como instrumento, no como barra de carga) ─── */
+  .scale {
+    margin-top: clamp(30px, 5vw, 46px);
+    background: color-mix(in srgb, var(--paper-2) 82%, transparent);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 20px 22px 18px; max-width: 640px;
+    backdrop-filter: blur(2px);
   }
-
-  .progress-count {
-    font-family: 'DM Mono', monospace;
-    font-size: 13px;
-    color: var(--ink);
-  }
-  .progress-count strong { color: var(--amber); }
-
-  .progress-track {
-    position: relative;
-    height: 8px;
-    background: var(--bg);
-    border-radius: 4px;
+  .scale-head { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; margin-bottom: 20px; }
+  .scale-read { font-family: var(--font-mono); font-size: 0.82rem; color: var(--sage); }
+  .scale-read b { font-size: 1.5rem; font-weight: 600; color: var(--signal-ink); letter-spacing: -0.01em; }
+  .scale-rail { position: relative; height: 26px; }
+  .scale-track {
+    position: absolute; left: 0; right: 0; top: 9px; height: 8px;
+    border: 1px solid var(--line); border-radius: 1px; background: var(--paper-3);
     overflow: hidden;
-    border: 1px solid var(--border);
+  }
+  .scale-fill {
+    height: 100%; width: 0;
+    background: repeating-linear-gradient(135deg, var(--brass) 0 3px, color-mix(in srgb, var(--brass) 62%, transparent) 3px 6px);
+    transition: width .9s cubic-bezier(.2,.7,.2,1);
+  }
+  /* graduación: marcas de instrumento cada unidad, la de índice más larga */
+  .scale-ticks { position: absolute; left: 0; right: 0; top: 0; height: 26px; }
+  .scale-ticks i {
+    position: absolute; top: 0; width: 1px; background: var(--line);
+    height: 7px; transform: translateX(-0.5px);
+  }
+  .scale-ticks i.idx { height: 26px; background: color-mix(in srgb, var(--pine) 34%, transparent); }
+  .scale-marker {
+    position: absolute; top: 19px; width: 0; height: 0;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-bottom: 7px solid var(--signal);
+    /* -5px centra el triángulo (10px de ancho visual) sobre su marca de graduación.
+       Sí, en 0/6 y en 6/6 asoma 5px fuera del raíl — es el precio de ir centrado
+       en la marca, es simétrico en los dos extremos y no recorta nada. */
+    transform: translateX(-5px);
+    transition: left .9s cubic-bezier(.2,.7,.2,1);
+  }
+  .scale-labels {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 0.7rem; color: var(--sage); margin-top: 4px;
+  }
+  .scale-note { font-family: var(--font-mono); font-size: 0.76rem; color: var(--sage); margin: 16px 0 0; line-height: 1.5; }
+  .scale-note b { color: var(--signal-ink); font-weight: 500; }
+  .scale-foot { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line-2); }
+  .scale-foot .tag { letter-spacing: 0.04em; }
+  .reset-btn {
+    margin-left: auto; font-family: var(--font-mono); font-size: 0.72rem;
+    color: var(--sage); background: transparent; border: 1px solid var(--line);
+    border-radius: 3px; padding: 5px 11px; cursor: pointer;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .reset-btn:hover { color: var(--ink); border-color: var(--brass); }
+
+  /* ─── SEPARADOR con marcas de instrumento ─── */
+  .rule {
+    height: 10px; border: 0; margin: 0;
+    background:
+      linear-gradient(var(--line), var(--line)) left bottom / 100% 1px no-repeat,
+      repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 28px) left bottom / 100% 6px no-repeat;
   }
 
-  .progress-fill {
-    position: absolute;
-    top: 0; left: 0; height: 100%;
-    background: linear-gradient(90deg, var(--amber-dim), var(--amber));
-    border-radius: 4px;
-    transition: width 0.5s cubic-bezier(.4,0,.2,1);
-    width: 0%;
-  }
-
-  .progress-secondary {
-    margin-top: 9px;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--muted);
-  }
-
-  .progress-state {
-    margin-top: 8px;
-    font-size: 12.5px;
-    color: var(--muted);
-    font-style: italic;
-  }
-
-  /* ── ARTEFACTOS (phases) ───────────────────────────── */
-  .phase {
-    margin-bottom: 14px;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-  .phase.complete { border-color: var(--green-dim); }
+  /* ─── FASES ─── */
+  .phases { padding-block: clamp(34px, 6vw, 56px) 0; }
+  .phase { border-top: 1px solid var(--line); }
+  .phase:last-of-type { border-bottom: 1px solid var(--line); }
 
   .phase-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 20px;
-    cursor: pointer;
-    user-select: none;
+    width: 100%; display: grid; grid-template-columns: 9ch 1fr auto auto;
+    gap: 8px 22px; align-items: baseline; text-align: left;
+    background: transparent; border: 0; cursor: pointer;
+    padding: 24px 4px; color: inherit; font: inherit;
+    transition: background .18s ease;
   }
-  .phase-header:hover { background: var(--bg-card-hover); }
-
-  .phase-marker {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--amber);
-    background: var(--amber-dim);
-    border-radius: 4px;
-    padding: 3px 7px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .phase.complete .phase-marker { color: var(--green); background: var(--green-dim); }
-
-  .phase-title-block { flex: 1; min-width: 0; }
-
-  .phase-title {
-    font-family: 'Fraunces', serif;
-    font-size: 17px;
-    font-weight: 600;
-    color: var(--ink);
-    margin-bottom: 2px;
-  }
-
-  .phase-meta { font-size: 12px; color: var(--muted); }
-
-  .phase-progress-mini {
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    color: var(--muted);
-    flex-shrink: 0;
-  }
-  .phase.complete .phase-progress-mini { color: var(--green); }
-
-  .phase-chevron {
-    color: var(--muted);
-    flex-shrink: 0;
-    transition: transform 0.25s;
-    font-size: 12px;
-  }
+  .phase-header:hover { background: color-mix(in srgb, var(--paper-2) 60%, transparent); }
+  .phase-marker { font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.05em; color: var(--sage); }
+  .phase-title-block { display: block; }
+  .phase-title { display: block; font-family: var(--font-display); font-size: 1.32rem; line-height: 1.25; color: var(--ink); margin: 0; }
+  .phase-meta { display: block; font-size: 0.86rem; color: var(--sage); margin: 5px 0 0; }
+  .phase-mini { font-family: var(--font-mono); font-size: 0.74rem; color: var(--sage); white-space: nowrap; }
+  .phase-chevron { color: var(--brass); font-size: 0.8rem; transition: transform .22s ease; display: inline-block; }
   .phase.open .phase-chevron { transform: rotate(90deg); }
-
-  .phase-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
+  /* una fase entregada del todo lleva su marca al margen */
+  .phase.sealed .phase-marker::after {
+    content: "✕"; color: var(--signal); margin-left: 8px; font-size: 0.7rem; vertical-align: 1px;
   }
-  .phase.open .phase-body { max-height: 1800px; }
+  @media (max-width: 700px) {
+    .phase-header { grid-template-columns: 1fr auto; gap: 6px 14px; }
+    .phase-marker { grid-column: 1; }
+    .phase-chevron { grid-column: 2; grid-row: 1; }
+    .phase-title-block { grid-column: 1 / -1; }
+    .phase-mini { grid-column: 1 / -1; }
+  }
+
+  .phase-body { display: none; padding: 0 4px 34px; }
+  .phase.open .phase-body { display: block; }
 
   .phase-why {
-    padding: 0 20px 14px 20px;
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.55;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 8px;
+    font-family: var(--font-display); font-size: 1.04rem; line-height: 1.55;
+    color: var(--pine); max-width: var(--measure);
+    border-left: 2px solid var(--brass); padding: 2px 0 2px 18px; margin: 0 0 26px;
   }
+  .phase-why strong { font-weight: 600; color: var(--signal-ink); }
 
-  /* ── DELIVERABLE (the shipped artifact — the star) ── */
-  .deliverable {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    background: rgba(240,165,0,0.045);
-    border: 1px solid var(--amber-dim);
-    border-radius: 8px;
-    padding: 13px 14px;
-    margin: 2px 12px 12px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+  /* ─── EL SELLO (casilla) ─── */
+  .sello {
+    flex: none; width: 20px; height: 20px; margin-top: 3px;
+    border: 1px solid var(--line); border-radius: 2px;
+    background: color-mix(in srgb, var(--paper-2) 70%, transparent);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: border-color .18s ease, background .18s ease;
   }
-  .deliverable:hover { background: rgba(240,165,0,0.08); }
-  .deliverable.checked {
-    border-color: var(--green-dim);
-    background: rgba(63,185,80,0.07);
+  .sello svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  /* Los dos trazos se definen UNA vez (<symbol> al principio del body) y aquí se
+     instancian con <use>. El estilo se pone en el <use> porque stroke, fill y
+     stroke-dashoffset son propiedades SVG heredables: bajan solas al <path>
+     que vive dentro del símbolo. */
+  .sello use {
+    fill: none; stroke: var(--signal); stroke-width: 2.1; stroke-linecap: round;
+    stroke-dasharray: 24; stroke-dashoffset: 24;
+    transition: stroke-dashoffset .34s cubic-bezier(.3,.8,.3,1);
   }
-  .deliverable .checkbox {
-    width: 19px; height: 19px;
-    border: 1.5px solid var(--amber);
-    border-radius: 5px;
-    flex-shrink: 0;
-    margin-top: 2px;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
-  }
-  .deliverable.checked .checkbox { background: var(--green); border-color: var(--green); }
-  .deliverable .checkbox svg { width: 12px; height: 12px; opacity: 0; transition: opacity 0.15s; }
-  .deliverable.checked .checkbox svg { opacity: 1; }
-  .deliverable-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--amber);
-    margin-bottom: 3px;
-  }
-  .deliverable.checked .deliverable-label { color: var(--green); }
-  .deliverable-text { font-size: 13.5px; line-height: 1.5; color: var(--ink); font-weight: 500; }
-  .deliverable.checked .deliverable-text { color: var(--muted); }
-
-  /* ── DEFINICIÓN DE HECHO ──────────────────────────── */
-  .dod {
-    margin: 0 12px 12px;
-    padding: 10px 13px;
-    border-left: 2px solid var(--amber);
-    background: var(--dod-bg);
-    border-radius: 0 6px 6px 0;
-    font-size: 12.5px; line-height: 1.55; color: var(--muted);
-  }
-  .dod strong {
-    color: var(--amber);
-    font-family: 'DM Mono', monospace;
-    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
-    display: block; margin-bottom: 4px;
-  }
-  .dod em { color: var(--ink); font-style: normal; }
-
-  /* ── WARNING (privacidad) ─────────────────────────── */
-  .warn {
-    margin: 0 12px 12px;
-    padding: 9px 13px;
-    border-left: 2px solid var(--warn);
-    background: rgba(210,153,34,0.06);
-    border-radius: 0 6px 6px 0;
-    font-size: 12px; line-height: 1.5; color: var(--warn-ink);
-  }
-  .warn strong { color: var(--warn); }
-
-  /* ── SUPPORT SECTION ──────────────────────────────── */
-  .support-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
-    color: var(--muted);
-    margin: 6px 18px 0;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .support-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-  .item-list { padding: 4px 12px 14px 12px; }
-  .item-list.steps { padding-bottom: 4px; }
+  .item:hover .sello { border-color: var(--brass); }
+  .item.done .sello { border-color: color-mix(in srgb, var(--signal) 45%, transparent); background: transparent; }
+  .item.done .sello use { stroke-dashoffset: 0; }
+  .item.done .sello use:nth-of-type(2) { transition-delay: .09s; }
 
   .item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 8px 8px;
-    border-radius: 6px;
-    cursor: pointer;
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 9px 10px; margin-left: -10px; border-radius: 3px;
+    cursor: pointer; user-select: none;
+    transition: background .15s ease;
   }
-  .item:hover { background: var(--hover); }
+  .item:hover { background: color-mix(in srgb, var(--paper-2) 70%, transparent); }
+  .item-text { font-size: 0.95rem; max-width: 62ch; transition: color .25s ease, opacity .25s ease; }
+  .item-text strong { font-weight: 600; color: var(--pine); }
+  /* marcado = asentado en el registro: la línea se apaga a tinta descolorida */
+  .item.done .item-text { color: var(--sage); opacity: 0.78; }
+  .item.done .item-text strong { color: var(--sage); font-weight: 500; }
 
-  .checkbox {
-    width: 17px; height: 17px;
-    border: 1.5px solid var(--muted);
-    border-radius: 4px;
-    flex-shrink: 0;
-    margin-top: 1px;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
+  .item-list { display: flex; flex-direction: column; margin-bottom: 4px; }
+  .support-label { margin: 24px 0 8px; display: block; }
+  .course-tag {
+    font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em;
+    color: var(--sage); border: 1px solid var(--line); border-radius: 3px;
+    padding: 1px 7px; margin-left: 9px; white-space: nowrap;
   }
-  .item.checked .checkbox { background: var(--green); border-color: var(--green); }
-  .checkbox svg { width: 11px; height: 11px; opacity: 0; transition: opacity 0.15s; }
-  .item.checked .checkbox svg { opacity: 1; }
+  .course-tag.own { color: var(--brass); border-color: color-mix(in srgb, var(--brass) 40%, transparent); }
 
-  .item-text { flex: 1; font-size: 13.5px; line-height: 1.5; color: var(--ink); }
-  .item.checked .item-text {
-    color: var(--muted);
-    text-decoration: line-through;
-    text-decoration-color: var(--border);
+  /* ─── ARTEFACTO (el entregable, destacado) ─── */
+  .deliverable {
+    background: color-mix(in srgb, var(--paper-2) 82%, transparent);
+    border: 1px solid var(--line); border-left: 3px solid var(--signal);
+    border-radius: 3px; padding: 16px 18px; margin: 0 0 14px;
+    align-items: flex-start; max-width: 68ch;
   }
-  .item.course-item .item-text { color: var(--muted); font-size: 13px; }
+  .deliverable:hover { background: var(--paper-2); }
+  .deliverable .tag { display: block; margin-bottom: 4px; }
+  .deliverable .item-text { font-size: 1rem; }
 
-  .item-text .course-name { font-weight: 500; }
-  .item-text .course-tag {
-    display: inline-block;
-    font-family: 'DM Mono', monospace;
-    font-size: 9.5px;
-    color: var(--blue);
-    background: rgba(74,140,255,0.1);
-    border-radius: 3px;
-    padding: 1px 5px;
-    margin-left: 6px;
-    vertical-align: middle;
+  /* ─── DEFINICIÓN DE HECHO ─── */
+  .dod {
+    border: 1px solid var(--line-2); border-radius: 3px;
+    padding: 14px 17px; margin: 0 0 16px; max-width: 68ch;
+    background: color-mix(in srgb, var(--paper-3) 45%, transparent);
+    font-size: 0.9rem;
   }
-  .item-text .course-tag.own { color: var(--amber); background: rgba(240,165,0,0.1); }
+  .dod .tag { display: block; margin-bottom: 5px; }
+  .dod em { font-family: var(--font-display); font-style: italic; font-size: 1.02rem; color: var(--pine); }
+  .dod .no { color: var(--sage); }
 
-  /* ── OPTIONAL BOX (fine-tuning, fuera de la espina) ── */
-  .optional-box {
-    margin-top: 16px;
-    background: var(--bg-card);
-    border: 1px dashed var(--border);
-    border-radius: 10px;
-    padding: 18px 20px;
+  .note-brass {
+    border-left: 2px solid var(--brass); padding: 4px 0 4px 16px;
+    margin: 0 0 18px; max-width: 68ch; font-size: 0.9rem; color: var(--ink);
   }
-  .opt-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 7px;
-  }
-  .opt-title {
-    font-family: 'Fraunces', serif;
-    font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 7px;
-  }
-  .opt-desc { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
-  .opt-desc .course-tag {
-    display: inline-block;
-    font-family: 'DM Mono', monospace;
-    font-size: 9.5px; color: var(--blue);
-    background: rgba(74,140,255,0.1);
-    border-radius: 3px; padding: 1px 5px; margin-left: 4px;
-    vertical-align: middle;
-  }
+  .note-brass strong { color: var(--brass); font-weight: 600; }
 
-  /* ── PRINCIPLE CALLOUT ────────────────────────────── */
-  .principle {
-    margin-top: 32px;
-    background: linear-gradient(135deg, var(--grad-start) 0%, var(--bg-card) 60%);
-    border: 1px solid var(--amber-dim);
-    border-radius: 12px;
-    padding: 24px 26px;
-    position: relative;
-    overflow: hidden;
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 0.79rem; letter-spacing: 0.02em;
+    padding: 9px 17px; border-radius: 3px; cursor: pointer;
+    border: 1px solid transparent; transition: transform .15s ease, background .15s ease;
   }
-  .principle::before {
-    content: '';
-    position: absolute;
-    top: -40%; right: -10%;
-    width: 220px; height: 220px;
-    background: radial-gradient(circle, rgba(240,165,0,0.08), transparent 70%);
-  }
-  .principle-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase;
-    color: var(--amber); margin-bottom: 10px;
-  }
-  .principle-text {
-    font-family: 'Fraunces', serif;
-    font-size: 19px; font-weight: 300; line-height: 1.4; color: var(--ink);
-    max-width: 640px;
-  }
-  .principle-text strong { font-weight: 600; color: var(--amber); }
+  .btn:hover { text-decoration: none; }
+  .btn-ghost { background: transparent; border-color: var(--line); color: var(--pine); }
+  .btn-ghost:hover { background: var(--paper-3); border-color: var(--brass); }
+  .btn-row { margin: 4px 0 20px; }
 
-  /* ── FOOTER ────────────────────────────────────────── */
-  .footer {
-    margin-top: 40px;
-    text-align: center;
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--faint);
+  /* ─── OPCIONAL + PRINCIPIO ─── */
+  .aside-block { padding-block: clamp(38px, 6vw, 56px) 0; }
+  .optional {
+    border: 1px dashed var(--line); border-radius: 4px;
+    padding: 24px 26px; max-width: 74ch;
+    background: color-mix(in srgb, var(--paper-2) 45%, transparent);
   }
-  .footer span { color: var(--amber); opacity: 0.6; }
+  .optional h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.45rem; color: var(--pine); margin: 8px 0 10px; }
+  .optional p { margin: 0; font-size: 0.94rem; color: var(--ink); opacity: 0.9; }
 
-  /* ── RESET BUTTON ──────────────────────────────────── */
-  .reset-btn {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--muted);
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 6px 12px;
-    cursor: pointer;
-    transition: all 0.15s;
+  .principle { padding-block: clamp(38px, 6vw, 60px); }
+  .principle p {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(1.3rem, 2.6vw, 1.85rem); line-height: 1.34; letter-spacing: -0.01em;
+    color: var(--pine); max-width: 30ch; margin: 14px 0 0;
   }
-  .reset-btn:hover { color: var(--ink); border-color: var(--muted); }
+  .principle p em { font-style: italic; color: var(--signal); }
 
-  .top-bar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; }
+  footer { padding-block: 40px 56px; }
+  .foot-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: baseline; }
+  .foot-row .tag a { color: var(--sage); }
+  .foot-row .tag a:hover { color: var(--signal-ink); }
 
-  @media (max-width: 600px) {
-    .wrap { padding: 32px 16px 60px; }
+  /* ─── PIEZAS PERSONALES ───
+     Marcadas con .personal = pruebas y enlaces de MI recorrido (notas de evidencia,
+     botones a mis artefactos desplegados). El método de esta página es genérico;
+     esto es lo que lo respalda. Para un build genérico (curso), basta con:
+        .personal { display: none }
+     y vaciar HORNEADO en el script (casillas a cero para que el alumno marque). */
+
+  /* ─── reveal "enfoque de instrumento" ─── */
+  .reveal { opacity: 0; transform: translateY(16px); filter: blur(7px) brightness(0.6); transition: opacity .75s ease, transform .75s cubic-bezier(.2,.7,.2,1), filter .85s ease; }
+  .reveal.revealed { opacity: 1; transform: none; filter: blur(0) brightness(1); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; filter: none; transition: none; }
+    .bg-contours { display: none; }
+    .scale-fill, .scale-marker, .sello path, .phase-chevron { transition: none; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
+<!--
+  ══ DOS PRODUCTOS, UNA FUENTE DE VERDAD ═════════════════════════════════════
+  Esta página tiene dos lecturas posibles:
+    1. MI BITÁCORA (lo que se publica hoy): el método + la prueba de que lo recorrí.
+    2. VERSIÓN GENÉRICA (curso, a futuro): solo el método, para que otro lo recorra.
 
-  <div class="top-bar">
-    <button class="reset-btn" id="themeBtn" title="Cambiar entre tema claro y oscuro">🌙 Noche</button>
-    <button class="reset-btn" id="resetBtn">Reiniciar progreso</button>
+  Para derivar la (2) desde este mismo fichero:
+    a) CSS ....... .personal { display: none }   → quita notas de evidencia y
+                                                   los botones "Ver artefacto →"
+    b) SCRIPT .... const HORNEADO = {}           → todas las casillas vacías: el
+                                                   progreso es el del alumno, no el mío
+    c) PROSA ..... reescribir a mano (verificado sobre el build genérico real):
+                     · Artefacto 2 → TÍTULO y porqué: "Corpus DOBE", 417 pág. TEA1
+                                     (genérico: "RAG sobre un corpus propio")
+                     · Artefacto 4 → porqué: Rex+Chef en DS-NEXUS
+                     · Lede del hero → "el portfolio enseña lo que está vivo"
+                   (el resto de porqués y todas las definiciones de «hecho» ya
+                    son genéricos y sirven tal cual)
+    d) MARCA ..... nav "DS-Nexus Protocol Based", pie, y el enlace ← Portfolio
+
+  Lo demás (los 6 artefactos, las definiciones de «hecho», el material de apoyo,
+  el principio rector, la escala) es genérico y sirve tal cual a los dos.
+════════════════════════════════════════════════════════════════════════════ -->
+<div class="bg" aria-hidden="true">
+  <div class="bg-grain"></div>
+  <svg class="bg-contours" id="contours" preserveAspectRatio="none" viewBox="0 0 1200 1200"></svg>
+</div>
+
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <!-- Los dos trazos del sello, definidos una sola vez y reutilizados con <use>
+       en cada casilla. Son dos símbolos y no uno para poder retrasar el segundo
+       trazo 90ms y que el aspa se lea como trazada a mano, no encendida de golpe. -->
+  <symbol id="sello-a" viewBox="0 0 20 20"><path d="M4.2 4.8 C 8.4 8.1, 12.1 11.6, 16.1 15.4"/></symbol>
+  <symbol id="sello-b" viewBox="0 0 20 20"><path d="M15.8 4.6 C 12.2 8.3, 8.1 11.9, 4.4 15.2"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="back" href="https://denysporynets.github.io/"><span class="arw">←</span> Portfolio</a>
+    <div class="nav-right">
+      <span class="brand"><b>DS-Nexus</b> Protocol Based</span>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Cambiar a modo noche" title="Modo noche / día">
+        <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
   </div>
+</header>
 
+<main>
+  <!-- HERO -->
   <div class="hero">
-    <div class="hero-eyebrow">Bitácora · columna vertebral: artefactos en producción</div>
-    <h1 class="hero-title">De Data Science a <strong>AI Engineering</strong></h1>
-    <p class="hero-sub">
-      Seis artefactos desplegados, no seis meses de cursos. La métrica de esta ruta es <strong>qué he puesto en producción y alguien usa</strong> — los cursos de DataCamp son material de apoyo colgado de cada artefacto, no el objetivo. Un sistema que sobrevive en producción pesa más que cualquier certificado.
-    </p>
+    <div class="wrap">
+      <span class="tag eyebrow reveal">Bitácora · plan de ruta y estado</span>
+      <h1 class="reveal">De Data Science a <em>AI Engineering</em></h1>
+      <p class="lede reveal">
+        El plan de trabajo detrás de los artefactos: qué hay que construir, <strong>cuándo cuenta como hecho</strong> y qué material lo apoya.
+        El portfolio enseña lo que está vivo; esta página enseña el criterio. Un sistema que sobrevive en producción pesa más que cualquier certificado.
+      </p>
 
-    <div class="progress-panel">
-      <div class="progress-top">
-        <span class="progress-label">Artefactos desplegados</span>
-        <span class="progress-count"><strong id="doneCount">0</strong> / <span id="totalCount">6</span> en producción</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="progressFill"></div>
-      </div>
-      <div class="progress-secondary"><span id="supportDone">0</span> / <span id="supportTotal">0</span> pasos y cursos de apoyo</div>
-      <div class="progress-state" id="progressState">Sin desplegar todavía. La métrica aquí no son cursos completados — son artefactos que alguien usa de verdad.</div>
-    </div>
-  </div>
-
-  <!-- ARTEFACTO 1 -->
-  <div class="phase open" data-phase="1">
-    <div class="phase-header" onclick="togglePhase(this)">
-      <span class="phase-marker">MES 1</span>
-      <div class="phase-title-block">
-        <div class="phase-title">Endpoint LLM en producción</div>
-        <div class="phase-meta">SDK directo · salida estructurada · empaquetado</div>
-      </div>
-      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
-      <span class="phase-chevron">▸</span>
-    </div>
-    <div class="phase-body">
-      <div class="phase-why">Antes de tocar frameworks, monta tú la llamada cruda. Si solo dominas la capa de LangChain, dominas algo que puede desaparecer; si entiendes el SDK por debajo, todo lo demás es conveniencia.</div>
-
-      <div class="deliverable" data-id="d1" data-deliverable="true">
-        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="deliverable-label">Artefacto</div>
-          <div class="deliverable-text">Un mini-servicio (CLI o FastAPI) que usas tú mismo: recibe input y devuelve salida estructurada llamando al LLM por SDK directo.</div>
+      <!-- escala de sonda -->
+      <div class="scale reveal">
+        <div class="scale-head">
+          <span class="tag">Artefactos entregados</span>
+          <span class="scale-read num"><b id="doneCount">0</b> / <span id="totalCount">6</span></span>
         </div>
-      </div>
-      <div class="dod"><strong>Definición de "hecho"</strong><em>Lo ejecutas desde fuera de tu editor y devuelve JSON válido de forma fiable.</em> No cuenta como hecho si solo corre dentro de un notebook.</div>
-
-      <div style="padding: 0 12px 14px;">
-        <a href="artefacto-1/" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--green); text-decoration:none; border:1px solid var(--green-dim); border-radius:6px; padding:7px 13px; display:inline-block; transition:all .15s;" onmouseover="this.style.background='rgba(63,185,80,0.08)'" onmouseout="this.style.background='transparent'">▸ Ver artefacto desplegado →</a>
-      </div>
-
-      <div class="item-list steps">
-        <div class="item" data-id="s1-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Llamada directa al SDK con <strong>OpenAI y Claude</strong> (compara ambos), sin framework de por medio</div>
+        <div class="scale-rail">
+          <div class="scale-track"><div class="scale-fill" id="scaleFill"></div></div>
+          <div class="scale-ticks" id="scaleTicks"></div>
+          <div class="scale-marker" id="scaleMarker" style="left:0"></div>
         </div>
-        <div class="item" data-id="s1-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Salida estructurada (JSON / schema) validada antes de devolverla</div>
+        <div class="scale-labels num" aria-hidden="true">
+          <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
         </div>
-        <div class="item" data-id="s1-3">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Empaquetado como CLI o FastAPI mínima que de verdad uses para algo</div>
-        </div>
-      </div>
-
-      <div class="support-label">Material de apoyo</div>
-      <div class="item-list">
-        <div class="item course-item" data-id="c1-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">Working with the OpenAI API</span><span class="course-tag">DataCamp</span></div>
-        </div>
-        <div class="item course-item" data-id="c1-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">Introduction to Embeddings with the OpenAI API</span><span class="course-tag">DataCamp</span></div>
+        <p class="scale-note" id="scaleNote">—</p>
+        <div class="scale-foot">
+          <span class="tag"><span id="supportDone">0</span>/<span id="supportTotal">0</span> pasos y material de apoyo</span>
+          <button class="reset-btn" id="resetBtn" type="button">Reiniciar mi progreso</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ARTEFACTO 2 -->
-  <div class="phase" data-phase="2">
-    <div class="phase-header" onclick="togglePhase(this)">
-      <span class="phase-marker">MES 2</span>
-      <div class="phase-title-block">
-        <div class="phase-title">RAG desplegado sobre el Corpus DOBE</div>
-        <div class="phase-meta">Chunking · vector DB · respuesta con fuentes</div>
-      </div>
-      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
-      <span class="phase-chevron">▸</span>
-    </div>
-    <div class="phase-body">
-      <div class="phase-why">Tu pieza diferenciadora: las 417 páginas del transcript TEA1 convertidas en conocimiento consultable. Nadie más tiene este dataset. Conecta DS-NEXUS con AI Engineering de forma literal.</div>
+  <div class="wrap"><hr class="rule"></div>
 
-      <div class="deliverable" data-id="d2" data-deliverable="true">
-        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="deliverable-label">Artefacto</div>
-          <div class="deliverable-text">Un RAG sobre el corpus DOBE: le preguntas por tu framework y responde citando pasajes reales de las 417 páginas.</div>
-        </div>
-      </div>
-      <div class="dod"><strong>Definición de "hecho"</strong><em>Una pregunta sobre el corpus devuelve una respuesta apoyada en fragmentos reales, con la fuente citada.</em> Si no puedes ver de qué pasaje sale la respuesta, no está hecho.</div>
-      <div class="warn"><strong>✓ Privacidad resuelta por capas.</strong> El corpus es tu proceso de autodescubrimiento — así que: el repo público no contiene corpus ni vectores (.gitignore), la imagen vive en registro privado, las claves van en Secret Manager y la consulta exige token. Demo real, acceso por token.</div>
+  <!-- FASES -->
+  <div class="wrap phases">
 
-      <div style="padding: 0 12px 14px;">
-        <a href="artefacto-2/" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--green); text-decoration:none; border:1px solid var(--green-dim); border-radius:6px; padding:7px 13px; display:inline-block; transition:all .15s;" onmouseover="this.style.background='rgba(63,185,80,0.08)'" onmouseout="this.style.background='transparent'">▸ Ver artefacto desplegado →</a>
-      </div>
+    <!-- ARTEFACTO 1 -->
+    <section class="phase reveal" data-phase="1">
+      <button class="phase-header" type="button" aria-expanded="false">
+        <span class="phase-marker">MES 1</span>
+        <span class="phase-title-block">
+          <span class="phase-title">Endpoint LLM en producción</span>
+          <span class="phase-meta">SDK directo · salida estructurada · empaquetado</span>
+        </span>
+        <span class="phase-mini num"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+        <span class="phase-chevron" aria-hidden="true">▸</span>
+      </button>
+      <div class="phase-body">
+        <p class="phase-why">Antes de tocar frameworks, monta tú la llamada cruda. Si solo dominas la capa de LangChain, dominas algo que puede desaparecer; si entiendes el SDK por debajo, todo lo demás es conveniencia.</p>
 
-      <div class="item-list steps">
-        <div class="item" data-id="s2-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Chunking + embeddings de las 417 páginas</div>
+        <div class="item deliverable" data-id="d1" data-deliverable="true" data-desplegado role="checkbox" tabindex="0" aria-checked="false">
+          <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+          <span>
+            <span class="tag">Artefacto</span>
+            <span class="item-text">Un mini-servicio (CLI o FastAPI) que usas tú mismo: recibe input y devuelve salida estructurada llamando al LLM por SDK directo.</span>
+          </span>
         </div>
-        <div class="item" data-id="s2-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Vector DB indexando el corpus (<strong>Chroma local</strong> primero; Pinecone solo si necesitas escalar)</div>
+        <div class="dod">
+          <span class="tag">Definición de «hecho»</span>
+          <em>Lo ejecutas desde fuera de tu editor y devuelve JSON válido de forma fiable.</em>
+          <span class="no"> No cuenta como hecho si solo corre dentro de un notebook.</span>
         </div>
-        <div class="item" data-id="s2-3">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Interfaz de consulta que responde citando las fuentes recuperadas</div>
-        </div>
-      </div>
+        <div class="btn-row personal"><a class="btn btn-ghost" href="artefacto-1/">Ver artefacto desplegado →</a></div>
 
-      <div class="support-label">Material de apoyo</div>
-      <div class="item-list">
-        <div class="item course-item" data-id="c2-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">Vector Databases for Embeddings with Pinecone</span><span class="course-tag">DataCamp</span></div>
+        <div class="item-list">
+          <div class="item" data-id="s1-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Llamada directa al SDK con <strong>OpenAI y Claude</strong> (compara ambos), sin framework de por medio</span>
+          </div>
+          <div class="item" data-id="s1-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Salida estructurada (JSON / schema) validada antes de devolverla</span>
+          </div>
+          <div class="item" data-id="s1-3" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Empaquetado como CLI o FastAPI mínima que de verdad uses para algo</span>
+          </div>
         </div>
-        <div class="item course-item" data-id="c2-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">Retrieval Augmented Generation (RAG) with LangChain</span><span class="course-tag">DataCamp</span> — el framework como conveniencia; ya conoces el SDK crudo</div>
+
+        <span class="tag support-label">Material de apoyo</span>
+        <div class="item-list">
+          <div class="item" data-id="c1-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">Working with the OpenAI API</span><span class="course-tag">DataCamp</span></span>
+          </div>
+          <div class="item" data-id="c1-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">Introduction to Embeddings with the OpenAI API</span><span class="course-tag">DataCamp</span></span>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- ARTEFACTO 2 -->
+    <section class="phase reveal" data-phase="2">
+      <button class="phase-header" type="button" aria-expanded="false">
+        <span class="phase-marker">MES 2</span>
+        <span class="phase-title-block">
+          <span class="phase-title">RAG desplegado sobre el Corpus DOBE</span>
+          <span class="phase-meta">Chunking · vector DB · respuesta con fuentes</span>
+        </span>
+        <span class="phase-mini num"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+        <span class="phase-chevron" aria-hidden="true">▸</span>
+      </button>
+      <div class="phase-body">
+        <p class="phase-why">La pieza diferenciadora: las 417 páginas del transcript TEA1 convertidas en conocimiento consultable. Nadie más tiene este dataset. Conecta DS-NEXUS con AI Engineering de forma literal.</p>
+
+        <div class="item deliverable" data-id="d2" data-deliverable="true" data-desplegado role="checkbox" tabindex="0" aria-checked="false">
+          <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+          <span>
+            <span class="tag">Artefacto</span>
+            <span class="item-text">Un RAG sobre el corpus DOBE: le preguntas por tu framework y responde citando pasajes reales de las 417 páginas.</span>
+          </span>
+        </div>
+        <div class="dod">
+          <span class="tag">Definición de «hecho»</span>
+          <em>Una pregunta sobre el corpus devuelve una respuesta apoyada en fragmentos reales, con la fuente citada.</em>
+          <span class="no"> Si no puedes ver de qué pasaje sale la respuesta, no está hecho.</span>
+        </div>
+        <p class="note-brass personal"><strong>Privacidad resuelta por capas.</strong> El corpus es un proceso de autodescubrimiento — así que: el repo público no contiene corpus ni vectores (<code>.gitignore</code>), la imagen vive en registro privado, las claves van en Secret Manager y la consulta exige token. Demo real, acceso por token.</p>
+        <div class="btn-row personal"><a class="btn btn-ghost" href="artefacto-2/">Ver artefacto desplegado →</a></div>
+
+        <div class="item-list">
+          <div class="item" data-id="s2-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Chunking + embeddings de las 417 páginas</span>
+          </div>
+          <div class="item" data-id="s2-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Vector DB indexando el corpus (<strong>Chroma local</strong> primero; Pinecone solo si hay que escalar)</span>
+          </div>
+          <div class="item" data-id="s2-3" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Interfaz de consulta que responde citando las fuentes recuperadas</span>
+          </div>
+        </div>
+
+        <span class="tag support-label">Material de apoyo</span>
+        <div class="item-list">
+          <div class="item" data-id="c2-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">Vector Databases for Embeddings with Pinecone</span><span class="course-tag">DataCamp</span></span>
+          </div>
+          <div class="item" data-id="c2-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">Retrieval Augmented Generation (RAG) with LangChain</span><span class="course-tag">DataCamp</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARTEFACTO 3 -->
+    <section class="phase reveal" data-phase="3">
+      <button class="phase-header" type="button" aria-expanded="false">
+        <span class="phase-marker">MES 2–3</span>
+        <span class="phase-title-block">
+          <span class="phase-title">Harness de evaluación</span>
+          <span class="phase-meta">Dataset de eval · LLM-as-judge · detección de regresiones</span>
+        </span>
+        <span class="phase-mini num"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+        <span class="phase-chevron" aria-hidden="true">▸</span>
+      </button>
+      <div class="phase-body">
+        <p class="phase-why">La pieza que más distingue en el mercado, y por eso va aquí y no al final. Construir un RAG es fácil; saber si funciona y detectar cuándo una versión nueva empeora es lo que separa portfolio de prototipo.</p>
+
+        <div class="item deliverable" data-id="d3" data-deliverable="true" role="checkbox" tabindex="0" aria-checked="false">
+          <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+          <span>
+            <span class="tag">Artefacto</span>
+            <span class="item-text">Un script que puntúa el RAG contra un dataset de eval y avisa cuando una versión nueva empeora respecto a la anterior.</span>
+          </span>
+        </div>
+        <div class="dod">
+          <span class="tag">Definición de «hecho»</span>
+          <em>Cambias algo del RAG, corres el harness y obtienes un número que dice si mejoró o empeoró.</em>
+          <span class="no"> La evaluación a ojo no cuenta.</span>
+        </div>
+        <p class="note-brass personal"><strong>Herramienta interna, no desplegable.</strong> Un harness de evaluación no se sirve como demo: se ejecuta en local y su valor es la disciplina — evaluar, comparar, y una puerta que bloquea regresiones. Aquí cazó un falso positivo real del umbral del RAG antes de que llegara a producción.</p>
+        <div class="btn-row personal"><a class="btn btn-ghost" href="artefacto-3/">Ver artefacto →</a></div>
+
+        <div class="item-list">
+          <div class="item" data-id="s3-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Dataset de eval: <strong>7 casos golden</strong> etiquetados a mano (directas, síntesis, trampas, frontera)</span>
+          </div>
+          <div class="item" data-id="s3-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">LLM-as-judge que puntúa fidelidad (¿la respuesta sale de la fuente?) y relevancia</span>
+          </div>
+          <div class="item" data-id="s3-3" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Reporte que compara versiones y marca regresiones</span>
+          </div>
+        </div>
+
+        <span class="tag support-label">Material de apoyo</span>
+        <div class="item-list">
+          <div class="item" data-id="c3-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">Métricas de evaluación: faithfulness, relevance, BLEU/ROUGE como contexto</span><span class="course-tag own">Propio</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARTEFACTO 4 -->
+    <section class="phase reveal" data-phase="4">
+      <button class="phase-header" type="button" aria-expanded="false">
+        <span class="phase-marker">MES 3–4</span>
+        <span class="phase-title-block">
+          <span class="phase-title">Agente con tool use real</span>
+          <span class="phase-meta">Function calling · orquestación · manejo de errores</span>
+        </span>
+        <span class="phase-mini num"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+        <span class="phase-chevron" aria-hidden="true">▸</span>
+      </button>
+      <div class="phase-body">
+        <p class="phase-why">La intuición viene de Rex+Chef en DS-NEXUS. Esta fase le pone tool use formal: un agente que ejecuta herramientas reales, no que solo conversa. Dominio elegido: <strong>búsqueda de empleo</strong> — el agente lee una oferta, la contrasta con el CV y redacta un borrador de candidatura.</p>
+
+        <div class="item deliverable" data-id="d4" data-deliverable="true" data-desplegado role="checkbox" tabindex="0" aria-checked="false">
+          <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+          <span>
+            <span class="tag">Artefacto</span>
+            <span class="item-text">Un agente de búsqueda de empleo con function calling: orquesta tres herramientas reales (analizar oferta · match con el CV · redactar borrador). Desplegado en Cloud Run tras un token.</span>
+          </span>
+        </div>
+        <div class="dod">
+          <span class="tag">Definición de «hecho»</span>
+          <em>Le das una oferta, el agente decide qué herramienta llamar, la ejecuta y usa el resultado — vivo en internet.</em>
+          <span class="no"> Si las herramientas son simuladas, no está hecho.</span>
+        </div>
+        <div class="btn-row personal"><a class="btn btn-ghost" href="artefacto-4/">Ver artefacto desplegado →</a></div>
+
+        <div class="item-list">
+          <div class="item" data-id="s4-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><strong>Agent loop escrito a mano</strong> con el SDK de OpenAI (function calling), sin framework que lo esconda</span>
+          </div>
+          <div class="item" data-id="s4-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Tres herramientas orquestadas por el modelo, con reglas de estilo horneadas en la redacción</span>
+          </div>
+          <div class="item" data-id="s4-3" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">CLI + API (FastAPI), <strong>desplegado en Cloud Run</strong> con token y secretos en Secret Manager</span>
+          </div>
+        </div>
+
+        <span class="tag support-label">Material de apoyo</span>
+        <div class="item-list">
+          <div class="item" data-id="c4-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">Building AI Agents with LangChain / LangGraph</span><span class="course-tag">DataCamp</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARTEFACTO 5 -->
+    <section class="phase reveal" data-phase="5">
+      <button class="phase-header" type="button" aria-expanded="false">
+        <span class="phase-marker">MES 4–5</span>
+        <span class="phase-title-block">
+          <span class="phase-title">Endurecimiento: prompts + structured outputs</span>
+          <span class="phase-meta">Few-shot · CoT · versionado · medido con el harness</span>
+        </span>
+        <span class="phase-mini num"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+        <span class="phase-chevron" aria-hidden="true">▸</span>
+      </button>
+      <div class="phase-body">
+        <p class="phase-why">Técnicas que se aplican el mismo día que las aprendes — pero aquí con disciplina: cada cambio de prompt se mide con el harness del Artefacto 3. <strong>Prompt engineering sin evaluación es superstición.</strong></p>
+
+        <div class="item deliverable" data-id="d5" data-deliverable="true" data-desplegado role="checkbox" tabindex="0" aria-checked="false">
+          <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+          <span>
+            <span class="tag">Artefacto</span>
+            <span class="item-text">El agente versiona sus prompts y devuelve siempre estructura válida; cada cambio queda justificado por su impacto medido en la métrica.</span>
+          </span>
+        </div>
+        <div class="dod">
+          <span class="tag">Definición de «hecho»</span>
+          <em>Puedes señalar un cambio de prompt y enseñar el número de eval que lo justifica.</em>
+          <span class="no"> «Parece mejor» no cuenta.</span>
+        </div>
+        <p class="note-brass personal"><strong>El eval-set salió de bugs reales.</strong> Los tres fallos que el agente cometió de verdad (confundir GCP con AWS, marcar un nivel de idioma que sí estaba en el CV, saturar de cifras) se convirtieron en casos de prueba — cada uno emparejado con un <em>caso de control</em> que vigila que arreglarlo no rompa lo que ya funcionaba.</p>
+        <div class="btn-row personal"><a class="btn btn-ghost" href="artefacto-5/">Ver artefacto desplegado →</a></div>
+
+        <div class="item-list">
+          <div class="item" data-id="s5-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Prompts sacados del código a un <strong>catálogo versionado</strong>, con v1 idéntica byte a byte como línea base</span>
+          </div>
+          <div class="item" data-id="s5-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Báscula híbrida: <strong>asserts</strong> para lo comprobable y <strong>juez LLM</strong> para el estilo, con casos de bug y de control emparejados</span>
+          </div>
+          <div class="item" data-id="s5-3" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Few-shot y chain-of-thought aplicados solo donde mueven la métrica; A/B contra la línea base</span>
+          </div>
+          <div class="item" data-id="s5-4" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Structured outputs con esquema validado en todo el pipeline, <em>fail-closed</em></span>
+          </div>
+          <div class="item" data-id="s5-5" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">La báscula corre sola en <strong>GitHub Actions</strong>: cada push pasa por la puerta, con el listón calibrado sobre el ruido medido</span>
+          </div>
+        </div>
+
+        <span class="tag support-label">Material de apoyo</span>
+        <div class="item-list">
+          <div class="item" data-id="c5-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">Prompt engineering</span><span class="course-tag">Nuclio · campus máster</span></span>
+          </div>
+          <div class="item" data-id="c5-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">Prompt Engineering for Business</span><span class="course-tag">DataCamp</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARTEFACTO 6 -->
+    <section class="phase reveal" data-phase="6">
+      <button class="phase-header" type="button" aria-expanded="false">
+        <span class="phase-marker">MES 5–6</span>
+        <span class="phase-title-block">
+          <span class="phase-title">Despliegue en producción real</span>
+          <span class="phase-meta">Docker · API · monitorización · coste por petición</span>
+        </span>
+        <span class="phase-mini num"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
+        <span class="phase-chevron" aria-hidden="true">▸</span>
+      </button>
+      <div class="phase-body">
+        <p class="phase-why">El cierre del ciclo, y donde la base de M7 MLOps (GCP, MLflow, Airflow) da ventaja. Lo que diferencia un script que corre en tu portátil de un sistema que sobrevive en producción.</p>
+
+        <div class="item deliverable" data-id="d6" data-deliverable="true" data-desplegado role="checkbox" tabindex="0" aria-checked="false">
+          <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+          <span>
+            <span class="tag">Artefacto</span>
+            <span class="item-text">Un servicio en contenedor, con monitorización y coste por petición, corriendo donde alguien lo usa de verdad (sobre EOH-INE o el RAG DOBE).</span>
+          </span>
+        </div>
+        <div class="dod">
+          <span class="tag">Definición de «hecho»</span>
+          <em>El servicio está desplegado, alcanzable, y puedes decir cuánto cuesta cada petición y cuántas fallan.</em>
+          <span class="no"> Correr en local no es producción.</span>
+        </div>
+
+        <div class="item-list">
+          <div class="item" data-id="s6-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Docker + API del sistema, desplegado en GCP</span>
+          </div>
+          <div class="item" data-id="s6-2" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Monitorización básica: latencia, tasa de errores, tokens y coste por petición</span>
+          </div>
+          <div class="item" data-id="s6-3" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text">Apoyo en el stack de M7 MLOps (MLflow para tracking, Airflow si hay pipeline)</span>
+          </div>
+        </div>
+
+        <span class="tag support-label">Material de apoyo</span>
+        <div class="item-list">
+          <div class="item" data-id="c6-1" role="checkbox" tabindex="0" aria-checked="false">
+            <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+            <span class="item-text"><span class="course-name">MLOps Concepts</span><span class="course-tag">DataCamp</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <!-- ARTEFACTO 3 -->
-  <div class="phase" data-phase="3">
-    <div class="phase-header" onclick="togglePhase(this)">
-      <span class="phase-marker">MES 2–3</span>
-      <div class="phase-title-block">
-        <div class="phase-title">Harness de evaluación</div>
-        <div class="phase-meta">Dataset de eval · LLM-as-judge · detección de regresiones</div>
-      </div>
-      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
-      <span class="phase-chevron">▸</span>
+  <!-- OPCIONAL -->
+  <div class="wrap aside-block reveal">
+    <div class="optional">
+      <span class="tag">Opcional · solo si sobra tiempo y un caso lo justifica</span>
+      <h2>Fine-tuning</h2>
+      <p>
+        Fuera de la columna vertebral a propósito: es un agujero profundo y, para la mayoría de roles de AI Engineering en 2026, de retorno bajo para portfolio.
+        RAG + prompting + evaluación + agentes cubren el ~90 % de los casos de producción reales. Solo si aparece un caso concreto que lo pida — entonces:
+        <span class="course-tag">Fine-Tuning with Llama 3 · DataCamp</span>
+      </p>
     </div>
-    <div class="phase-body">
-      <div class="phase-why">Esta es la pieza que más te distingue en el mercado, y por eso va aquí y no al final. Construir un RAG es fácil; saber si funciona y detectar cuándo una nueva versión empeora es lo que separa portfolio de prototipo.</div>
-
-      <div class="deliverable" data-id="d3" data-deliverable="true">
-        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="deliverable-label">Artefacto</div>
-          <div class="deliverable-text">Un script que puntúa tu RAG contra un dataset de eval y te avisa cuando una versión nueva empeora respecto a la anterior.</div>
-        </div>
-      </div>
-      <div class="dod"><strong>Definición de "hecho"</strong><em>Cambias algo del RAG, corres el harness y obtienes un número que dice si mejoró o empeoró.</em> La evaluación a ojo no cuenta.</div>
-      <div class="warn"><strong>✓ Herramienta interna, no desplegable.</strong> Un harness de evaluación no se sirve como demo: se ejecuta en local y su valor es la disciplina (evaluar → comparar → puerta que bloquea regresiones). Aquí cazó un falso positivo real del umbral del RAG antes de que llegara a producción.</div>
-
-      <div style="padding: 0 12px 14px;">
-        <a href="artefacto-3/" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--green); text-decoration:none; border:1px solid var(--green-dim); border-radius:6px; padding:7px 13px; display:inline-block; transition:all .15s;" onmouseover="this.style.background='rgba(63,185,80,0.08)'" onmouseout="this.style.background='transparent'">▸ Ver artefacto →</a>
-      </div>
-
-      <div class="item-list steps">
-        <div class="item" data-id="s3-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Dataset de eval: <strong>7 casos golden</strong> etiquetados a mano (directas, síntesis, trampas, frontera) — arranca pequeño y crece</div>
-        </div>
-        <div class="item" data-id="s3-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">LLM-as-judge que puntúa fidelidad (¿la respuesta sale de la fuente?) y relevancia</div>
-        </div>
-        <div class="item" data-id="s3-3">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Reporte que compara versiones y marca regresiones</div>
-        </div>
-      </div>
-
-      <div class="support-label">Material de apoyo</div>
-      <div class="item-list">
-        <div class="item course-item" data-id="c3-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">Métricas de evaluación: faithfulness, relevance, BLEU/ROUGE como contexto</span><span class="course-tag own">Propio</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ARTEFACTO 4 -->
-  <div class="phase" data-phase="4">
-    <div class="phase-header" onclick="togglePhase(this)">
-      <span class="phase-marker">MES 3–4</span>
-      <div class="phase-title-block">
-        <div class="phase-title">Agente con tool use real</div>
-        <div class="phase-meta">Function calling · orquestación · manejo de errores</div>
-      </div>
-      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
-      <span class="phase-chevron">▸</span>
-    </div>
-    <div class="phase-body">
-      <div class="phase-why">La intuición viene de Rex+Chef en DS-NEXUS. Esta fase le pone tool use formal: un agente que ejecuta herramientas reales, no que solo conversa. Dominio elegido: <strong>búsqueda de empleo</strong> — el agente lee una oferta, la contrasta con el CV y redacta un borrador de candidatura.</div>
-
-      <div class="deliverable" data-id="d4" data-deliverable="true">
-        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="deliverable-label">Artefacto</div>
-          <div class="deliverable-text">Un agente de búsqueda de empleo con function calling: orquesta tres herramientas reales (analizar oferta · match con el CV · redactar borrador). Desplegado en Cloud Run tras un token.</div>
-        </div>
-      </div>
-      <div class="dod"><strong>Definición de "hecho"</strong><em>Le das una oferta y el agente decide qué herramienta llamar, la ejecuta y usa el resultado — vivo en internet.</em> Si las herramientas son simuladas, no está hecho.</div>
-
-      <div style="padding: 0 12px 14px;">
-        <a href="artefacto-4/" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--green); text-decoration:none; border:1px solid var(--green-dim); border-radius:6px; padding:7px 13px; display:inline-block; transition:all .15s;" onmouseover="this.style.background='rgba(63,185,80,0.08)'" onmouseout="this.style.background='transparent'">▸ Ver artefacto desplegado →</a>
-      </div>
-
-      <div class="item-list steps">
-        <div class="item" data-id="s4-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><strong>Agent loop escrito a mano</strong> con el SDK de OpenAI (function calling), sin framework que lo esconda</div>
-        </div>
-        <div class="item" data-id="s4-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Tres herramientas orquestadas por el modelo, con reglas de estilo horneadas en la redacción</div>
-        </div>
-        <div class="item" data-id="s4-3">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">CLI + API (FastAPI), <strong>desplegado en Cloud Run</strong> con token y secretos en Secret Manager</div>
-        </div>
-      </div>
-
-      <div class="support-label">Material de apoyo</div>
-      <div class="item-list">
-        <div class="item course-item" data-id="c4-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">Building AI Agents with LangChain / LangGraph</span><span class="course-tag">DataCamp</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ARTEFACTO 5 -->
-  <div class="phase" data-phase="5">
-    <div class="phase-header" onclick="togglePhase(this)">
-      <span class="phase-marker">MES 4–5</span>
-      <div class="phase-title-block">
-        <div class="phase-title">Endurecimiento: prompts + structured outputs</div>
-        <div class="phase-meta">Few-shot · CoT · versionado · medido con el harness</div>
-      </div>
-      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
-      <span class="phase-chevron">▸</span>
-    </div>
-    <div class="phase-body">
-      <div class="phase-why">Técnicas que se aplican el mismo día que las aprendes — pero aquí con disciplina: cada cambio de prompt se mide con el harness del Artefacto 3. Prompt engineering sin evaluación es superstición.</div>
-
-      <div class="deliverable" data-id="d5" data-deliverable="true">
-        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="deliverable-label">Artefacto</div>
-          <div class="deliverable-text">El agente versiona sus prompts y devuelve siempre estructura válida; cada cambio queda justificado por su impacto medido en la métrica.</div>
-        </div>
-      </div>
-      <div class="dod"><strong>Definición de "hecho"</strong><em>Puedes señalar un cambio de prompt y enseñar el número de eval que lo justifica.</em> "Parece mejor" no cuenta.</div>
-
-      <div style="margin:14px 0 4px;">
-        <a href="artefacto-5/" style="font-family:'DM Mono',monospace; font-size:12px; color:var(--green); text-decoration:none; border:1px solid var(--green-dim); border-radius:6px; padding:7px 13px; display:inline-block; transition:all .15s;" onmouseover="this.style.background='rgba(63,185,80,0.08)'" onmouseout="this.style.background='transparent'">▸ Ver artefacto desplegado →</a>
-      </div>
-
-      <div class="item-list steps">
-        <div class="item" data-id="s5-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Few-shot y chain-of-thought aplicados donde mueven la métrica</div>
-        </div>
-        <div class="item" data-id="s5-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Structured outputs con validación de schema en todo el pipeline</div>
-        </div>
-        <div class="item" data-id="s5-3">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Versionado de prompts + comparación A/B con el harness de eval</div>
-        </div>
-      </div>
-
-      <div class="support-label">Material de apoyo</div>
-      <div class="item-list">
-        <div class="item course-item" data-id="c5-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">Prompt Engineering for Business</span><span class="course-tag">DataCamp</span></div>
-        </div>
-        <div class="item course-item" data-id="c5-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">Prompt engineering</span><span class="course-tag">Nuclio · campus máster</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ARTEFACTO 6 -->
-  <div class="phase" data-phase="6">
-    <div class="phase-header" onclick="togglePhase(this)">
-      <span class="phase-marker">MES 5–6</span>
-      <div class="phase-title-block">
-        <div class="phase-title">Despliegue en producción real</div>
-        <div class="phase-meta">Docker · API · monitorización · coste por petición</div>
-      </div>
-      <span class="phase-progress-mini"><span class="mini-done">0</span>/<span class="mini-total">0</span></span>
-      <span class="phase-chevron">▸</span>
-    </div>
-    <div class="phase-body">
-      <div class="phase-why">El cierre del ciclo, y donde tu base de M7 MLOps (GCP, MLflow, Airflow) te da ventaja. Lo que diferencia un script que corre en tu portátil de un sistema que sobrevive en producción.</div>
-
-      <div class="deliverable" data-id="d6" data-deliverable="true">
-        <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="deliverable-label">Artefacto</div>
-          <div class="deliverable-text">Un servicio en contenedor, con monitorización y coste por petición, corriendo donde alguien lo usa de verdad (sobre EOH-INE o el RAG DOBE).</div>
-        </div>
-      </div>
-      <div class="dod"><strong>Definición de "hecho"</strong><em>El servicio está desplegado, alcanzable, y puedes decir cuánto cuesta cada petición y cuántas fallan.</em> Correr en local no es producción.</div>
-
-      <div class="item-list steps">
-        <div class="item" data-id="s6-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Docker + API del sistema, desplegado en GCP</div>
-        </div>
-        <div class="item" data-id="s6-2">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Monitorización básica: latencia, tasa de errores, tokens y coste por petición</div>
-        </div>
-        <div class="item" data-id="s6-3">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text">Apoyo en tu stack de M7 MLOps (MLflow para tracking, Airflow si hay pipeline)</div>
-        </div>
-      </div>
-
-      <div class="support-label">Material de apoyo</div>
-      <div class="item-list">
-        <div class="item course-item" data-id="c6-1">
-          <div class="checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div class="item-text"><span class="course-name">MLOps Concepts</span><span class="course-tag">DataCamp</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- OPCIONAL: FINE-TUNING (fuera de la espina) -->
-  <div class="optional-box">
-    <div class="opt-eyebrow">Opcional · solo si sobra tiempo y un caso lo justifica</div>
-    <div class="opt-title">Fine-tuning</div>
-    <p class="opt-desc">
-      Lo saco de la columna vertebral a propósito: es un agujero profundo y, para la mayoría de roles de AI Engineering en 2026, de retorno bajo para portfolio. RAG + prompting + evaluación + agentes cubren el ~90% de los casos de producción reales. Atácalo solo si te topas con un caso concreto que lo pida — entonces:
-      <span class="course-tag">Fine-Tuning with Llama 3 · DataCamp</span>
-    </p>
   </div>
 
   <!-- PRINCIPIO RECTOR -->
-  <div class="principle">
-    <div class="principle-eyebrow">Principio rector</div>
-    <p class="principle-text">
-      Esta bitácora no se completa estudiando. Se completa <strong>desplegando</strong>. Un curso marcado es un medio; un artefacto en producción es la prueba. Empieza el Artefacto 2 (Corpus DOBE) en paralelo al 1 — aplicar mientras aprendes es más DOBE que aprender en línea recta.
-    </p>
+  <div class="wrap principle reveal">
+    <span class="tag">Principio rector</span>
+    <p>Esta bitácora no se completa estudiando. Se completa <em>desplegando</em>.</p>
   </div>
 
-  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · bitácora de artefactos</div>
+  <div class="wrap"><hr class="rule"></div>
 
-</div>
+  <footer class="wrap">
+    <div class="foot-row">
+      <span class="tag">protocolo ds-nexus · constante 2.51</span>
+      <span class="tag"><a href="https://denysporynets.github.io/">← volver al portfolio</a></span>
+    </div>
+  </footer>
+</main>
 
 <script>
-(function() {
-  const STORAGE_KEY = 'ai-eng-roadmap-v5';
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // Estado real "horneado": lo que ya está entregado y verificado, para que
-  // un visitante nuevo (sin localStorage) vea la progresión verdadera y no 0/6.
-  // Marca los 3 artefactos entregados + sus pasos de construcción + el material
-  // propio del harness. Los cursos externos de apoyo no se dan por hechos.
-  const BAKED = {
-    d1:true, 's1-1':true, 's1-2':true, 's1-3':true,
-    d2:true, 's2-1':true, 's2-2':true, 's2-3':true,
-    d3:true, 's3-1':true, 's3-2':true, 's3-3':true, 'c3-1':true,
-    d4:true, 's4-1':true, 's4-2':true, 's4-3':true, 'c4-1':true  // Artefacto 4 (agente de empleo) DESPLEGADO 11/07
-  };
-
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : Object.assign({}, BAKED);
-    } catch(e) { return Object.assign({}, BAKED); }
-  }
-
-  function saveState(state) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
-  }
-
-  let state = loadState();
-
-  function allCheckables() {
-    return Array.from(document.querySelectorAll('[data-id]'));
-  }
-
-  function updateUI() {
-    const items = allCheckables();
-    items.forEach(el => {
-      el.classList.toggle('checked', !!state[el.dataset.id]);
-    });
-
-    // Main bar = artefactos desplegados (deliverables)
-    const deliverables = Array.from(document.querySelectorAll('[data-deliverable]'));
-    const shipped = deliverables.filter(el => state[el.dataset.id]).length;
-    const totalDeliv = deliverables.length;
-    document.getElementById('doneCount').textContent = shipped;
-    document.getElementById('totalCount').textContent = totalDeliv;
-    const pct = totalDeliv ? Math.round((shipped/totalDeliv)*100) : 0;
-    document.getElementById('progressFill').style.width = pct + '%';
-
-    // Secondary = pasos y cursos de apoyo (todo lo que no es deliverable)
-    const support = items.filter(el => !el.hasAttribute('data-deliverable'));
-    const supportDone = support.filter(el => state[el.dataset.id]).length;
-    document.getElementById('supportDone').textContent = supportDone;
-    document.getElementById('supportTotal').textContent = support.length;
-
-    // Mini-counters por artefacto; complete = artefacto desplegado
-    document.querySelectorAll('.phase').forEach(phase => {
-      const phaseItems = phase.querySelectorAll('[data-id]');
-      const phaseDone = Array.from(phaseItems).filter(i => state[i.dataset.id]).length;
-      const miniDone = phase.querySelector('.mini-done');
-      const miniTotal = phase.querySelector('.mini-total');
-      if (miniDone) miniDone.textContent = phaseDone;
-      if (miniTotal) miniTotal.textContent = phaseItems.length;
-      const deliv = phase.querySelector('[data-deliverable]');
-      phase.classList.toggle('complete', deliv && !!state[deliv.dataset.id]);
-    });
-
-    // Estado segun artefactos desplegados
-    const stateMsg = document.getElementById('progressState');
-    const msgs = {
-      0: 'Sin desplegar todavía. La métrica aquí no son cursos completados — son artefactos que alguien usa de verdad.',
-      1: 'Primer artefacto en producción. Esto ya pesa más en una entrevista que cualquier certificado.',
-      2: 'Dos desplegados. Con el RAG vivo, arranca ya el harness de evaluación — es lo que más te distingue.',
-      3: 'Mitad del camino. RAG + evaluación funcionando: tienes la columna vertebral de un AI Engineer.',
-      4: 'Cuatro artefactos. El agente con tool use real es la pieza que conecta directamente con Rex+Chef.',
-      5: 'Recta final. Solo queda llevar algo a producción de verdad: contenedor, monitorización, coste.',
-      6: 'Seis artefactos en producción. De Data Scientist a AI Engineer — con evidencia desplegada, no con checkboxes de cursos.'
-    };
-    stateMsg.textContent = msgs[shipped] || msgs[0];
-  }
-
-  function toggleItem(el) {
-    const id = el.dataset.id;
-    state[id] = !state[id];
-    saveState(state);
-    updateUI();
-  }
-
-  document.querySelectorAll('[data-id]').forEach(el => {
-    el.addEventListener('click', (e) => { e.stopPropagation(); toggleItem(el); });
-  });
-
-  window.togglePhase = function(headerEl) {
-    headerEl.closest('.phase').classList.toggle('open');
-  };
-
-  // ── Toggle de tema claro/oscuro (anula la preferencia del sistema) ──
-  const THEME_KEY = 'ai-eng-roadmap-theme';
-  const root = document.documentElement;
-  const themeBtn = document.getElementById('themeBtn');
-  const systemDarkMQ = window.matchMedia('(prefers-color-scheme: dark)');
-
-  function effectiveTheme() {
-    const attr = root.getAttribute('data-theme');
-    if (attr === 'light' || attr === 'dark') return attr;
-    return systemDarkMQ.matches ? 'dark' : 'light';
-  }
-
-  function updateThemeBtn() {
-    // El botón ofrece la acción contraria al tema actual
-    themeBtn.textContent = effectiveTheme() === 'dark' ? '☀ Día' : '🌙 Noche';
-  }
-
-  themeBtn.addEventListener('click', () => {
-    const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    try { localStorage.setItem(THEME_KEY, next); } catch(e) {}
-    updateThemeBtn();
-  });
-
-  // Si estás en modo automático, refleja los cambios del sistema en el botón
-  systemDarkMQ.addEventListener('change', () => {
-    if (!root.getAttribute('data-theme')) updateThemeBtn();
-  });
-
-  updateThemeBtn();
-
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    if (confirm('¿Reiniciar el progreso al estado real entregado?')) {
-      state = Object.assign({}, BAKED);
-      saveState(state);
-      updateUI();
+  // ── reveal "enfoque de instrumento" ──
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add("revealed"); io.unobserve(e.target); }
     }
+  }, { threshold: 0.08 });
+  document.querySelectorAll(".reveal").forEach((el) => { if (!el.closest(".hero")) io.observe(el); });
+  requestAnimationFrame(() => {
+    document.querySelectorAll(".hero .reveal").forEach((el, i) => {
+      setTimeout(() => el.classList.add("revealed"), 90 * i);
+    });
   });
 
-  updateUI();
-})();
+  // ── modo noche / día (misma clave que la home: el tema viaja con el visitante) ──
+  (function tema() {
+    const root = document.documentElement;
+    const btn = document.getElementById("themeToggle");
+    const CLAVE = "portfolio-tema";
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function aplicar(t) {
+      if (t === "dark") { root.setAttribute("data-theme", "dark"); btn.setAttribute("aria-label", "Cambiar a modo día"); }
+      else { root.removeAttribute("data-theme"); btn.setAttribute("aria-label", "Cambiar a modo noche"); }
+    }
+    function guardado() { try { return localStorage.getItem(CLAVE); } catch (e) { return null; } }
+    // El tema ya lo aplicó el script del <head>; aquí solo se pone al día la etiqueta del botón.
+    aplicar(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
+    btn.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      aplicar(next);
+      try { localStorage.setItem(CLAVE, next); } catch (e) {}
+    });
+    // Sin preferencia propia guardada, seguir al sistema si cambia durante la visita
+    // (p. ej. macOS/iOS conmutando a oscuro al anochecer con la página abierta).
+    mq.addEventListener("change", (e) => { if (!guardado()) aplicar(e.matches ? "dark" : "light"); });
+  })();
+
+  // ── fondo: contornos tipo carta náutica ──
+  (function drawContours() {
+    const svg = document.getElementById("contours");
+    if (!svg || reduce) return;
+    const W = 1200, H = 1200, lines = 26;
+    let frag = "";
+    for (let i = 0; i < lines; i++) {
+      const baseY = (H / (lines - 1)) * i;
+      const amp = 20 + (i % 5) * 5;
+      const phase = i * 0.7;
+      const freq = 0.0055 + (i % 3) * 0.0011;
+      let d = "";
+      for (let x = 0; x <= W; x += 40) {
+        const y = baseY + Math.sin(x * freq + phase) * amp;
+        d += (x === 0 ? "M" : "L") + x + " " + y.toFixed(1) + " ";
+      }
+      const index = (i % 5 === 0);
+      frag += '<path d="' + d.trim() + '" stroke-width="' + (index ? 1.5 : 0.8) + '"/>';
+    }
+    svg.innerHTML = frag;
+  })();
+
+  // ── parallax del fondo ──
+  (function parallax() {
+    const el = document.getElementById("contours");
+    if (!el || reduce) return;
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        el.style.transform = "translateY(" + (window.scrollY * -0.07).toFixed(1) + "px)";
+        ticking = false;
+      });
+    }, { passive: true });
+  })();
+
+  // ── graduación de la escala ──
+  (function ticks() {
+    const cont = document.getElementById("scaleTicks");
+    if (!cont) return;
+    let frag = "";
+    for (let i = 0; i <= 6; i++) {
+      const pct = (i / 6) * 100;
+      frag += '<i class="' + (i % 2 === 0 ? "idx" : "") + '" style="left:' + pct + '%"></i>';
+    }
+    cont.innerHTML = frag;
+  })();
+
+  // ── bitácora: estado, sellos y escala ──
+  (function bitacora() {
+    const CLAVE = "ai-eng-roadmap-v6";
+
+    // Estado real "horneado": lo que ya está entregado y verificado, para que un
+    // visitante nuevo (sin localStorage) vea la progresión verdadera y no 0/6.
+    // ES LA PIEZA MÁS PERSONAL DE LA PÁGINA: en un build genérico va vacío ({}),
+    // porque entonces el progreso lo marca quien recorre la ruta, no yo.
+    // Al tocarlo, SUBIR la versión de CLAVE: si no, quien ya visitó la página
+    // conserva su estado guardado y nunca vería lo nuevo.
+    const HORNEADO = {
+      d1:true, "s1-1":true, "s1-2":true, "s1-3":true,
+      d2:true, "s2-1":true, "s2-2":true, "s2-3":true,
+      d3:true, "s3-1":true, "s3-2":true, "s3-3":true, "c3-1":true,
+      d4:true, "s4-1":true, "s4-2":true, "s4-3":true, "c4-1":true,
+      d5:true, "s5-1":true, "s5-2":true, "s5-3":true, "s5-4":true, "s5-5":true, "c5-1":true
+    };
+
+    function cargar() {
+      try {
+        const raw = localStorage.getItem(CLAVE);
+        return raw ? JSON.parse(raw) : Object.assign({}, HORNEADO);
+      } catch (e) { return Object.assign({}, HORNEADO); }
+    }
+    function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(estado)); } catch (e) {} }
+
+    let estado = cargar();
+
+    const items      = Array.from(document.querySelectorAll(".item[data-id]"));
+    const doneCount  = document.getElementById("doneCount");
+    const totalCount = document.getElementById("totalCount");
+    const fill       = document.getElementById("scaleFill");
+    const marker     = document.getElementById("scaleMarker");
+    const nota       = document.getElementById("scaleNote");
+    const supDone    = document.getElementById("supportDone");
+    const supTotal   = document.getElementById("supportTotal");
+
+    // Qué artefactos se sirven de verdad se declara EN EL MARCADO (data-desplegado),
+    // no en una lista aparte: así añadir un artefacto es tocar un sitio, no dos.
+    // El único que no se sirve es el harness (herramienta interna de trabajo).
+
+    function pintar() {
+      let entregados = 0, apoyoHechos = 0, apoyoTotal = 0, desplegados = 0;
+
+      for (const el of items) {
+        const id = el.dataset.id;
+        const on = !!estado[id];
+        el.classList.toggle("done", on);
+        el.setAttribute("aria-checked", on ? "true" : "false");
+        if (el.dataset.deliverable) {
+          if (on) { entregados++; if (el.dataset.desplegado !== undefined) desplegados++; }
+        } else {
+          apoyoTotal++; if (on) apoyoHechos++;
+        }
+      }
+
+      // mini-contadores por fase + sello al margen cuando el ARTEFACTO está entregado
+      // (no cuando están todos los cursos: el material de apoyo es medio, no prueba)
+      for (const fase of document.querySelectorAll(".phase")) {
+        const propios = Array.from(fase.querySelectorAll(".item[data-id]"));
+        const hechos = propios.filter((el) => estado[el.dataset.id]).length;
+        fase.querySelector(".mini-done").textContent = hechos;
+        fase.querySelector(".mini-total").textContent = propios.length;
+        const entregable = fase.querySelector(".item[data-deliverable]");
+        fase.classList.toggle("sealed", !!(entregable && estado[entregable.dataset.id]));
+      }
+
+      const total = items.filter((el) => el.dataset.deliverable).length;
+      totalCount.textContent = total;
+      doneCount.textContent = entregados;
+      supDone.textContent = apoyoHechos;
+      supTotal.textContent = apoyoTotal;
+
+      const pct = total ? (entregados / total) * 100 : 0;
+      fill.style.width = pct + "%";
+      marker.style.left = pct + "%";
+
+      const internos = entregados - desplegados;
+      if (entregados === 0) {
+        nota.textContent = "Sin entregar todavía. La métrica aquí no son cursos completados — son artefactos que alguien usa de verdad.";
+      } else {
+        nota.innerHTML = "<b>" + desplegados + "</b> vivos en internet · <b>" + internos +
+          "</b> " + (internos === 1 ? "interno" : "internos") +
+          " (herramienta de trabajo, no se sirve) · quedan <b>" + (total - entregados) + "</b>.";
+      }
+    }
+
+    function alternar(el) {
+      const id = el.dataset.id;
+      estado[id] = !estado[id];
+      guardar();
+      pintar();
+    }
+
+    for (const el of items) {
+      el.addEventListener("click", () => alternar(el));
+      el.addEventListener("keydown", (e) => {
+        if (e.key === " " || e.key === "Enter") { e.preventDefault(); alternar(el); }
+      });
+    }
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      // Con confirmación a propósito: el progreso vive solo en el localStorage de
+      // quien visita — no hay copia en servidor ni deshacer. Un clic accidental
+      // borraría semanas de marcas suyas sin vuelta atrás.
+      if (!confirm("¿Reiniciar el progreso al estado real entregado?")) return;
+      estado = Object.assign({}, HORNEADO);
+      guardar();
+      pintar();
+    });
+
+    // plegado de fases
+    for (const btn of document.querySelectorAll(".phase-header")) {
+      btn.addEventListener("click", () => {
+        const fase = btn.closest(".phase");
+        const abierta = fase.classList.toggle("open");
+        btn.setAttribute("aria-expanded", abierta ? "true" : "false");
+      });
+    }
+    // arranca con el artefacto en curso abierto
+    const enCurso = document.querySelector('.phase[data-phase="6"]');
+    if (enCurso) { enCurso.classList.add("open"); enCurso.querySelector(".phase-header").setAttribute("aria-expanded", "true"); }
+
+    pintar();
+  })();
 </script>
+
 </body>
 </html>

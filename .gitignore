@@ -72,8 +72,32 @@ material-visual/
 **/oferta_*.txt
 **/borrador_*.txt
 **/borrador_*.md
+# ── BLINDAJE POR DEFECTO DE IMAGENES (21/07) ──
+# Perseguir nombres no funciona: aparecio una captura llamada literalmente " .png"
+# (un espacio) que ningun glob por nombre cubria. Y una captura de trabajo suele
+# llevar tokens, rutas y datos a la vista.
+# Verificado antes de escribir esto: el repo NO tiene ninguna imagen trackeada
+# (`git ls-files` da 0) y ningun HTML publicado referencia una. Asi que el criterio
+# seguro es DENEGAR TODAS por defecto y permitir a mano la que haya que publicar:
+#     git add -f ruta/a/la/imagen.png      (o anadir aqui una excepcion !ruta)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
 # Capturas de tokens/secretos: JAMAS suben a un repo publico.
 # (la del Artefacto 4 se llama "   Token App.png" — con espacios; el glob la cubre)
+#
+# OJO AL ORDEN: van DESPUES de las reglas generales a proposito. En git gana la
+# ULTIMA regla que casa, asi que puestos aqui abajo sobreviven a una excepcion
+# (p. ej. "!docs/captura.png") escrita mas arriba, que es el caso habitual.
+#
+# PERO ojo tambien al limite, comprobado con una prueba real: una excepcion
+# anadida DEBAJO de estas lineas si las anula, y `git add -f` se salta el
+# .gitignore entero. Ninguna regla de aqui es una barrera dura — son una red
+# para despistes, no un control de seguridad. Lo que de verdad protege es no
+# tener secretos en capturas y revisar el `git status` antes de commitear.
 **/*Token*.png
 **/*token*.png
 **/*secret*.png
