@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/laton.css">
 <noscript><style>.reveal{opacity:1;filter:none;transform:none}.run-panel[hidden]{display:block!important}</style></noscript>
 <script>
   // Mismo guardián que la home y el ROADMAP: el tema se aplica ANTES del primer
@@ -28,189 +29,9 @@
   })();
 </script>
 <style>
-  :root {
-    /* — latón sobre papel (idéntico a la home y al ROADMAP) — */
-    --paper:    #DEDCD5;
-    --paper-2:  #E5E4DE;
-    --paper-3:  #D6D3C8;
-    --ink:      #20272A;
-    --pine:     #1E3A34;
-    --signal:   #C8502A;
-    --signal-ink:#A83E1E;
-    --brass:    #9A7420;
-    --sage:     #6E7A6F;
-    --line:     rgba(30,58,52,0.16);
-    --line-2:   rgba(30,58,52,0.09);
-
-    --font-display: "Spectral", Georgia, "Times New Roman", serif;
-    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-
-    --pad: clamp(20px, 5vw, 40px);
-  }
-
-  :root[data-theme="dark"] {
-    --paper:    #161F1C;
-    --paper-2:  #1D2724;
-    --paper-3:  #26302C;
-    --ink:      #E4E0D5;
-    --pine:     #A9C6B8;
-    --signal:   #D6603C;
-    --signal-ink:#E8825C;
-    --brass:    #CBA24D;
-    --sage:     #93A096;
-    --line:     rgba(196,214,204,0.16);
-    --line-2:   rgba(196,214,204,0.09);
-  }
-
-  *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; scroll-padding-top: 74px; }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-
-  body {
-    margin: 0;
-    background: var(--paper);
-    color: var(--ink);
-    font-family: var(--font-body);
-    font-size: 17px;
-    line-height: 1.65;
-    -webkit-font-smoothing: antialiased;
-    transition: background .4s ease, color .4s ease;
-  }
-
-  :root[data-theme="dark"] .bg-grain { mix-blend-mode: screen; opacity: 0.05; }
-  :root[data-theme="dark"] .bg-contours { opacity: 0.12; }
-
-  a { color: var(--signal-ink); text-decoration: none; }
-  a:hover { text-decoration: underline; text-underline-offset: 3px; }
-  :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 2px; }
-
-  /* ─── FONDO: carta náutica ─── */
-  .bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-  .bg-grain {
-    position: absolute; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    opacity: 0.16; mix-blend-mode: multiply;
-  }
-  .bg-contours { position: absolute; left: 0; right: 0; top: -20vh; height: 160vh; width: 100%; opacity: 0.07; will-change: transform; }
-  .bg-contours path { fill: none; stroke: var(--pine); }
-
-  main, header.nav { position: relative; z-index: 1; }
-  .wrap { max-width: 1000px; margin: 0 auto; padding-inline: var(--pad); }
-
-  .tag {
-    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.09em;
-    text-transform: uppercase; color: var(--sage);
-  }
-  .num { font-variant-numeric: tabular-nums; }
-
-  /* ─── NAV ─── */
-  header.nav {
-    position: sticky; top: 0; z-index: 50;
-    background: color-mix(in srgb, var(--paper) 86%, transparent);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--line);
-  }
-  .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 58px; }
-  .brand { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em; color: var(--pine); }
-  .brand b { color: var(--signal-ink); font-weight: 600; }
-  .back {
-    font-family: var(--font-mono); font-size: 0.78rem; color: var(--sage);
-    display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
-  }
-  .back:hover { color: var(--ink); text-decoration: none; }
-  .back .arw { transition: transform .16s ease; display: inline-block; }
-  .back:hover .arw { transform: translateX(-3px); }
-  .nav-right { display: flex; align-items: center; gap: 18px; }
-  .theme-toggle {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 36px; height: 36px; border-radius: 50%; flex: none;
-    border: 1px solid var(--line); background: transparent; color: var(--pine); cursor: pointer;
-    transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
-  }
-  .theme-toggle:hover { background: var(--paper-3); border-color: var(--brass); color: var(--brass); transform: rotate(-12deg); }
-  .theme-toggle svg { width: 17px; height: 17px; display: block; }
-  .theme-toggle .ico-sun { display: none; }
-  :root[data-theme="dark"] .theme-toggle .ico-sun { display: block; }
-  :root[data-theme="dark"] .theme-toggle .ico-moon { display: none; }
-  @media (max-width: 620px) { .brand { display: none; } }
-
-  /* ─── HERO ─── */
-  .hero { padding-block: clamp(44px, 8vw, 76px) clamp(24px, 4vw, 38px); }
-  .hero .eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 22px; }
-  .estado {
-    font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--pine); border: 1px solid color-mix(in srgb, var(--pine) 34%, transparent);
-    border-radius: 2px; padding: 2px 9px;
-  }
-  .estado::before { content: "●"; color: var(--signal); margin-right: 7px; font-size: 0.8em; }
-  .hero h1 {
-    font-family: var(--font-display); font-weight: 400;
-    font-size: clamp(2.1rem, 5.4vw, 3.6rem); line-height: 1.07; letter-spacing: -0.015em;
-    text-wrap: balance; margin: 0 0 20px; color: var(--pine);
-  }
-  .hero h1 em { font-style: italic; color: var(--signal); }
-  .hero .lede { max-width: 60ch; font-size: 1.04rem; margin: 0; }
-  .hero .lede strong { font-weight: 600; color: var(--pine); }
-
-  /* ─── TELEMETRÍA (la ficha del instrumento) ─── */
-  .telemetry {
-    margin-top: clamp(28px, 5vw, 42px);
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
-    gap: 1px; background: var(--line);
-    border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
-  }
-  .tcell { background: color-mix(in srgb, var(--paper-2) 88%, transparent); padding: 15px 17px; }
-  .tcell b {
-    display: block; font-family: var(--font-mono); font-size: 1.32rem; font-weight: 500;
-    color: var(--signal-ink); letter-spacing: -0.01em; line-height: 1.2;
-  }
-  .tcell span { display: block; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.05em; color: var(--sage); margin-top: 5px; }
-
-  /* ─── SEPARADOR con marcas de instrumento ─── */
-  .rule {
-    height: 10px; border: 0; margin: 0;
-    background:
-      linear-gradient(var(--line), var(--line)) left bottom / 100% 1px no-repeat,
-      repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 28px) left bottom / 100% 6px no-repeat;
-  }
-
-  /* ─── SECCIONES ─── */
-  .sec { padding-block: clamp(34px, 6vw, 58px) 0; }
-  .sec > .tag { display: block; margin-bottom: 10px; }
-  .sec h2 {
-    font-family: var(--font-display); font-weight: 400;
-    font-size: clamp(1.5rem, 3.2vw, 2.15rem); line-height: 1.18; letter-spacing: -0.012em;
-    color: var(--pine); margin: 0 0 16px; max-width: 26ch; text-wrap: balance;
-  }
-  .sec h2 em { font-style: italic; color: var(--signal); }
-  .sec h3 {
-    font-family: var(--font-display); font-weight: 600; font-size: 1.12rem;
-    color: var(--pine); margin: 30px 0 10px;
-  }
-  .sec p { max-width: 66ch; margin: 0 0 15px; font-size: 0.98rem; }
-  .sec p strong { font-weight: 600; color: var(--pine); }
-  .sec code {
-    font-family: var(--font-mono); font-size: 0.86em;
-    background: color-mix(in srgb, var(--paper-3) 60%, transparent);
-    border: 1px solid var(--line-2); border-radius: 2px; padding: 0.5px 5px;
-  }
-
-  .note-brass {
-    border-left: 2px solid var(--brass); padding: 4px 0 4px 16px;
-    margin: 0 0 18px; max-width: 68ch; font-size: 0.9rem;
-  }
-  .note-brass strong { color: var(--brass); font-weight: 600; }
-
-  .dod {
-    border: 1px solid var(--line-2); border-radius: 3px;
-    padding: 14px 17px; margin: 6px 0 18px; max-width: 68ch;
-    background: color-mix(in srgb, var(--paper-3) 45%, transparent);
-    font-size: 0.9rem;
-  }
-  .dod .tag { display: block; margin-bottom: 5px; }
-  .dod em { font-family: var(--font-display); font-style: italic; font-size: 1.02rem; color: var(--pine); }
-  .dod .no { color: var(--sage); }
+  /* Lo compartido del sistema "latón sobre papel" vive en ../assets/laton.css.
+     Aquí queda SOLO lo propio de este artefacto: la cadena, el anexo, la
+     prueba del rojo, la escala del juez y el disparador del sello. */
 
   /* ─── CADENA (versiona → mide → registra) ─── */
   .chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; margin: 4px 0 22px; }
@@ -223,25 +44,6 @@
   .chain-step span { font-size: 0.82rem; color: var(--sage); }
   .chain-arrow { align-self: center; color: var(--sage); font-family: var(--font-mono); }
   @media (max-width: 620px) { .chain-arrow { display: none; } }
-
-  /* ─── CÓDIGO / LOG ─── */
-  .code {
-    border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
-    background: color-mix(in srgb, var(--paper-2) 88%, transparent); margin: 0 0 20px;
-  }
-  .code-head {
-    display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: space-between; align-items: center;
-    padding: 9px 15px; border-bottom: 1px solid var(--line-2);
-    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.05em; color: var(--sage);
-  }
-  .code pre {
-    margin: 0; padding: 15px; overflow-x: auto;
-    font-family: var(--font-mono); font-size: 0.79rem; line-height: 1.75; color: var(--ink);
-  }
-  .c-com { color: var(--sage); }
-  .c-key { color: var(--brass); }
-  .c-ok  { color: var(--pine); font-weight: 500; }
-  .c-bad { color: var(--signal-ink); font-weight: 500; }
 
   /* ─── EL ANEXO (acto final, se marca aparte) ─── */
   .anexo { position: relative; padding-block: clamp(40px, 7vw, 70px) 0; }
@@ -323,87 +125,12 @@
   .juez-foot .dato { font-family: var(--font-mono); font-size: 0.72rem; color: var(--sage); letter-spacing: 0.03em; }
   .juez-foot b { color: var(--pine); font-weight: 600; }
 
-  /* ─── ENTREGADO (casillas selladas, ya marcadas) ─── */
-  .checks { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 22px; }
-  .check { display: flex; gap: 14px; align-items: flex-start; padding: 11px 10px; margin-left: -10px; border-radius: 3px; }
-  .sello {
-    flex: none; width: 20px; height: 20px; margin-top: 3px;
-    border: 1px solid color-mix(in srgb, var(--signal) 45%, transparent); border-radius: 2px;
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .sello svg { width: 100%; height: 100%; display: block; overflow: visible; }
-  /* Los dos trazos se definen UNA vez (<symbol> al principio del body) y aquí se
-     instancian con <use>: stroke y stroke-dashoffset son heredables y bajan solos
-     al <path> de dentro. Dos símbolos y no uno para retrasar el 2º trazo 90 ms y
-     que el aspa se lea trazada a mano, no encendida de golpe. */
-  .sello use {
-    fill: none; stroke: var(--signal); stroke-width: 2.1; stroke-linecap: round;
-    stroke-dasharray: 24; stroke-dashoffset: 24;
-    transition: stroke-dashoffset .34s cubic-bezier(.3,.8,.3,1);
-  }
-  /* El aspa se traza cuando la sección entra en pantalla: aquí las casillas ya
-     están cumplidas, no son interactivas como en el ROADMAP. */
+  /* ─── EL SELLO, versión sellada: aquí las casillas ya están cumplidas ─── */
+  .sello { border-color: color-mix(in srgb, var(--signal) 45%, transparent); }
+  /* El aspa se traza cuando la sección entra en pantalla: no es interactiva
+     como en el ROADMAP. */
   .revealed .sello use { stroke-dashoffset: 0; }
   .revealed .sello use:nth-of-type(2) { transition-delay: .09s; }
-  .check b { display: block; font-weight: 600; color: var(--pine); font-size: 0.96rem; }
-  .check span { display: block; font-size: 0.9rem; color: var(--ink); max-width: 62ch; }
-
-  /* ─── LIBROS ─── */
-  .libros { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin: 6px 0 20px; }
-  .libro {
-    display: block; border: 1px solid var(--line); border-radius: 4px; padding: 16px 18px;
-    background: color-mix(in srgb, var(--paper-2) 55%, transparent);
-    color: var(--ink); transition: border-color .16s ease, background .16s ease, transform .16s ease;
-  }
-  .libro:hover { border-color: var(--brass); background: var(--paper-2); text-decoration: none; transform: translateY(-2px); }
-  .libro .tag { display: block; margin-bottom: 5px; }
-  .libro b { display: block; font-family: var(--font-display); font-weight: 600; font-size: 1.02rem; color: var(--pine); margin-bottom: 4px; }
-  .libro span { display: block; font-size: 0.86rem; color: var(--sage); }
-
-  /* ─── CHIPS + BOTONES ─── */
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 22px; }
-  .chip {
-    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.02em;
-    border: 1px solid var(--line); border-radius: 3px; padding: 5px 11px; color: var(--sage);
-  }
-  .chip b { color: var(--pine); font-weight: 500; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-family: var(--font-mono); font-size: 0.79rem; letter-spacing: 0.02em;
-    padding: 9px 17px; border-radius: 3px; cursor: pointer;
-    border: 1px solid transparent; transition: transform .15s ease, background .15s ease, border-color .15s ease;
-  }
-  .btn:hover { text-decoration: none; }
-  .btn-primary { background: var(--signal-ink); color: #FDF4EC; }
-  .btn-primary:hover { background: #8F3417; }
-  :root[data-theme="dark"] .btn-primary { background: #C24A20; color: #FDF4EC; }
-  :root[data-theme="dark"] .btn-primary:hover { background: #A83E1E; }
-  .btn-ghost { background: transparent; border-color: var(--line); color: var(--pine); }
-  .btn-ghost:hover { background: var(--paper-3); border-color: var(--brass); }
-  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 24px; }
-
-  /* ─── PRINCIPIO + PIE ─── */
-  .principle { padding-block: clamp(40px, 6vw, 64px); }
-  .principle p {
-    font-family: var(--font-display); font-weight: 400;
-    font-size: clamp(1.3rem, 2.6vw, 1.85rem); line-height: 1.34; letter-spacing: -0.01em;
-    color: var(--pine); max-width: 32ch; margin: 14px 0 0;
-  }
-  .principle p em { font-style: italic; color: var(--signal); }
-
-  footer { padding-block: 36px 56px; }
-  .foot-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: baseline; }
-  .foot-row .tag a { color: var(--sage); }
-  .foot-row .tag a:hover { color: var(--signal-ink); }
-
-  /* ─── reveal "enfoque de instrumento" ─── */
-  .reveal { opacity: 0; transform: translateY(16px); filter: blur(7px) brightness(0.6); transition: opacity .75s ease, transform .75s cubic-bezier(.2,.7,.2,1), filter .85s ease; }
-  .reveal.revealed { opacity: 1; transform: none; filter: blur(0) brightness(1); }
-  @media (prefers-reduced-motion: reduce) {
-    .reveal { opacity: 1; transform: none; filter: none; transition: none; }
-    .bg-contours { display: none; }
-    .sello use, .libro { transition: none; }
-  }
 </style>
 </head>
 <body>
