@@ -1,465 +1,535 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artefacto 2 — RAG sobre el Corpus DOBE (memoria episódica) · Ruta AI Engineering</title>
-<meta name="description" content="Sistema RAG desplegado en producción que responde preguntas citando fragmentos reales y dice 'no lo sé' cuando no hay recuerdo. FastAPI + Docker + Cloud Run. Segundo artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Artefacto 2: un sistema RAG en producción que responde citando el fragmento real y su página — y dice «no guardo ese recuerdo» en vez de inventar. FastAPI + Docker + Cloud Run. Segundo artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<meta name="author" content="Denys Porynets">
+<meta name="color-scheme" content="light dark">
+<title>Artefacto 2 — RAG sobre el Corpus DOBE: una memoria que sabe cuándo callar</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/laton.css">
+<noscript><style>.reveal{opacity:1;filter:none;transform:none}.sonda-panel[hidden]{display:block!important}</style></noscript>
+<script>
+  // Mismo guardián que la home y el ROADMAP: el tema se aplica ANTES del primer
+  // pintado. Si se deja para el script del final, quien abre en modo noche ve un
+  // destello blanco en cada carga.
+  (function () {
+    try {
+      var CLAVE = "portfolio-tema";
+      var t = localStorage.getItem(CLAVE);
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    } catch (e) {}
+  })();
+</script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+  /* Lo compartido del sistema "latón sobre papel" vive en ../assets/laton.css.
+     Aquí queda SOLO lo propio de este artefacto: el pipeline, la sonda del
+     recuerdo, las capas de servicio y el disparador del sello. */
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ─── PIPELINE (pregunta → retrieval → umbral → síntesis) ───
+     La cadena vive en laton.css; aquí solo el ajuste de esta página:
+     pasos más estrechos para que los 4 quepan en una fila. */
+  .chain-step { flex-basis: 150px; }
 
-  :root {
-    --bg:        #0d1117;
-    --bg-card:   #151b23;
-    --bg-card-h: #1a2230;
-    --ink:       #e6edf3;
-    --muted:     #7d8590;
-    --border:    #2a3340;
-    --amber:     #f0a500;
-    --amber-dim: #5c4419;
-    --green:     #3fb950;
-    --green-dim: #1d3a23;
-    --yellow:    #d9a520;
-    --blue:      #4a8cff;
-    --red:       #f85149;
+  /* ─── LA SONDA DEL RECUERDO (pieza propia de esta página) ───
+     El raíl es un tramo AMPLIADO de la escala de similitud (0,20–0,70): las dos
+     fronteras reales, 0,43 y 0,45, están a dos centésimas — a escala completa
+     el vecindario sería invisible. */
+  .sonda {
+    border: 1px solid var(--line); border-radius: 5px; overflow: hidden;
+    background: color-mix(in srgb, var(--paper-2) 82%, transparent);
+    margin: 8px 0 22px; backdrop-filter: blur(2px);
   }
+  .sonda-tabs { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--line); }
+  .sonda-tab {
+    flex: 1 1 auto; font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.04em;
+    padding: 12px 16px; background: transparent; border: 0; border-right: 1px solid var(--line-2);
+    color: var(--sage); cursor: pointer; text-align: left;
+    transition: background .16s ease, color .16s ease;
+  }
+  .sonda-tab:last-child { border-right: 0; }
+  .sonda-tab:hover { background: color-mix(in srgb, var(--paper-3) 55%, transparent); color: var(--ink); }
+  .sonda-tab[aria-selected="true"] { color: var(--ink); background: color-mix(in srgb, var(--paper-3) 72%, transparent); }
+  .sonda-tab .dot { margin-right: 8px; }
+  .sonda-tab[data-banda="claro"] .dot { color: var(--pine); }
+  .sonda-tab[data-banda="posible"] .dot { color: var(--brass); }
+  .sonda-tab[data-banda="lejano"] .dot { color: var(--sage); }
+  .sonda-tab small { display: block; font-size: 0.68rem; color: var(--sage); margin-top: 2px; letter-spacing: 0.02em; }
 
-  html, body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-    line-height: 1.6;
+  .sonda-scale { padding: 22px 18px 10px; border-bottom: 1px solid var(--line-2); }
+  .sonda-scale .slabel {
+    font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--sage); margin-bottom: 14px; display: block;
   }
+  .sonda-rail { position: relative; height: 26px; }
+  .sonda-track {
+    position: absolute; left: 0; right: 0; top: 10px; height: 6px;
+    border: 1px solid var(--line); border-radius: 1px; background: var(--paper-3);
+  }
+  .sonda-zone { position: absolute; top: 10px; height: 6px; opacity: 0.28; transition: opacity .4s ease; }
+  .sonda-zone.on { opacity: 0.85; }
+  /* Anchos = RESPALDO sin JS (0,43/0,45 sobre el tramo 0,20–0,70). Con JS, el
+     script los recoloca desde los mismos umbrales que mueven la aguja — si se
+     recalibra el RAG, solo hay que tocar las constantes del script. */
+  .sonda-zone[data-banda="lejano"] { left: 0; width: 46%; background: var(--sage); }
+  .sonda-zone[data-banda="posible"] { left: 46%; width: 4%; background: var(--brass); }
+  .sonda-zone[data-banda="claro"] { left: 50%; width: 50%; background: var(--pine); }
+  .sonda-ticks { position: absolute; left: 0; right: 0; top: 6px; height: 14px; }
+  .sonda-ticks i { position: absolute; top: 0; width: 1px; height: 14px; background: var(--line); transform: translateX(-0.5px); }
+  .sonda-marker {
+    position: absolute; top: 0; width: 0; height: 0;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 8px solid var(--signal); transform: translateX(-5px);
+    transition: left .6s ease;
+  }
+  @media (prefers-reduced-motion: reduce) { .sonda-marker { transition: none; } }
+  .sonda-bounds {
+    display: flex; justify-content: space-between; margin-top: 10px;
+    font-family: var(--font-mono); font-size: 0.68rem; color: var(--sage); letter-spacing: 0.03em;
+  }
+  .sonda-panel pre {
+    margin: 0; padding: 18px 15px; overflow-x: auto;
+    font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.85; color: var(--ink);
+  }
+  .sonda-foot {
+    border-top: 1px solid var(--line-2); padding: 13px 16px;
+    font-size: 0.86rem; color: var(--ink); max-width: none; margin: 0;
+  }
+  .sonda-foot b { color: var(--pine); }
+  /* ─── CAPAS (de script a servicio) ───
+     Las capas y el veredicto viven en laton.css; aquí el rótulo corto de esta página. */
+  .layer .lnum { width: 62px; }
 
-  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 24px 80px; }
-
-  /* ── NAV ── */
-  .topnav {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 44px; flex-wrap: wrap; gap: 12px;
-  }
-  .topnav a {
-    font-family: 'DM Mono', monospace; font-size: 12px;
-    color: var(--muted); text-decoration: none;
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 6px 12px; transition: all 0.15s;
-  }
-  .topnav a:hover { color: var(--ink); border-color: var(--muted); }
-  .topnav .navgroup { display: flex; gap: 8px; flex-wrap: wrap; }
-
-  /* ── HERO ── */
-  .hero { margin-bottom: 40px; }
-  .hero-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  }
-  .badge-done {
-    color: var(--green); background: var(--green-dim);
-    border-radius: 4px; padding: 2px 8px; letter-spacing: 1px;
-  }
-  .hero-title {
-    font-family: 'Fraunces', serif; font-weight: 300;
-    font-size: clamp(30px, 5vw, 44px); line-height: 1.07;
-    letter-spacing: -0.5px; margin-bottom: 16px;
-  }
-  .hero-title strong { font-weight: 600; color: var(--amber); }
-  .hero-sub { font-size: 15px; color: var(--muted); max-width: 640px; }
-  .hero-sub strong { color: var(--ink); font-weight: 600; }
-
-  /* ── SECTION ── */
-  .section { margin-top: 44px; }
-  .sec-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
-  }
-  .sec-title {
-    font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600;
-    margin-bottom: 14px;
-  }
-  .sec-p { font-size: 14.5px; color: var(--muted); margin-bottom: 14px; }
-  .sec-p strong { color: var(--ink); font-weight: 600; }
-
-  /* ── PIPELINE ── */
-  .pipeline {
-    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 8px; margin: 18px 0;
-  }
-  .pipe-step { flex: 1; min-width: 130px; padding: 16px; text-align: center; }
-  .pipe-step .pe {
-    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
-  }
-  .pipe-step .pt { font-size: 14px; color: var(--ink); font-weight: 500; }
-  .pipe-step .pd { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .pipe-arrow { display: flex; align-items: center; color: var(--amber); font-size: 18px; }
-  @media (max-width: 620px) { .pipe-arrow { transform: rotate(90deg); margin: 0 auto; } }
-
-  /* ── CODE ── */
-  .codecard {
-    background: #0a0e14; border: 1px solid var(--border); border-radius: 10px;
-    overflow: hidden; margin: 16px 0;
-  }
-  .code-head {
-    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
-    padding: 9px 14px; border-bottom: 1px solid var(--border);
-    background: var(--bg-card); display: flex; justify-content: space-between;
-  }
-  .code-head .tag { color: var(--amber); }
-  pre { padding: 14px 16px; overflow-x: auto; }
-  code {
-    font-family: 'DM Mono', monospace; font-size: 12.5px; line-height: 1.7;
-    color: var(--ink); white-space: pre;
-  }
-  .c-key { color: var(--blue); }
-  .c-str { color: var(--green); }
-  .c-com { color: var(--muted); font-style: italic; }
-  .c-num { color: var(--amber); }
-  .c-grn { color: var(--green); }
-  .c-yel { color: var(--yellow); }
-  .c-gry { color: var(--muted); }
-
-  /* ── BANDS (umbral de confianza) ── */
-  .bands { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
-  @media (max-width: 620px) { .bands { grid-template-columns: 1fr; } }
-  .band {
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 10px; padding: 14px 16px;
-  }
-  .band .bdot { font-size: 18px; }
-  .band .bname { font-family: 'DM Mono', monospace; font-size: 12px; margin: 6px 0 4px; font-weight: 500; }
-  .band .bdesc { font-size: 12.5px; color: var(--muted); }
-  .band.g { border-color: var(--green-dim); }
-  .band.g .bname { color: var(--green); }
-  .band.y .bname { color: var(--yellow); }
-  .band.w .bname { color: var(--muted); }
-
-  /* ── CHECKS ── */
-  .checks { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
-  .check {
-    display: flex; gap: 12px; align-items: flex-start;
-    background: var(--bg-card); border: 1px solid var(--green-dim);
-    border-radius: 8px; padding: 14px 16px;
-  }
-  .check .mark {
-    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
-    background: var(--green); display: flex; align-items: center; justify-content: center;
-    margin-top: 1px;
-  }
-  .check .mark svg { width: 13px; height: 13px; }
-  .check .ctitle { font-weight: 600; font-size: 14.5px; }
-  .check .cdesc { font-size: 13px; color: var(--muted); margin-top: 2px; }
-
-  /* ── DOD ── */
-  .dod {
-    margin: 20px 0; padding: 14px 18px;
-    border-left: 3px solid var(--green); background: rgba(63,185,80,0.06);
-    border-radius: 0 8px 8px 0;
-  }
-  .dod-label {
-    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--green); margin-bottom: 5px;
-  }
-  .dod-text { font-size: 14px; color: var(--ink); }
-
-  /* ── NOTE (privacidad / token) ── */
-  .note {
-    margin: 18px 0; padding: 14px 18px;
-    border-left: 3px solid var(--amber); background: rgba(240,165,0,0.06);
-    border-radius: 0 8px 8px 0; font-size: 13.5px; color: var(--ink);
-  }
-  .note strong { color: var(--amber); }
-
-  /* ── STACK chips ── */
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  .chip {
-    font-family: 'DM Mono', monospace; font-size: 12px;
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 5px 11px; color: var(--muted);
-  }
-  .chip strong { color: var(--amber); font-weight: 500; }
-
-  /* ── CTA ── */
-  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
-  .cta {
-    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-    text-decoration: none; border-radius: 8px; padding: 11px 20px;
-    transition: all 0.18s; display: inline-flex; align-items: center; gap: 8px;
-  }
-  .cta-primary { background: var(--amber); color: #0d1117; }
-  .cta-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,165,0,0.25); }
-  .cta-ghost { border: 1px solid var(--border); color: var(--muted); }
-  .cta-ghost:hover { color: var(--ink); border-color: var(--muted); }
-
-  /* ── ARCH layers ── */
-  .layers { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
-  .layer {
-    display: flex; gap: 14px; align-items: baseline;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 8px; padding: 13px 16px;
-  }
-  .layer .lnum {
-    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--amber);
-    flex-shrink: 0; width: 70px;
-  }
-  .layer .lbody { font-size: 13.5px; }
-  .layer .lbody b { color: var(--ink); }
-  .layer .lbody span { color: var(--muted); }
-
-  /* ── PRINCIPLE ── */
-  .principle {
-    margin-top: 44px;
-    background: linear-gradient(135deg, #1a1410 0%, var(--bg-card) 60%);
-    border: 1px solid var(--amber-dim); border-radius: 12px;
-    padding: 26px 28px; position: relative; overflow: hidden;
-  }
-  .principle::before {
-    content: ''; position: absolute; top: -40%; right: -10%;
-    width: 220px; height: 220px;
-    background: radial-gradient(circle, rgba(240,165,0,0.08), transparent 70%);
-  }
-  .principle-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
-  }
-  .principle-text {
-    font-family: 'Fraunces', serif; font-size: 19px; font-weight: 300;
-    line-height: 1.45; color: var(--ink); max-width: 660px;
-  }
-  .principle-text strong { font-weight: 600; color: var(--amber); }
-
-  .footer {
-    margin-top: 44px; text-align: center;
-    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--border);
-  }
-  .footer span { color: var(--amber); opacity: 0.6; }
+  /* ─── EL SELLO, versión sellada: aquí las casillas ya están cumplidas ─── */
+  .sello { border-color: color-mix(in srgb, var(--signal) 45%, transparent); }
+  /* El aspa se traza cuando la sección entra en pantalla: no es interactiva
+     como en el ROADMAP. */
+  .revealed .sello use { stroke-dashoffset: 0; }
+  .revealed .sello use:nth-of-type(2) { transition-delay: .09s; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="bg" aria-hidden="true">
+  <div class="bg-grain"></div>
+  <svg class="bg-contours" id="contours" preserveAspectRatio="none" viewBox="0 0 1200 1200"></svg>
+</div>
 
-  <div class="topnav">
-    <a href="../ROADMAP.html">← Bitácora del roadmap</a>
-    <div class="navgroup">
-      <a href="https://dobe-rag-1015586629315.europe-southwest1.run.app" target="_blank">Probar demo ↗</a>
-      <a href="https://github.com/denysporynets/AI-Roadmap/tree/main/2_RAG%20desplegado%20sobre%20el%20Corpus%20DOBE" target="_blank">Ver código en GitHub ↗</a>
-      <a href="https://denysporynets.github.io">Portfolio ↗</a>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="sello-a" viewBox="0 0 20 20"><path d="M4.2 4.8 C 8.4 8.1, 12.1 11.6, 16.1 15.4"/></symbol>
+  <symbol id="sello-b" viewBox="0 0 20 20"><path d="M15.8 4.6 C 12.2 8.3, 8.1 11.9, 4.4 15.2"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="back" href="../ROADMAP.html"><span class="arw">←</span> Bitácora</a>
+    <div class="nav-right">
+      <span class="brand"><b>DS-Nexus</b> Protocol Based</span>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Cambiar a modo noche" title="Modo noche / día">
+        <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
     </div>
   </div>
+</header>
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-eyebrow">
-      <span>Artefacto 2 · Mes 2</span>
-      <span class="badge-done">✓ Desplegado</span>
+<main>
+  <!-- ═══ HERO ═══ -->
+  <section class="wrap hero">
+    <div class="eyebrow reveal">
+      <span class="tag">Artefacto 2 de 6 · Mes 2</span>
+      <span class="estado">Desplegado · Cloud Run</span>
     </div>
-    <h1 class="hero-title">RAG sobre el Corpus DOBE<br><strong>una memoria episódica consultable</strong></h1>
-    <p class="hero-sub">
-      Un sistema que responde preguntas sobre un corpus personal <strong>citando el fragmento real
-      y su página</strong> — y que dice <strong>"no guardo ese recuerdo"</strong> en vez de inventar
-      cuando la pregunta cae fuera. Desplegado en producción con FastAPI, Docker y Cloud Run.
-      Segundo artefacto de la ruta <strong>Data Science → AI Engineering</strong>.
-    </p>
-  </div>
-
-  <!-- QUÉ HACE -->
-  <div class="section">
-    <div class="sec-eyebrow">Qué hace</div>
-    <div class="sec-title">Recuperar el momento, no resumir un libro</div>
-    <p class="sec-p">
-      No es un buscador ni una enciclopedia: es <strong>recuperación episódica</strong>. Ante una
-      pregunta, encuentra los <strong>momentos reales</strong> del corpus que más se le parecen por
-      significado, y solo entonces redacta una respuesta <strong>anclada a esos momentos</strong>,
-      citando de qué pasaje y página sale cada cosa.
+    <h1 class="reveal">Una memoria que sabe <em>cuándo callar</em>.</h1>
+    <p class="lede reveal">
+      Un RAG sobre un corpus personal que responde <strong>citando el fragmento real y su página</strong> —
+      y que dice <strong>«no guardo ese recuerdo»</strong> en vez de inventar cuando la pregunta cae fuera.
+      Desplegado en producción con <strong>FastAPI, Docker y Cloud Run</strong>. Segundo artefacto de la ruta
+      <strong>Data Science → AI Engineering</strong>.
     </p>
 
-    <div class="pipeline">
-      <div class="pipe-step">
-        <div class="pe">Pregunta</div>
-        <div class="pt">Lenguaje natural</div>
-        <div class="pd">se convierte en vector</div>
-      </div>
-      <div class="pipe-arrow">→</div>
-      <div class="pipe-step">
-        <div class="pe">Retrieval</div>
-        <div class="pt">Búsqueda por coseno</div>
-        <div class="pd">momentos más cercanos</div>
-      </div>
-      <div class="pipe-arrow">→</div>
-      <div class="pipe-step">
-        <div class="pe">Umbral</div>
-        <div class="pt">¿hay recuerdo?</div>
-        <div class="pd">🟢 🟡 ⚪ antes del LLM</div>
-      </div>
-      <div class="pipe-arrow">→</div>
-      <div class="pipe-step">
-        <div class="pe">Síntesis</div>
-        <div class="pt">LLM con fuentes</div>
-        <div class="pd">respuesta + citas</div>
-      </div>
+    <div class="telemetry reveal">
+      <div class="tcell"><b class="num">3</b><span>bandas de confianza</span></div>
+      <div class="tcell"><b class="num">0 €</b><span>coste de decir «no sé»</span></div>
+      <div class="tcell"><b class="num">4</b><span>capas desacopladas</span></div>
+      <div class="tcell"><b class="num">1</b><span>token para preguntar</span></div>
     </div>
-  </div>
+  </section>
 
-  <!-- LA DECISIÓN CLAVE: EL UMBRAL -->
-  <div class="section">
-    <div class="sec-eyebrow">La decisión de diseño</div>
-    <div class="sec-title">El umbral manda antes que el LLM</div>
-    <p class="sec-p">
-      Antes de llamar al modelo, el sistema mide cuánto se parece la mejor coincidencia. Si no
-      alcanza, <strong>no llama al LLM</strong>: ni inventa una cercanía que no existe, ni gasta una
-      petición. La honestidad es una característica del diseño, no un accidente.
+  <div class="wrap"><hr class="rule"></div>
+
+  <!-- ═══ LA IDEA ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">La idea</span>
+    <h2>Recuperar el momento, <em>no resumir un libro</em></h2>
+    <p>
+      No es un buscador ni una enciclopedia: es <strong>recuperación episódica</strong>. Ante una pregunta,
+      encuentra los <strong>momentos reales</strong> del corpus que más se le parecen por significado, y solo
+      entonces redacta una respuesta <strong>anclada a esos momentos</strong>, citando de qué pasaje y página
+      sale cada cosa.
     </p>
-    <div class="bands">
-      <div class="band g">
-        <div class="bdot">🟢</div>
-        <div class="bname">recuerdo claro</div>
-        <div class="bdesc">Responde y cita el momento + página.</div>
+
+    <div class="chain">
+      <div class="chain-step">
+        <span class="tag">Pregunta</span>
+        <b>lenguaje natural</b>
+        <span>se convierte en vector</span>
       </div>
-      <div class="band y">
-        <div class="bdot">🟡</div>
-        <div class="bname">vecindario</div>
-        <div class="bdesc">Responde, pero marca la incertidumbre.</div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">
+        <span class="tag">Retrieval</span>
+        <b>coseno</b>
+        <span>los momentos más cercanos</span>
       </div>
-      <div class="band w">
-        <div class="bdot">⚪</div>
-        <div class="bname">sin recuerdo</div>
-        <div class="bdesc">No inventa. Lo dice y sugiere lo más cercano.</div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">
+        <span class="tag">Umbral</span>
+        <b>¿hay recuerdo?</b>
+        <span>la sonda decide antes del LLM</span>
+      </div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">
+        <span class="tag">Síntesis</span>
+        <b>LLM con fuentes</b>
+        <span>respuesta + citas</span>
       </div>
     </div>
 
-    <div class="codecard">
-      <div class="code-head"><span>POST /preguntar · pregunta fuera del corpus</span><span class="tag">respuesta real</span></div>
-<pre><code><span class="c-com"># una pregunta que el corpus no contiene</span>
-{ <span class="c-key">"consulta"</span>: <span class="c-str">"¿qué ropa me pongo para una boda?"</span> }
-
-<span class="c-com"># el sistema NO inventa: el umbral corta antes del LLM</span>
-{
-  <span class="c-key">"banda"</span>:     <span class="c-gry">"lejano"</span>,        <span class="c-com">// ⚪</span>
-  <span class="c-key">"sim_top"</span>:   <span class="c-num">0.262</span>,
-  <span class="c-key">"respuesta"</span>: <span class="c-key">null</span>,           <span class="c-com">// no se llamó al modelo</span>
-  <span class="c-key">"fuentes"</span>:   [],
-  <span class="c-key">"cercanos"</span>:  [ <span class="c-com">/* lo más próximo, no concluyente */</span> ]
-}</code></pre>
+    <div class="dod">
+      <span class="tag">Definición de «hecho»</span>
+      <em>Una pregunta devuelve respuesta apoyada en fragmentos reales con la fuente citada, servida desde una URL pública.</em>
+      <span class="no"> No vive en un notebook.</span>
     </div>
-    <p class="sec-p">
-      Cuando <strong>sí</strong> hay recuerdo (🟢), la respuesta llega redactada y con
-      <code style="color:var(--amber)">[#momento · página]</code> en cada afirmación — para que siempre
-      puedas ver de qué pasaje real sale.
-    </p>
-  </div>
+  </section>
 
-  <!-- ARQUITECTURA DE PRODUCCIÓN -->
-  <div class="section">
-    <div class="sec-eyebrow">De script a servicio</div>
-    <div class="sec-title">Tres capas y una caja en la nube</div>
-    <p class="sec-p">
+  <!-- ═══ EL INSTRUMENTO: la sonda del recuerdo ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">El instrumento</span>
+    <h2>La sonda mide <em>antes de navegar</em></h2>
+    <p>
+      Antes de llamar al modelo, el sistema mide cuánto se parece la mejor coincidencia. Si no alcanza,
+      <strong>no llama al LLM</strong>: ni inventa una cercanía que no existe, ni gasta una petición.
+      Elige una pregunta y mira dónde cae la aguja.
+    </p>
+
+    <div class="sonda">
+      <div class="sonda-tabs" role="tablist" aria-label="Tres preguntas, una por banda de confianza">
+        <button class="sonda-tab" role="tab" id="tab-lejano" data-banda="lejano" data-sim="0.262" aria-controls="panel-lejano" aria-selected="true">
+          <span class="dot" aria-hidden="true">○</span>«¿qué ropa me pongo para una boda?»
+          <small>sim 0,262 · ejecución real de la demo</small>
+        </button>
+        <button class="sonda-tab" role="tab" id="tab-posible" data-banda="posible" data-sim="0.44" aria-controls="panel-posible" aria-selected="false" tabindex="-1">
+          <span class="dot" aria-hidden="true">◐</span>una que solo roza el corpus
+          <small>sim 0,44 · ilustrativa</small>
+        </button>
+        <button class="sonda-tab" role="tab" id="tab-claro" data-banda="claro" data-sim="0.58" aria-controls="panel-claro" aria-selected="false" tabindex="-1">
+          <span class="dot" aria-hidden="true">●</span>una que el corpus sí recuerda
+          <small>sim 0,58 · ilustrativa</small>
+        </button>
+      </div>
+
+      <div class="sonda-scale">
+        <span class="slabel">Similitud del mejor momento · tramo 0,20 – 0,70</span>
+        <div class="sonda-rail">
+          <span class="sonda-track"></span>
+          <span class="sonda-zone on" data-banda="lejano"></span>
+          <span class="sonda-zone" data-banda="posible"></span>
+          <span class="sonda-zone" data-banda="claro"></span>
+          <span class="sonda-ticks" id="sondaTicks"></span>
+          <span class="sonda-marker" id="sondaMarker" style="left:12.4%" role="img" aria-label="similitud 0,262: banda lejano"></span>
+        </div>
+        <div class="sonda-bounds">
+          <span>sin recuerdo &lt; 0,43</span>
+          <span>vecindario 0,43 – 0,45</span>
+          <span>recuerdo claro ≥ 0,45</span>
+        </div>
+      </div>
+
+      <div class="sonda-body">
+        <div class="sonda-panel" id="panel-lejano" role="tabpanel" aria-labelledby="tab-lejano">
+<pre><code>{ <span class="c-com">"consulta"</span>: "¿qué ropa me pongo para una boda?" }
+
+{ <span class="c-com">"banda"</span>:     "lejano",     <span class="c-com"># ○ 0,262 &lt; 0,43</span>
+  <span class="c-com">"respuesta"</span>: <span class="c-key">null</span>,         <span class="c-com"># «no guardo ese recuerdo»</span>
+  <span class="c-com">"fuentes"</span>:   [],
+  <span class="c-com">"cercanos"</span>:  [ <span class="c-com"># lo más próximo, no concluyente</span> ] }</code></pre>
+          <p class="sonda-foot">
+            <span class="veredicto ok">0 llamadas al LLM</span>
+            <b>El umbral cortó antes del modelo: ni invención ni gasto.</b> La honestidad es una
+            característica del diseño, no un accidente — y además sale gratis.
+          </p>
+        </div>
+        <div class="sonda-panel" id="panel-posible" role="tabpanel" aria-labelledby="tab-posible" hidden>
+<pre><code>{ <span class="c-com">"banda"</span>:     "posible",    <span class="c-com"># ◐ 0,43 ≤ 0,44 &lt; 0,45</span>
+  <span class="c-com">"respuesta"</span>: "…redactada, marcando la incertidumbre…",
+  <span class="c-com">"fuentes"</span>:   [ <span class="c-com"># solo los momentos ≥ 0,43</span> ] }</code></pre>
+          <p class="sonda-foot">
+            <span class="veredicto aviso">responde con aviso</span>
+            <b>El vecindario entero mide dos centésimas.</b> El mejor momento roza el recuerdo:
+            se responde, pero la incertidumbre viaja con la respuesta en vez de esconderse.
+          </p>
+        </div>
+        <div class="sonda-panel" id="panel-claro" role="tabpanel" aria-labelledby="tab-claro" hidden>
+<pre><code>{ <span class="c-com">"banda"</span>:     "claro",      <span class="c-com"># ● 0,58 ≥ 0,45</span>
+  <span class="c-com">"respuesta"</span>: "…con [#momento · página] en cada afirmación…",
+  <span class="c-com">"fuentes"</span>:   [ <span class="c-com"># los 4 momentos citados</span> ] }</code></pre>
+          <p class="sonda-foot">
+            <span class="veredicto ok">responde y cita</span>
+            <b>Cada afirmación lleva su cita [#momento · página].</b> Si no puedes ver de qué pasaje
+            real sale, no cuenta.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p class="note-brass">
+      <strong>El umbral tiene historia, y no la escribí yo a ojo.</strong> Las fronteras vivían en 0,40 hasta que
+      el <a href="../artefacto-3/index.html">harness del Artefacto 3</a> cazó un falso positivo: contenido
+      <em>ausente</em> del corpus colándose en «posible» con similitud 0,421. Subir el listón a 0,43 llevó la
+      métrica de decisión del 86 % al 100 %, con cero regresiones en el golden set. El instrumento calibró
+      al instrumento — con su caveat honesto anotado en el código: n pequeño, vigilar.
+    </p>
+  </section>
+
+  <!-- ═══ DE SCRIPT A SERVICIO ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">De script a servicio</span>
+    <h2>Cuatro capas y <em>una caja en la nube</em></h2>
+    <p>
       El sistema está <strong>desacoplado en capas que solo se hablan por un contrato</strong> (un JSON).
       Cambiar la cara no toca el motor; cambiar el modelo no toca la web.
     </p>
     <div class="layers">
       <div class="layer">
-        <div class="lnum">motor</div>
-        <div class="lbody"><b>rag_core.py</b> — <span>retrieval + umbral + síntesis. Carga el índice una sola vez. Devuelve un dict, no imprime.</span></div>
+        <span class="lnum">motor</span>
+        <span class="lbody"><b>rag_core.py</b> — retrieval + umbral + síntesis. Carga el índice una sola vez. Devuelve un dict, no imprime.</span>
       </div>
       <div class="layer">
-        <div class="lnum">API</div>
-        <div class="lbody"><b>FastAPI + uvicorn</b> — <span><code>/preguntar</code> protegido por token, <code>/salud</code> para el orquestador. Motor cargado en el <i>lifespan</i>.</span></div>
+        <span class="lnum">API</span>
+        <span class="lbody"><b>FastAPI + uvicorn</b> — <code>/preguntar</code> protegido por token, <code>/salud</code> para el orquestador. Motor cargado en el <em>lifespan</em>.</span>
       </div>
       <div class="layer">
-        <div class="lnum">cara</div>
-        <div class="lbody"><b>frontend estático</b> — <span>chat que hace <code>fetch</code> y pinta el JSON: banda 🟢🟡⚪, respuesta y fuentes.</span></div>
+        <span class="lnum">cara</span>
+        <span class="lbody"><b>frontend estático</b> — chat que hace <code>fetch</code> y pinta el JSON: banda, respuesta y fuentes.</span>
       </div>
       <div class="layer">
-        <div class="lnum">caja</div>
-        <div class="lbody"><b>Docker → Cloud Run</b> — <span>imagen mínima construida en la nube (Cloud Build), <i>serverless</i> con escala a cero, claves en Secret Manager.</span></div>
+        <span class="lnum">caja</span>
+        <span class="lbody"><b>Docker → Cloud Run</b> — imagen mínima construida en la nube (Cloud Build), <em>serverless</em> con escala a cero, claves en Secret Manager.</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- PRIVACIDAD -->
-  <div class="section">
-    <div class="sec-eyebrow">Privacidad por diseño</div>
-    <div class="sec-title">Un corpus personal, protegido por capas</div>
-    <p class="sec-p">
+  <!-- ═══ PRIVACIDAD ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Privacidad por diseño</span>
+    <h2>Un corpus personal, <em>protegido por capas</em></h2>
+    <p>
       El corpus es material personal, así que la privacidad no se deja al azar: el repositorio público
       <strong>no contiene ni el corpus ni los vectores</strong> (un <code>.gitignore</code> los blinda),
       la imagen vive en un <strong>registro privado</strong>, las claves se inyectan desde
-      <strong>Secret Manager</strong> (nunca en el código) y la consulta exige <strong>token</strong>.
+      <strong>Secret Manager</strong> —nunca en el código— y la consulta exige <strong>token</strong>.
     </p>
-    <div class="note">
-      <strong>Demo real, acceso por token.</strong> La URL está viva y abierta para <em>cargar</em>
-      la web, pero preguntar al corpus requiere un token que se comparte de forma selectiva. Así se
-      puede enseñar el sistema funcionando sin abrir el contenido personal a cualquiera.
-    </div>
-  </div>
+    <p class="note-brass">
+      <strong>Demo real, acceso por token.</strong> La URL está viva y abierta para <em>cargar</em> la web,
+      pero preguntar al corpus requiere un token que se comparte de forma selectiva. Así se puede enseñar
+      el sistema funcionando sin abrir el contenido personal a cualquiera.
+    </p>
+  </section>
 
-  <!-- LO QUE SE ENTREGÓ -->
-  <div class="section">
-    <div class="sec-eyebrow">Lo que se entregó</div>
-    <div class="sec-title">Los criterios, cumplidos</div>
+  <!-- ═══ ENTREGADO ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Lo que se entregó</span>
+    <h2>Los tres criterios, cumplidos</h2>
     <div class="checks">
       <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">Respuestas ancladas a fragmentos reales, con fuente citada</div>
-          <div class="cdesc">Cada afirmación trae [#momento · página]; si no puedes ver de dónde sale, no cuenta.</div>
-        </div>
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Respuestas ancladas a fragmentos reales, con fuente citada</b><span>Cada afirmación trae [#momento · página]; si no puedes ver de dónde sale, no cuenta.</span></span>
       </div>
       <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">No alucina: umbral de confianza antes del LLM</div>
-          <div class="cdesc">Sin recuerdo claro → lo dice y no gasta el modelo. Verificado con prueba ciega.</div>
-        </div>
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>No alucina: el umbral manda antes que el LLM</b><span>Sin recuerdo claro → lo dice y no gasta el modelo. Verificado con prueba ciega, y recalibrado por el harness del Artefacto 3.</span></span>
       </div>
       <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">Desplegado en producción con URL pública</div>
-          <div class="cdesc">FastAPI + Docker + Cloud Run serverless; secretos gestionados; verificado de punta a punta.</div>
-        </div>
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Desplegado en producción con URL pública</b><span>FastAPI + Docker + Cloud Run serverless; secretos gestionados; verificado de punta a punta.</span></span>
       </div>
-    </div>
-
-    <div class="dod">
-      <div class="dod-label">Definición de "hecho" — cumplida</div>
-      <div class="dod-text">Una pregunta sobre el corpus devuelve respuesta apoyada en fragmentos reales con la fuente citada, servida desde una URL pública. No vive en un notebook.</div>
     </div>
 
     <div class="chips">
-      <span class="chip"><strong>Python</strong> · NumPy</span>
-      <span class="chip"><strong>OpenAI</strong> embeddings</span>
-      <span class="chip"><strong>gpt-4o-mini</strong> síntesis</span>
-      <span class="chip"><strong>FastAPI</strong> + uvicorn</span>
-      <span class="chip"><strong>Docker</strong></span>
-      <span class="chip"><strong>Cloud Run</strong> serverless</span>
-      <span class="chip"><strong>Secret Manager</strong></span>
-      <span class="chip"><strong>Cloud Build</strong> + Artifact Registry</span>
+      <span class="chip"><b>Python</b> · NumPy</span>
+      <span class="chip"><b>OpenAI</b> embeddings</span>
+      <span class="chip"><b>gpt-4o-mini</b> síntesis</span>
+      <span class="chip"><b>FastAPI</b> + uvicorn</span>
+      <span class="chip"><b>Docker</b></span>
+      <span class="chip"><b>Cloud Run</b> serverless</span>
+      <span class="chip"><b>Secret Manager</b></span>
+      <span class="chip"><b>Cloud Build</b> + Artifact Registry</span>
     </div>
 
-    <div class="cta-row">
-      <a class="cta cta-primary" href="https://dobe-rag-1015586629315.europe-southwest1.run.app" target="_blank">Probar la demo ↗</a>
-      <a class="cta cta-ghost" href="https://github.com/denysporynets/AI-Roadmap/tree/main/2_RAG%20desplegado%20sobre%20el%20Corpus%20DOBE" target="_blank">Ver código en GitHub ↗</a>
-      <a class="cta cta-ghost" href="../ROADMAP.html">Ver el roadmap completo →</a>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="https://dobe-rag-1015586629315.europe-southwest1.run.app" target="_blank" rel="noopener">Probar la demo ↗</a>
+      <a class="btn btn-ghost" href="https://github.com/denysporynets/AI-Roadmap/tree/main/2_RAG%20desplegado%20sobre%20el%20Corpus%20DOBE" target="_blank" rel="noopener">Ver el código ↗</a>
+      <a class="btn btn-ghost" href="../artefacto-1/index.html">← Artefacto 1 · el molde</a>
+      <a class="btn btn-ghost" href="../ROADMAP.html">Bitácora completa →</a>
     </div>
-  </div>
+  </section>
 
-  <!-- PRINCIPIO -->
-  <div class="principle">
-    <div class="principle-eyebrow">Por qué este artefacto importa</div>
-    <p class="principle-text">
-      Un RAG fácil contesta siempre; uno bueno sabe <strong>cuándo callar</strong>. Poner el umbral
-      antes del modelo convierte "no alucinar" en una decisión de ingeniería —
-      <strong>y eso, además, no cuesta dinero</strong>.
+  <!-- ═══ PRINCIPIO ═══ -->
+  <section class="wrap principle reveal">
+    <span class="tag">Por qué este artefacto importa</span>
+    <p>
+      Un RAG fácil contesta siempre; uno bueno sabe <em>cuándo callar</em>. Poner el umbral antes del
+      modelo convierte «no alucinar» en una decisión de ingeniería — y eso, además, no cuesta dinero.
     </p>
-  </div>
+  </section>
 
-  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · artefacto 2 de 6</div>
+  <div class="wrap"><hr class="rule"></div>
 
-</div>
+  <footer class="wrap">
+    <div class="foot-row">
+      <span class="tag">protocolo ds-nexus · constante 2.51 · artefacto 2 de 6</span>
+      <span class="tag"><a href="https://denysporynets.github.io/">← volver al portfolio</a></span>
+    </div>
+  </footer>
+</main>
+
+<script>
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ── reveal "enfoque de instrumento" ──
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add("revealed"); io.unobserve(e.target); }
+    }
+  }, { threshold: 0.08 });
+  document.querySelectorAll(".reveal").forEach((el) => { if (!el.closest(".hero")) io.observe(el); });
+  requestAnimationFrame(() => {
+    document.querySelectorAll(".hero .reveal").forEach((el, i) => {
+      setTimeout(() => el.classList.add("revealed"), 90 * i);
+    });
+  });
+
+  // ── modo noche / día (misma clave que la home: el tema viaja con el visitante) ──
+  (function tema() {
+    const root = document.documentElement;
+    const btn = document.getElementById("themeToggle");
+    const CLAVE = "portfolio-tema";
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function aplicar(t) {
+      if (t === "dark") { root.setAttribute("data-theme", "dark"); btn.setAttribute("aria-label", "Cambiar a modo día"); }
+      else { root.removeAttribute("data-theme"); btn.setAttribute("aria-label", "Cambiar a modo noche"); }
+    }
+    function guardado() { try { return localStorage.getItem(CLAVE); } catch (e) { return null; } }
+    // El tema ya lo aplicó el script del <head>; aquí solo se pone al día la etiqueta del botón.
+    aplicar(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
+    btn.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      aplicar(next);
+      try { localStorage.setItem(CLAVE, next); } catch (e) {}
+    });
+    mq.addEventListener("change", (e) => { if (!guardado()) aplicar(e.matches ? "dark" : "light"); });
+  })();
+
+  // ── fondo: contornos tipo carta náutica ──
+  (function drawContours() {
+    const svg = document.getElementById("contours");
+    if (!svg || reduce) return;
+    const W = 1200, H = 1200, lines = 26;
+    let frag = "";
+    for (let i = 0; i < lines; i++) {
+      const baseY = (H / (lines - 1)) * i;
+      const amp = 20 + (i % 5) * 5;
+      const phase = i * 0.7;
+      const freq = 0.0055 + (i % 3) * 0.0011;
+      let d = "";
+      for (let x = 0; x <= W; x += 40) {
+        const y = baseY + Math.sin(x * freq + phase) * amp;
+        d += (x === 0 ? "M" : "L") + x + " " + y.toFixed(1) + " ";
+      }
+      const index = (i % 5 === 0);
+      frag += '<path d="' + d.trim() + '" stroke-width="' + (index ? 1.5 : 0.8) + '"/>';
+    }
+    svg.innerHTML = frag;
+  })();
+
+  // ── parallax del fondo ──
+  (function parallax() {
+    const el = document.getElementById("contours");
+    if (!el || reduce) return;
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        el.style.transform = "translateY(" + (window.scrollY * -0.07).toFixed(1) + "px)";
+        ticking = false;
+      });
+    }, { passive: true });
+  })();
+
+  // ── la sonda del recuerdo: la aguja cae en su banda y el panel cuenta el resultado ──
+  (function sonda() {
+    const tabs = Array.from(document.querySelectorAll(".sonda-tab"));
+    const marker = document.getElementById("sondaMarker");
+    const ticks = document.getElementById("sondaTicks");
+    if (!tabs.length || !marker) return;
+    // Tramo ampliado del raíl: 0,20–0,70 (las fronteras 0,43/0,45 están a dos centésimas).
+    const MIN = 0.20, MAX = 0.70;
+    const UMBRAL_POSIBLE = 0.43, UMBRAL_CLARO = 0.45;   // los de rag_core.py
+    const pctDe = (v) => ((v - MIN) / (MAX - MIN)) * 100;
+    // Graduación cada 0,10: se arma una vez.
+    if (ticks) {
+      let frag = "";
+      for (let v = MIN; v <= MAX + 0.001; v += 0.10) {
+        frag += '<i style="left:' + pctDe(v).toFixed(1) + '%"></i>';
+      }
+      ticks.innerHTML = frag;
+    }
+    // Las bandas se recolocan desde los MISMOS umbrales que mueven la aguja:
+    // una sola fuente de verdad (los anchos del CSS quedan como respaldo sin JS).
+    const bordes = { lejano: [MIN, UMBRAL_POSIBLE], posible: [UMBRAL_POSIBLE, UMBRAL_CLARO], claro: [UMBRAL_CLARO, MAX] };
+    document.querySelectorAll(".sonda-zone").forEach((z) => {
+      const b = bordes[z.dataset.banda];
+      if (!b) return;
+      z.style.left = pctDe(b[0]).toFixed(1) + "%";
+      z.style.width = (pctDe(b[1]) - pctDe(b[0])).toFixed(1) + "%";
+    });
+    function activar(tab) {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.tabIndex = on ? 0 : -1;
+        const panel = document.getElementById(t.getAttribute("aria-controls"));
+        if (panel) panel.hidden = !on;
+      });
+      const sim = parseFloat(tab.dataset.sim);
+      const pct = pctDe(Math.min(MAX, Math.max(MIN, sim)));
+      marker.style.left = pct.toFixed(1) + "%";
+      // La precisión del aria-label es la ESCRITA en la pestaña (0,44 se anuncia
+      // «0,44», no «0,440»): lo que se oye coincide con lo que se lee.
+      marker.setAttribute("aria-label", "similitud " + tab.dataset.sim.replace(".", ",") + ": banda " + tab.dataset.banda);
+      document.querySelectorAll(".sonda-zone").forEach((z) => {
+        z.classList.toggle("on", z.dataset.banda === tab.dataset.banda);
+      });
+    }
+    tabs.forEach((tab, i) => {
+      tab.addEventListener("click", () => activar(tab));
+      // Flechas entre pestañas: es lo que una lectura por teclado espera de un tablist.
+      tab.addEventListener("keydown", (e) => {
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        e.preventDefault();
+        const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+        activar(next);
+        next.focus();
+      });
+    });
+  })();
+</script>
 </body>
 </html>

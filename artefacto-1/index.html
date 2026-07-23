@@ -1,328 +1,257 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artefacto 1 — Analizador de ofertas (LLM → JSON) · Ruta AI Engineering</title>
-<meta name="description" content="Mini-servicio CLI que extrae datos estructurados de ofertas de empleo llamando al LLM por SDK directo. Primer artefacto desplegado de la ruta Data Science → AI Engineering de Denys Porynets.">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Artefacto 1: un mini-servicio CLI que convierte el texto de una oferta de empleo en JSON validado, llamando al LLM por SDK directo — sin frameworks. Primer artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<meta name="author" content="Denys Porynets">
+<meta name="color-scheme" content="light dark">
+<title>Artefacto 1 — Analizador de ofertas: texto → JSON estructurado</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/laton.css">
+<noscript><style>.reveal{opacity:1;filter:none;transform:none}</style></noscript>
+<script>
+  // Mismo guardián que la home y el ROADMAP: el tema se aplica ANTES del primer
+  // pintado. Si se deja para el script del final, quien abre en modo noche ve un
+  // destello blanco en cada carga.
+  (function () {
+    try {
+      var CLAVE = "portfolio-tema";
+      var t = localStorage.getItem(CLAVE);
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    } catch (e) {}
+  })();
+</script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+  /* Lo compartido del sistema "latón sobre papel" vive en ../assets/laton.css.
+     Aquí queda SOLO lo propio de este artefacto: el extractor en vivo, la
+     comparativa a dos columnas y el disparador del sello. */
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ─── EL EXTRACTOR EN VIVO (pieza propia de esta página) ───
+     Sin JS, la página enseña el resultado ya extraído (todo encendido);
+     con JS, el script apaga el instrumento y el botón lo hace medir. */
+  .extractor {
+    border: 1px solid var(--line); border-radius: 5px; overflow: hidden;
+    background: color-mix(in srgb, var(--paper-2) 82%, transparent);
+    margin: 8px 0 22px; backdrop-filter: blur(2px);
+  }
+  .ext-head {
+    display: flex; justify-content: space-between; gap: 12px; padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--sage);
+  }
+  .ext-src {
+    padding: 18px 16px; border-bottom: 1px solid var(--line-2);
+    font-family: var(--font-mono); font-size: 0.82rem; line-height: 2.05; color: var(--ink);
+    max-width: none;
+  }
+  .ext-src mark {
+    background: transparent; color: inherit; padding: 1px 2px; border-radius: 2px;
+    border-bottom: 1px dashed var(--line);
+    transition: background .35s ease, border-color .35s ease;
+  }
+  .ext-src mark.lit {
+    background: color-mix(in srgb, var(--brass) 20%, transparent);
+    border-bottom: 2px solid var(--brass);
+  }
+  .ext-actions { padding: 13px 16px; border-bottom: 1px solid var(--line-2); }
+  .ext-btn {
+    font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.06em;
+    padding: 9px 18px; background: transparent; color: var(--brass);
+    border: 1px solid color-mix(in srgb, var(--brass) 55%, transparent);
+    border-radius: 3px; cursor: pointer;
+    transition: background .16s ease, color .16s ease;
+  }
+  .ext-btn:hover { background: color-mix(in srgb, var(--brass) 14%, transparent); color: var(--ink); }
+  .ext-json { padding: 16px; font-family: var(--font-mono); font-size: 0.8rem; line-height: 2; overflow-x: auto; }
+  .ext-line { display: flex; gap: 8px; align-items: baseline; white-space: pre; }
+  .ext-line .k { color: var(--pine); }
+  .ext-line .val { color: var(--ink); opacity: 0; transition: opacity .3s ease; }
+  .ext-line .okmark { color: var(--pine); opacity: 0; margin-left: auto; transition: opacity .3s ease .1s; }
+  .ext-line.set .val, .ext-line.set .okmark { opacity: 1; }
+  .ext-foot {
+    padding: 12px 16px; border-top: 1px solid var(--line-2);
+    font-size: 0.86rem; color: var(--ink); max-width: none; margin: 0;
+    opacity: 0; transition: opacity .4s ease;
+  }
+  .ext-foot.on { opacity: 1; }
+  .ext-foot b { color: var(--pine); }
 
-  :root {
-    --bg:        #0d1117;
-    --bg-card:   #151b23;
-    --bg-card-h: #1a2230;
-    --ink:       #e6edf3;
-    --muted:     #7d8590;
-    --border:    #2a3340;
-    --amber:     #f0a500;
-    --amber-dim: #5c4419;
-    --green:     #3fb950;
-    --green-dim: #1d3a23;
-    --blue:      #4a8cff;
-    --red:       #f85149;
-  }
-
-  html, body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-    line-height: 1.6;
-  }
-
-  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 24px 80px; }
-
-  /* ── NAV ── */
-  .topnav {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 44px; flex-wrap: wrap; gap: 12px;
-  }
-  .topnav a {
-    font-family: 'DM Mono', monospace; font-size: 12px;
-    color: var(--muted); text-decoration: none;
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 6px 12px; transition: all 0.15s;
-  }
-  .topnav a:hover { color: var(--ink); border-color: var(--muted); }
-  .topnav .navgroup { display: flex; gap: 8px; flex-wrap: wrap; }
-
-  /* ── HERO ── */
-  .hero { margin-bottom: 40px; }
-  .hero-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  }
-  .badge-done {
-    color: var(--green); background: var(--green-dim);
-    border-radius: 4px; padding: 2px 8px; letter-spacing: 1px;
-  }
-  .hero-title {
-    font-family: 'Fraunces', serif; font-weight: 300;
-    font-size: clamp(30px, 5vw, 44px); line-height: 1.07;
-    letter-spacing: -0.5px; margin-bottom: 16px;
-  }
-  .hero-title strong { font-weight: 600; color: var(--amber); }
-  .hero-sub { font-size: 15px; color: var(--muted); max-width: 620px; }
-  .hero-sub strong { color: var(--ink); font-weight: 600; }
-
-  /* ── SECTION ── */
-  .section { margin-top: 44px; }
-  .sec-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
-  }
-  .sec-title {
-    font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600;
-    margin-bottom: 14px;
-  }
-  .sec-p { font-size: 14.5px; color: var(--muted); margin-bottom: 14px; }
-  .sec-p strong { color: var(--ink); font-weight: 600; }
-
-  /* ── PIPELINE ── */
-  .pipeline {
-    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 8px; margin: 18px 0;
-  }
-  .pipe-step { flex: 1; min-width: 150px; padding: 16px; text-align: center; }
-  .pipe-step .pe {
-    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
-  }
-  .pipe-step .pt { font-size: 14px; color: var(--ink); font-weight: 500; }
-  .pipe-step .pd { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .pipe-arrow { display: flex; align-items: center; color: var(--amber); font-size: 18px; }
-  @media (max-width: 620px) { .pipe-arrow { transform: rotate(90deg); margin: 0 auto; } }
-
-  /* ── CODE ── */
-  .codecard {
-    background: #0a0e14; border: 1px solid var(--border); border-radius: 10px;
-    overflow: hidden; margin: 16px 0;
-  }
-  .code-head {
-    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
-    padding: 9px 14px; border-bottom: 1px solid var(--border);
-    background: var(--bg-card); display: flex; justify-content: space-between;
-  }
-  .code-head .tag { color: var(--amber); }
-  pre { padding: 14px 16px; overflow-x: auto; }
-  code {
-    font-family: 'DM Mono', monospace; font-size: 12.5px; line-height: 1.7;
-    color: var(--ink); white-space: pre;
-  }
-  .c-key { color: var(--blue); }
-  .c-str { color: var(--green); }
-  .c-com { color: var(--muted); font-style: italic; }
-  .c-num { color: var(--amber); }
-
-  /* ── TWO-COL compare ── */
-  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  /* ─── COMPARATIVA A DOS COLUMNAS (Claude / OpenAI) ─── */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 4px 0 22px; }
+  .compare .code { margin: 0; }
   @media (max-width: 620px) { .compare { grid-template-columns: 1fr; } }
 
-  /* ── CHECKS ── */
-  .checks { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
-  .check {
-    display: flex; gap: 12px; align-items: flex-start;
-    background: var(--bg-card); border: 1px solid var(--green-dim);
-    border-radius: 8px; padding: 14px 16px;
-  }
-  .check .mark {
-    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
-    background: var(--green); display: flex; align-items: center; justify-content: center;
-    margin-top: 1px;
-  }
-  .check .mark svg { width: 13px; height: 13px; }
-  .check .ctitle { font-weight: 600; font-size: 14.5px; }
-  .check .cdesc { font-size: 13px; color: var(--muted); margin-top: 2px; }
-
-  /* ── DOD ── */
-  .dod {
-    margin: 20px 0; padding: 14px 18px;
-    border-left: 3px solid var(--green); background: rgba(63,185,80,0.06);
-    border-radius: 0 8px 8px 0;
-  }
-  .dod-label {
-    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--green); margin-bottom: 5px;
-  }
-  .dod-text { font-size: 14px; color: var(--ink); }
-
-  /* ── STACK chips ── */
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  .chip {
-    font-family: 'DM Mono', monospace; font-size: 12px;
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 5px 11px; color: var(--muted);
-  }
-  .chip strong { color: var(--amber); font-weight: 500; }
-
-  /* ── CTA ── */
-  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
-  .cta {
-    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-    text-decoration: none; border-radius: 8px; padding: 11px 20px;
-    transition: all 0.18s; display: inline-flex; align-items: center; gap: 8px;
-  }
-  .cta-primary { background: var(--amber); color: #0d1117; }
-  .cta-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,165,0,0.25); }
-  .cta-ghost { border: 1px solid var(--border); color: var(--muted); }
-  .cta-ghost:hover { color: var(--ink); border-color: var(--muted); }
-
-  /* ── PRINCIPLE ── */
-  .principle {
-    margin-top: 44px;
-    background: linear-gradient(135deg, #1a1410 0%, var(--bg-card) 60%);
-    border: 1px solid var(--amber-dim); border-radius: 12px;
-    padding: 26px 28px; position: relative; overflow: hidden;
-  }
-  .principle::before {
-    content: ''; position: absolute; top: -40%; right: -10%;
-    width: 220px; height: 220px;
-    background: radial-gradient(circle, rgba(240,165,0,0.08), transparent 70%);
-  }
-  .principle-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
-  }
-  .principle-text {
-    font-family: 'Fraunces', serif; font-size: 19px; font-weight: 300;
-    line-height: 1.45; color: var(--ink); max-width: 640px;
-  }
-  .principle-text strong { font-weight: 600; color: var(--amber); }
-
-  .footer {
-    margin-top: 44px; text-align: center;
-    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--border);
-  }
-  .footer span { color: var(--amber); opacity: 0.6; }
+  /* ─── EL SELLO, versión sellada: aquí las casillas ya están cumplidas ─── */
+  .sello { border-color: color-mix(in srgb, var(--signal) 45%, transparent); }
+  /* El aspa se traza cuando la sección entra en pantalla: no es interactiva
+     como en el ROADMAP. */
+  .revealed .sello use { stroke-dashoffset: 0; }
+  .revealed .sello use:nth-of-type(2) { transition-delay: .09s; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="bg" aria-hidden="true">
+  <div class="bg-grain"></div>
+  <svg class="bg-contours" id="contours" preserveAspectRatio="none" viewBox="0 0 1200 1200"></svg>
+</div>
 
-  <div class="topnav">
-    <a href="../ROADMAP.html">← Bitácora del roadmap</a>
-    <div class="navgroup">
-      <a href="https://github.com/denysporynets/AI-Roadmap/tree/main/1_Endpoint%20LLM%20en%20producci%C3%B3n" target="_blank">Ver código en GitHub ↗</a>
-      <a href="https://denysporynets.github.io">Portfolio ↗</a>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="sello-a" viewBox="0 0 20 20"><path d="M4.2 4.8 C 8.4 8.1, 12.1 11.6, 16.1 15.4"/></symbol>
+  <symbol id="sello-b" viewBox="0 0 20 20"><path d="M15.8 4.6 C 12.2 8.3, 8.1 11.9, 4.4 15.2"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="back" href="../ROADMAP.html"><span class="arw">←</span> Bitácora</a>
+    <div class="nav-right">
+      <span class="brand"><b>DS-Nexus</b> Protocol Based</span>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Cambiar a modo noche" title="Modo noche / día">
+        <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
     </div>
   </div>
+</header>
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-eyebrow">
-      <span>Artefacto 1 · Mes 1</span>
-      <span class="badge-done">✓ Desplegado</span>
+<main>
+  <!-- ═══ HERO ═══ -->
+  <section class="wrap hero">
+    <div class="eyebrow reveal">
+      <span class="tag">Artefacto 1 de 6 · Mes 1</span>
+      <span class="estado">Entregado · CLI en uso real</span>
     </div>
-    <h1 class="hero-title">Analizador de ofertas de empleo<br><strong>texto → JSON estructurado</strong></h1>
-    <p class="hero-sub">
-      Un mini-servicio de terminal que recibe el texto de una oferta y devuelve sus datos
-      en JSON fiable, llamando al LLM <strong>por SDK directo</strong> — sin frameworks de por medio.
-      Primer artefacto en producción de la ruta <strong>Data Science → AI Engineering</strong>.
-    </p>
-  </div>
-
-  <!-- QUÉ HACE -->
-  <div class="section">
-    <div class="sec-eyebrow">Qué hace</div>
-    <div class="sec-title">De texto caótico a datos manejables</div>
-    <p class="sec-p">
-      Un LLM por defecto devuelve <strong>texto libre</strong>, distinto en cada llamada e
-      inservible para un programa. Este artefacto <strong>fuerza</strong> una salida con forma
-      fija (un molde Pydantic) y la <strong>valida</strong> antes de devolverla.
+    <h1 class="reveal">Texto caótico dentro, <em>forma garantizada</em> fuera.</h1>
+    <p class="lede reveal">
+      Un mini-servicio de terminal que recibe una oferta de empleo en prosa y devuelve sus datos como
+      <strong>JSON validado</strong>, llamando al LLM <strong>por SDK directo</strong> — sin frameworks de por medio.
+      Primer artefacto de la ruta <strong>Data Science → AI Engineering</strong>: la llamada cruda,
+      entendida antes de taparla con capas.
     </p>
 
-    <div class="pipeline">
-      <div class="pipe-step">
-        <div class="pe">Entrada</div>
-        <div class="pt">Texto de la oferta</div>
-        <div class="pd">desde la terminal o un fichero</div>
-      </div>
-      <div class="pipe-arrow">→</div>
-      <div class="pipe-step">
-        <div class="pe">Motor</div>
-        <div class="pt">LLM + molde Pydantic</div>
-        <div class="pd">SDK directo · validación</div>
-      </div>
-      <div class="pipe-arrow">→</div>
-      <div class="pipe-step">
-        <div class="pe">Salida</div>
-        <div class="pt">JSON validado</div>
-        <div class="pd">siempre la misma forma</div>
-      </div>
+    <div class="telemetry reveal">
+      <div class="tcell"><b class="num">9</b><span>campos en el molde</span></div>
+      <div class="tcell"><b class="num">2</b><span>SDKs · mismo patrón</span></div>
+      <div class="tcell"><b class="num">0</b><span>frameworks de por medio</span></div>
+      <div class="tcell"><b class="num">1</b><span>comando de terminal</span></div>
     </div>
+  </section>
 
-    <div class="codecard">
-      <div class="code-head"><span>$ terminal</span><span class="tag">ejemplo real</span></div>
-<pre><code><span class="c-com"># Entrada</span>
-$ python analizar_oferta.py <span class="c-str">"Machine Learning Engineer 100% remoto,
-  Python, PyTorch, Docker y AWS. Banda 60.000-70.000 EUR. Indefinido."</span>
+  <div class="wrap"><hr class="rule"></div>
 
-<span class="c-com"># Salida</span>
-{
-  <span class="c-key">"puesto"</span>:      <span class="c-str">"Machine Learning Engineer"</span>,
-  <span class="c-key">"modalidad"</span>:   <span class="c-str">"remoto"</span>,
-  <span class="c-key">"stack"</span>:       [<span class="c-str">"Python"</span>, <span class="c-str">"PyTorch"</span>, <span class="c-str">"Docker"</span>, <span class="c-str">"AWS"</span>],
-  <span class="c-key">"salario_min"</span>: <span class="c-num">60000</span>,
-  <span class="c-key">"salario_max"</span>: <span class="c-num">70000</span>,
-  <span class="c-key">"contrato"</span>:    <span class="c-str">"indefinido"</span>
-}</code></pre>
+  <!-- ═══ LA IDEA ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">La idea</span>
+    <h2>De texto libre a <em>datos manejables</em></h2>
+    <p>
+      Un LLM por defecto devuelve <strong>texto libre</strong>: distinto en cada llamada e inservible para un
+      programa. Este artefacto <strong>fuerza</strong> una salida con forma fija —un molde Pydantic— y la
+      <strong>valida</strong> antes de devolverla. Ahora el resultado sí es código:
+      <code>if oferta.salario_min &gt;= 40000</code> funciona, porque el salario es un número, no un párrafo.
+    </p>
+    <div class="dod">
+      <span class="tag">Definición de «hecho»</span>
+      <em>Se ejecuta desde fuera del editor y devuelve JSON válido de forma fiable.</em>
+      <span class="no"> No vive en un notebook.</span>
     </div>
-    <p class="sec-p">
-      Ahora el resultado <strong>sí es código</strong>: <code style="color:var(--amber)">if oferta.salario_min &gt;= 40000</code>
-      funciona, porque el salario es un número, no un párrafo.
-    </p>
-  </div>
+  </section>
 
-  <!-- CÓMO: el patrón -->
-  <div class="section">
-    <div class="sec-eyebrow">El patrón</div>
-    <div class="sec-title">Schema → parse → objeto validado</div>
-    <p class="sec-p">
-      El <strong>molde</strong> define qué campos quiero; el SDK obliga al modelo a rellenarlo y
-      lo valida. Lo único específico del dominio son los campos y sus descripciones — el motor
-      es reutilizable para facturas, tickets o contratos.
+  <!-- ═══ EL INSTRUMENTO: extractor en vivo ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">El instrumento</span>
+    <h2>La extracción, <em>en vivo</em></h2>
+    <p>
+      La oferta de abajo es el caso real del repo: <code>oferta_ejemplo.txt</code>, y el JSON es
+      <code>resultado.json</code> tal cual lo produjo la CLI. Pulsa <strong>Extraer</strong> y mira cómo
+      cada dato se enciende en el texto y aterriza en su campo del molde — es exactamente lo que el
+      artefacto hace en cada llamada.
     </p>
-    <div class="codecard">
-      <div class="code-head"><span>analizar_oferta.py</span><span class="tag">Pydantic</span></div>
-<pre><code><span class="c-key">class</span> <span class="c-num">Oferta</span>(BaseModel):
-    puesto: str = Field(description=<span class="c-str">"Título del puesto"</span>)
-    stack: list[str] = Field(description=<span class="c-str">"Tecnologías mencionadas"</span>)
-    salario_min: Optional[int] = Field(description=<span class="c-str">"Salario mínimo EUR, o null"</span>)
-    <span class="c-com"># ...</span>
+
+    <div class="extractor">
+      <div class="ext-head"><span>$ python analizar_oferta.py oferta_ejemplo.txt</span><span>caso real del repo</span></div>
+      <p class="ext-src"><mark data-campo="puesto" class="lit">Data Analyst Junior</mark> en
+        <mark data-campo="ubicacion" class="lit">Barcelona</mark>
+        (<mark data-campo="modalidad" class="lit">presencial</mark>). Buscamos perfil con
+        <mark data-campo="stack" class="lit">SQL</mark>, <mark data-campo="stack" class="lit">Power BI</mark> y
+        <mark data-campo="stack" class="lit">Excel</mark> avanzado.
+        <mark data-campo="seniority" class="lit">No se requiere experiencia previa</mark>.
+        Salario <mark data-campo="salario_min" class="lit">24.000</mark> EUR brutos/año.
+        Contrato de <mark data-campo="contrato" class="lit">prácticas</mark> con posibilidad de indefinido.</p>
+      <div class="ext-actions" hidden>
+        <button class="ext-btn" id="extBtn" type="button">▶ &nbsp;Extraer</button>
+      </div>
+      <div class="ext-json" aria-label="JSON extraído y validado">
+        <div class="ext-line set" data-campo="puesto"><span class="k">"puesto":</span><span class="val">"Data Analyst Junior",</span><span class="okmark">✓</span></div>
+        <div class="ext-line set" data-campo="empresa"><span class="k">"empresa":</span><span class="val">null,</span><span class="okmark">✓</span></div>
+        <div class="ext-line set" data-campo="ubicacion"><span class="k">"ubicacion":</span><span class="val">"Barcelona",</span><span class="okmark">✓</span></div>
+        <div class="ext-line set" data-campo="modalidad"><span class="k">"modalidad":</span><span class="val">"presencial",</span><span class="okmark">✓</span></div>
+        <div class="ext-line set" data-campo="seniority"><span class="k">"seniority":</span><span class="val">"junior",</span><span class="okmark">✓</span></div>
+        <div class="ext-line set" data-campo="stack"><span class="k">"stack":</span><span class="val">["SQL", "Power BI", "Excel"],</span><span class="okmark">✓</span></div>
+        <div class="ext-line set" data-campo="salario_min"><span class="k">"salario_min":</span><span class="val">24000,</span><span class="okmark">✓</span></div>
+        <div class="ext-line set" data-campo="salario_max"><span class="k">"salario_max":</span><span class="val">24000,</span><span class="okmark">✓</span></div>
+        <div class="ext-line set" data-campo="contrato"><span class="k">"contrato":</span><span class="val">"practicas"</span><span class="okmark">✓</span></div>
+      </div>
+      <p class="ext-foot on" id="extFoot">
+        <b>9 campos validados contra el molde <code>Oferta</code>.</b>
+        Y los detalles finos: la empresa no aparece en el texto → <code>null</code> explícito, nunca un
+        invento; una sola cifra de salario → mínimo y máximo iguales; «no se requiere experiencia» →
+        <code>seniority: "junior"</code>, inferido del contexto.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══ EL PATRÓN ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">El patrón</span>
+    <h2>Schema → parse → <em>objeto validado</em></h2>
+    <p>
+      El <strong>molde</strong> define qué campos quiero; el SDK obliga al modelo a rellenarlo y lo valida.
+      Lo único específico del dominio son los campos y sus descripciones — el motor es reutilizable para
+      facturas, tickets o contratos.
+    </p>
+    <div class="code">
+      <div class="code-head"><span>analizar_oferta.py · el contrato de forma</span><span>Pydantic</span></div>
+<pre><code><span class="c-key">class</span> Oferta(BaseModel):
+    puesto: str = Field(description=<span class="c-com">"Título del puesto"</span>)
+    stack: list[str] = Field(description=<span class="c-com">"Tecnologías mencionadas"</span>)
+    salario_min: int | <span class="c-key">None</span> = Field(description=<span class="c-com">"Salario mínimo EUR, o null"</span>)
+    ...
 
 respuesta = client.messages.parse(
-    model=<span class="c-str">"claude-opus-4-8"</span>,
-    messages=[{<span class="c-str">"role"</span>: <span class="c-str">"user"</span>, <span class="c-str">"content"</span>: texto}],
-    output_format=Oferta,        <span class="c-com"># ← se pasa el molde</span>
+    model=<span class="c-com">"claude-opus-4-8"</span>,
+    messages=[{<span class="c-com">"role"</span>: <span class="c-com">"user"</span>, <span class="c-com">"content"</span>: texto}],
+    output_format=Oferta,             <span class="c-com"># ← se pasa el molde</span>
 )
-oferta = respuesta.parsed_output  <span class="c-com"># ← objeto validado, no texto</span></code></pre>
+oferta = respuesta.parsed_output      <span class="c-com"># ← objeto validado, no texto</span></code></pre>
     </div>
-  </div>
+  </section>
 
-  <!-- COMPARATIVA -->
-  <div class="section">
-    <div class="sec-eyebrow">Dos proveedores, mismo patrón</div>
-    <div class="sec-title">Claude y OpenAI, lado a lado</div>
-    <p class="sec-p">
-      La misma extracción con los dos SDKs. Cambian tres nombres de parámetro y el id del modelo;
-      el concepto es idéntico. <strong>El SDK por debajo es casi igual — todo lo demás es conveniencia.</strong>
+  <!-- ═══ DOS PROVEEDORES ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Dos proveedores, mismo patrón</span>
+    <h2>Claude y OpenAI, <em>lado a lado</em></h2>
+    <p>
+      La misma extracción con los dos SDKs: cambian tres nombres de parámetro y el id del modelo; el concepto
+      es idéntico. <strong>El SDK por debajo es casi igual — todo lo demás es conveniencia.</strong>
     </p>
     <div class="compare">
-      <div class="codecard" style="margin:0">
-        <div class="code-head"><span>Anthropic</span><span class="tag">claude-opus-4-8</span></div>
+      <div class="code">
+        <div class="code-head"><span>Anthropic</span><span>claude-opus-4-8</span></div>
 <pre><code>client.messages.parse(
   messages=[...],
   output_format=Oferta,
 )
 .parsed_output</code></pre>
       </div>
-      <div class="codecard" style="margin:0">
-        <div class="code-head"><span>OpenAI</span><span class="tag">gpt-4.1</span></div>
+      <div class="code">
+        <div class="code-head"><span>OpenAI</span><span>gpt-4.1</span></div>
 <pre><code>client.responses.parse(
   input=[...],
   text_format=Oferta,
@@ -330,67 +259,174 @@ oferta = respuesta.parsed_output  <span class="c-com"># ← objeto validado, no 
 .output_parsed</code></pre>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- LO QUE SE ENTREGÓ -->
-  <div class="section">
-    <div class="sec-eyebrow">Lo que se entregó</div>
-    <div class="sec-title">Los tres criterios, cumplidos</div>
+  <!-- ═══ ENTREGADO ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Lo que se entregó</span>
+    <h2>Los tres criterios, cumplidos</h2>
     <div class="checks">
       <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">Llamada directa al SDK con OpenAI y Claude</div>
-          <div class="cdesc">Sin framework de por medio; comparados ambos proveedores.</div>
-        </div>
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Llamada directa al SDK, con OpenAI y con Claude</b><span>Sin framework de por medio; los dos proveedores comparados sobre el mismo molde.</span></span>
       </div>
       <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">Salida estructurada validada antes de devolverla</div>
-          <div class="cdesc">Molde Pydantic + validación nativa del SDK.</div>
-        </div>
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Salida estructurada validada antes de devolverla</b><span>Molde Pydantic + validación nativa del SDK; <code>null</code> explícito cuando el dato no está, nunca un invento.</span></span>
       </div>
       <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">Empaquetado como CLI que de verdad uso</div>
-          <div class="cdesc">argparse · entrada por argumento o fichero · redirección a JSON.</div>
-        </div>
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Empaquetado como CLI que de verdad uso</b><span>argparse · entrada por argumento o fichero · redirección a JSON.</span></span>
       </div>
-    </div>
-
-    <div class="dod">
-      <div class="dod-label">Definición de "hecho" — cumplida</div>
-      <div class="dod-text">Se ejecuta desde fuera del editor y devuelve JSON válido de forma fiable. No vive en un notebook.</div>
     </div>
 
     <div class="chips">
-      <span class="chip"><strong>Python</strong> 3.13</span>
-      <span class="chip"><strong>Pydantic</strong> v2</span>
-      <span class="chip"><strong>anthropic</strong> SDK</span>
-      <span class="chip"><strong>openai</strong> SDK</span>
-      <span class="chip"><strong>argparse</strong> CLI</span>
-      <span class="chip"><strong>.env</strong> · claves protegidas</span>
+      <span class="chip"><b>Python</b> 3.13</span>
+      <span class="chip"><b>Pydantic</b> v2</span>
+      <span class="chip"><b>anthropic</b> SDK</span>
+      <span class="chip"><b>openai</b> SDK</span>
+      <span class="chip"><b>argparse</b> CLI</span>
+      <span class="chip"><b>.env</b> · claves protegidas</span>
     </div>
 
-    <div class="cta-row">
-      <a class="cta cta-primary" href="https://github.com/denysporynets/AI-Roadmap/tree/main/1_Endpoint%20LLM%20en%20producci%C3%B3n" target="_blank">Ver código en GitHub ↗</a>
-      <a class="cta cta-ghost" href="../ROADMAP.html">Ver el roadmap completo →</a>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="https://github.com/denysporynets/AI-Roadmap/tree/main/1_Endpoint%20LLM%20en%20producci%C3%B3n" target="_blank" rel="noopener">Ver el código ↗</a>
+      <a class="btn btn-ghost" href="../artefacto-2/index.html">Artefacto 2 · el RAG →</a>
+      <a class="btn btn-ghost" href="../ROADMAP.html">Bitácora completa →</a>
     </div>
-  </div>
+  </section>
 
-  <!-- PRINCIPIO -->
-  <div class="principle">
-    <div class="principle-eyebrow">Por qué este artefacto primero</div>
-    <p class="principle-text">
-      Antes de tocar frameworks, monté la llamada cruda. Si solo dominas la capa de LangChain,
-      dominas algo que puede desaparecer; si entiendes el <strong>SDK por debajo</strong>, todo lo demás es conveniencia.
+  <!-- ═══ PRINCIPIO ═══ -->
+  <section class="wrap principle reveal">
+    <span class="tag">Por qué este artefacto primero</span>
+    <p>
+      Antes de tocar frameworks, monté la llamada cruda. Si solo dominas la capa de LangChain, dominas algo
+      que puede desaparecer; si entiendes el <em>SDK por debajo</em>, todo lo demás es conveniencia.
     </p>
-  </div>
+  </section>
 
-  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · artefacto 1 de 6</div>
+  <div class="wrap"><hr class="rule"></div>
 
-</div>
+  <footer class="wrap">
+    <div class="foot-row">
+      <span class="tag">protocolo ds-nexus · constante 2.51 · artefacto 1 de 6</span>
+      <span class="tag"><a href="https://denysporynets.github.io/">← volver al portfolio</a></span>
+    </div>
+  </footer>
+</main>
+
+<script>
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ── reveal "enfoque de instrumento" ──
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add("revealed"); io.unobserve(e.target); }
+    }
+  }, { threshold: 0.08 });
+  document.querySelectorAll(".reveal").forEach((el) => { if (!el.closest(".hero")) io.observe(el); });
+  requestAnimationFrame(() => {
+    document.querySelectorAll(".hero .reveal").forEach((el, i) => {
+      setTimeout(() => el.classList.add("revealed"), 90 * i);
+    });
+  });
+
+  // ── modo noche / día (misma clave que la home: el tema viaja con el visitante) ──
+  (function tema() {
+    const root = document.documentElement;
+    const btn = document.getElementById("themeToggle");
+    const CLAVE = "portfolio-tema";
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function aplicar(t) {
+      if (t === "dark") { root.setAttribute("data-theme", "dark"); btn.setAttribute("aria-label", "Cambiar a modo día"); }
+      else { root.removeAttribute("data-theme"); btn.setAttribute("aria-label", "Cambiar a modo noche"); }
+    }
+    function guardado() { try { return localStorage.getItem(CLAVE); } catch (e) { return null; } }
+    // El tema ya lo aplicó el script del <head>; aquí solo se pone al día la etiqueta del botón.
+    aplicar(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
+    btn.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      aplicar(next);
+      try { localStorage.setItem(CLAVE, next); } catch (e) {}
+    });
+    mq.addEventListener("change", (e) => { if (!guardado()) aplicar(e.matches ? "dark" : "light"); });
+  })();
+
+  // ── fondo: contornos tipo carta náutica ──
+  (function drawContours() {
+    const svg = document.getElementById("contours");
+    if (!svg || reduce) return;
+    const W = 1200, H = 1200, lines = 26;
+    let frag = "";
+    for (let i = 0; i < lines; i++) {
+      const baseY = (H / (lines - 1)) * i;
+      const amp = 20 + (i % 5) * 5;
+      const phase = i * 0.7;
+      const freq = 0.0055 + (i % 3) * 0.0011;
+      let d = "";
+      for (let x = 0; x <= W; x += 40) {
+        const y = baseY + Math.sin(x * freq + phase) * amp;
+        d += (x === 0 ? "M" : "L") + x + " " + y.toFixed(1) + " ";
+      }
+      const index = (i % 5 === 0);
+      frag += '<path d="' + d.trim() + '" stroke-width="' + (index ? 1.5 : 0.8) + '"/>';
+    }
+    svg.innerHTML = frag;
+  })();
+
+  // ── parallax del fondo ──
+  (function parallax() {
+    const el = document.getElementById("contours");
+    if (!el || reduce) return;
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        el.style.transform = "translateY(" + (window.scrollY * -0.07).toFixed(1) + "px)";
+        ticking = false;
+      });
+    }, { passive: true });
+  })();
+
+  // ── el extractor en vivo: cada campo se enciende en el texto y aterriza en el JSON ──
+  (function extractor() {
+    const btn = document.getElementById("extBtn");
+    const foot = document.getElementById("extFoot");
+    if (!btn || !foot) return;
+    // empresa y salario_max no tienen marca en el texto (empresa no aparece; el
+    // máximo sale de la misma cifra que el mínimo): su línea aterriza igual.
+    const orden = ["puesto", "empresa", "ubicacion", "modalidad", "seniority", "stack", "salario_min", "salario_max", "contrato"];
+    const marcas = (c) => document.querySelectorAll('.ext-src mark[data-campo="' + c + '"]');
+    const linea = (c) => document.querySelector('.ext-json .ext-line[data-campo="' + c + '"]');
+    let timers = [];
+    function limpiar() {
+      timers.forEach(clearTimeout);
+      timers = [];
+      document.querySelectorAll(".ext-src mark.lit").forEach((m) => m.classList.remove("lit"));
+      document.querySelectorAll(".ext-json .ext-line.set").forEach((l) => l.classList.remove("set"));
+      foot.classList.remove("on");
+    }
+    function extraer() {
+      limpiar();
+      const paso = reduce ? 0 : 360;
+      orden.forEach((campo, i) => {
+        timers.push(setTimeout(() => {
+          marcas(campo).forEach((m) => m.classList.add("lit"));
+          timers.push(setTimeout(() => { linea(campo).classList.add("set"); }, reduce ? 0 : 200));
+        }, paso * i));
+      });
+      timers.push(setTimeout(() => {
+        foot.classList.add("on");
+        btn.textContent = "↻  Repetir la extracción";
+      }, paso * orden.length + 250));
+    }
+    // Sin JS la página enseña el resultado ya extraído (la fila de acciones va
+    // oculta en el markup para no dejar una franja vacía); con JS se arma el instrumento.
+    btn.closest(".ext-actions").hidden = false;
+    limpiar();
+    btn.addEventListener("click", extraer);
+  })();
+</script>
 </body>
 </html>

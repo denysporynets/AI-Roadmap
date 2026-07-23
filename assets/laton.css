@@ -252,6 +252,42 @@ pre code, .sec pre code { background: none; border: 0; padding: 0; font-size: in
 .check b { display: block; font-weight: 600; color: var(--pine); font-size: 0.96rem; }
 .check span { display: block; font-size: 0.9rem; color: var(--ink); max-width: 62ch; }
 
+/* ─── CADENA (pasos con flecha entre cajas; instrumento común de gemela) ───
+   La gemela 2 estrecha el paso a 150px inline (le caben 4 en fila);
+   la gemela 5 conserva su copia inline idéntica hasta el hito laton.js. */
+.chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px; margin: 4px 0 22px; }
+.chain-step {
+  flex: 1 1 170px; border: 1px solid var(--line); border-radius: 3px;
+  padding: 13px 15px; background: color-mix(in srgb, var(--paper-2) 62%, transparent);
+}
+.chain-step .tag { display: block; margin-bottom: 3px; }
+.chain-step b { font-family: var(--font-mono); font-size: 0.88rem; color: var(--pine); font-weight: 500; display: block; }
+.chain-step span { font-size: 0.82rem; color: var(--sage); }
+.chain-arrow { align-self: center; color: var(--sage); font-family: var(--font-mono); }
+@media (max-width: 620px) { .chain-arrow { display: none; } }
+
+/* ─── CAPAS (filas rotuladas de "cómo está construido") ───
+   La gemela 2 acorta el rótulo a 62px inline. */
+.layers { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 22px; }
+.layer {
+  display: flex; gap: 16px; align-items: baseline;
+  border: 1px solid var(--line); border-radius: 3px; padding: 12px 15px;
+  background: color-mix(in srgb, var(--paper-2) 62%, transparent);
+}
+.layer .lnum { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brass); flex-shrink: 0; width: 92px; }
+.layer .lbody { font-size: 0.9rem; color: var(--sage); }
+.layer .lbody b { font-family: var(--font-mono); font-size: 0.85rem; color: var(--pine); font-weight: 500; }
+@media (max-width: 620px) { .layer { flex-direction: column; gap: 4px; } }
+
+/* ─── VEREDICTO (etiqueta de dictamen en los pies de instrumento) ─── */
+.veredicto {
+  font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase;
+  border-radius: 2px; padding: 2px 9px; margin-right: 10px; white-space: nowrap;
+}
+.veredicto.ok { color: var(--pine); border: 1px solid color-mix(in srgb, var(--pine) 40%, transparent); }
+.veredicto.ko { color: var(--signal-ink); border: 1px solid color-mix(in srgb, var(--signal) 45%, transparent); }
+.veredicto.aviso { color: var(--brass); border: 1px solid color-mix(in srgb, var(--brass) 45%, transparent); }
+
 /* ─── LIBROS ─── */
 .libros { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin: 6px 0 20px; }
 .libro {

@@ -1,459 +1,479 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Artefacto 3 — Harness de evaluación del RAG · Ruta AI Engineering</title>
-<meta name="description" content="Un harness que puntúa el RAG contra un dataset golden con jueces LLM, compara versiones y bloquea las regresiones con una puerta de calidad (pytest). El RAG deja de calificarse a ojo. Tercer artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Artefacto 3: un harness de evaluación que puntúa el RAG contra casos golden con jueces LLM, compara cada versión con la línea base y bloquea regresiones con una puerta pytest. Cazó y guió la corrección de un falso positivo real. Tercer artefacto de la ruta Data Science → AI Engineering de Denys Porynets.">
+<meta name="author" content="Denys Porynets">
+<meta name="color-scheme" content="light dark">
+<title>Artefacto 3 — Harness de evaluación: el RAG deja de calificarse a ojo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/laton.css">
+<noscript><style>.reveal{opacity:1;filter:none;transform:none}</style></noscript>
+<script>
+  // Mismo guardián que la home y el ROADMAP: el tema se aplica ANTES del primer
+  // pintado. Si se deja para el script del final, quien abre en modo noche ve un
+  // destello blanco en cada carga.
+  (function () {
+    try {
+      var CLAVE = "portfolio-tema";
+      var t = localStorage.getItem(CLAVE);
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    } catch (e) {}
+  })();
+</script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,600;1,400&display=swap');
+  /* Lo compartido del sistema "latón sobre papel" vive en ../assets/laton.css.
+     Aquí queda SOLO lo propio de este artefacto: el pipeline con costes, la
+     caza paso a paso, las capas y el disparador del sello. */
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ─── PIPELINE (evaluar → comparar → puerta) con velocidad de coste ───
+     La cadena vive en laton.css; aquí solo el indicador de coste, que es
+     propio de esta página. */
+  .chain-step .coste { display: block; margin-top: 7px; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.05em; }
+  .coste.caro { color: var(--signal-ink); }
+  .coste.free { color: var(--pine); }
 
-  :root {
-    --bg:        #0d1117;
-    --bg-card:   #151b23;
-    --bg-card-h: #1a2230;
-    --ink:       #e6edf3;
-    --muted:     #7d8590;
-    --border:    #2a3340;
-    --amber:     #f0a500;
-    --amber-dim: #5c4419;
-    --green:     #3fb950;
-    --green-dim: #1d3a23;
-    --yellow:    #d9a520;
-    --blue:      #4a8cff;
-    --red:       #f85149;
-    --red-dim:   #3a1d1d;
+  /* ─── LA CAZA, PASO A PASO (pieza propia de esta página) ───
+     Sin JS, los cuatro pasos se leen apilados como una bitácora;
+     con JS, se pasa página con anterior/siguiente. */
+  .caza {
+    border: 1px solid var(--line); border-radius: 5px; overflow: hidden;
+    background: color-mix(in srgb, var(--paper-2) 82%, transparent);
+    margin: 8px 0 22px; backdrop-filter: blur(2px);
   }
+  .caza-head {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--sage);
+  }
+  .caza-dots { display: flex; gap: 9px; }
+  .caza-dots i {
+    width: 9px; height: 9px; border-radius: 50%;
+    border: 1px solid var(--line); background: transparent;
+    transition: background .25s ease, border-color .25s ease;
+  }
+  .caza-dots i.on { background: var(--signal); border-color: var(--signal); }
+  .caza-step .tag { display: block; padding: 14px 16px 0; }
+  .caza-step pre {
+    margin: 0; padding: 14px 15px 18px; overflow-x: auto;
+    font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.85; color: var(--ink);
+  }
+  .caza-foot {
+    border-top: 1px solid var(--line-2); padding: 13px 16px;
+    font-size: 0.86rem; color: var(--ink); max-width: none; margin: 0;
+  }
+  .caza-foot b { color: var(--pine); }
+  .caza-nav {
+    display: flex; justify-content: space-between; gap: 10px;
+    padding: 13px 16px; border-top: 1px solid var(--line);
+  }
+  /* El display:flex de arriba le ganaría al atributo hidden (regla de autor vs
+     regla del navegador): sin esto, los botones saldrían muertos en el modo sin JS. */
+  .caza-nav[hidden] { display: none; }
+  .caza-btn {
+    font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.06em;
+    padding: 9px 18px; background: transparent; color: var(--brass);
+    border: 1px solid color-mix(in srgb, var(--brass) 55%, transparent);
+    border-radius: 3px; cursor: pointer;
+    transition: background .16s ease, color .16s ease;
+  }
+  .caza-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--brass) 14%, transparent); color: var(--ink); }
+  .caza-btn:disabled { opacity: 0.35; cursor: default; }
+  /* Las capas y el veredicto viven en laton.css (valores por defecto de gemela). */
 
-  html, body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--ink);
-    min-height: 100vh;
-    line-height: 1.6;
-  }
-
-  .wrap { max-width: 880px; margin: 0 auto; padding: 28px 24px 80px; }
-
-  /* ── NAV ── */
-  .topnav {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 44px; flex-wrap: wrap; gap: 12px;
-  }
-  .topnav a {
-    font-family: 'DM Mono', monospace; font-size: 12px;
-    color: var(--muted); text-decoration: none;
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 6px 12px; transition: all 0.15s;
-  }
-  .topnav a:hover { color: var(--ink); border-color: var(--muted); }
-  .topnav .navgroup { display: flex; gap: 8px; flex-wrap: wrap; }
-
-  /* ── HERO ── */
-  .hero { margin-bottom: 40px; }
-  .hero-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  }
-  .badge-done {
-    color: var(--green); background: var(--green-dim);
-    border-radius: 4px; padding: 2px 8px; letter-spacing: 1px;
-  }
-  .hero-title {
-    font-family: 'Fraunces', serif; font-weight: 300;
-    font-size: clamp(30px, 5vw, 44px); line-height: 1.07;
-    letter-spacing: -0.5px; margin-bottom: 16px;
-  }
-  .hero-title strong { font-weight: 600; color: var(--amber); }
-  .hero-sub { font-size: 15px; color: var(--muted); max-width: 640px; }
-  .hero-sub strong { color: var(--ink); font-weight: 600; }
-
-  /* ── SECTION ── */
-  .section { margin-top: 44px; }
-  .sec-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 12px;
-  }
-  .sec-title {
-    font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600;
-    margin-bottom: 14px;
-  }
-  .sec-p { font-size: 14.5px; color: var(--muted); margin-bottom: 14px; }
-  .sec-p strong { color: var(--ink); font-weight: 600; }
-
-  /* ── PIPELINE ── */
-  .pipeline {
-    display: flex; align-items: stretch; gap: 0; flex-wrap: wrap;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 8px; margin: 18px 0;
-  }
-  .pipe-step { flex: 1; min-width: 150px; padding: 16px; text-align: center; }
-  .pipe-step .pe {
-    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
-  }
-  .pipe-step .pt { font-size: 14px; color: var(--ink); font-weight: 500; }
-  .pipe-step .pd { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .pipe-step .pcost {
-    display: inline-block; font-family: 'DM Mono', monospace; font-size: 9.5px;
-    letter-spacing: 0.5px; border-radius: 20px; padding: 1px 8px; margin-top: 8px;
-  }
-  .pcost.caro { color: var(--red); background: var(--red-dim); }
-  .pcost.free { color: var(--green); background: var(--green-dim); }
-  .pipe-arrow { display: flex; align-items: center; color: var(--amber); font-size: 18px; }
-  @media (max-width: 620px) { .pipe-arrow { transform: rotate(90deg); margin: 0 auto; } }
-
-  /* ── CODE ── */
-  .codecard {
-    background: #0a0e14; border: 1px solid var(--border); border-radius: 10px;
-    overflow: hidden; margin: 16px 0;
-  }
-  .code-head {
-    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
-    padding: 9px 14px; border-bottom: 1px solid var(--border);
-    background: var(--bg-card); display: flex; justify-content: space-between;
-  }
-  .code-head .tag { color: var(--amber); }
-  pre { padding: 14px 16px; overflow-x: auto; }
-  code {
-    font-family: 'DM Mono', monospace; font-size: 12.5px; line-height: 1.7;
-    color: var(--ink); white-space: pre;
-  }
-  .c-key { color: var(--blue); }
-  .c-str { color: var(--green); }
-  .c-com { color: var(--muted); font-style: italic; }
-  .c-num { color: var(--amber); }
-  .c-grn { color: var(--green); }
-  .c-yel { color: var(--yellow); }
-  .c-red { color: var(--red); }
-  .c-gry { color: var(--muted); }
-
-  /* ── CHECKS ── */
-  .checks { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
-  .check {
-    display: flex; gap: 12px; align-items: flex-start;
-    background: var(--bg-card); border: 1px solid var(--green-dim);
-    border-radius: 8px; padding: 14px 16px;
-  }
-  .check .mark {
-    width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
-    background: var(--green); display: flex; align-items: center; justify-content: center;
-    margin-top: 1px;
-  }
-  .check .mark svg { width: 13px; height: 13px; }
-  .check .ctitle { font-weight: 600; font-size: 14.5px; }
-  .check .cdesc { font-size: 13px; color: var(--muted); margin-top: 2px; }
-
-  /* ── DOD ── */
-  .dod {
-    margin: 20px 0; padding: 14px 18px;
-    border-left: 3px solid var(--green); background: rgba(63,185,80,0.06);
-    border-radius: 0 8px 8px 0;
-  }
-  .dod-label {
-    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px;
-    text-transform: uppercase; color: var(--green); margin-bottom: 5px;
-  }
-  .dod-text { font-size: 14px; color: var(--ink); }
-
-  /* ── NOTE ── */
-  .note {
-    margin: 18px 0; padding: 14px 18px;
-    border-left: 3px solid var(--amber); background: rgba(240,165,0,0.06);
-    border-radius: 0 8px 8px 0; font-size: 13.5px; color: var(--ink);
-  }
-  .note strong { color: var(--amber); }
-
-  /* ── STACK chips ── */
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  .chip {
-    font-family: 'DM Mono', monospace; font-size: 12px;
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 5px 11px; color: var(--muted);
-  }
-  .chip strong { color: var(--amber); font-weight: 500; }
-
-  /* ── CTA ── */
-  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
-  .cta {
-    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
-    text-decoration: none; border-radius: 8px; padding: 11px 20px;
-    transition: all 0.18s; display: inline-flex; align-items: center; gap: 8px;
-  }
-  .cta-primary { background: var(--amber); color: #0d1117; }
-  .cta-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(240,165,0,0.25); }
-  .cta-ghost { border: 1px solid var(--border); color: var(--muted); }
-  .cta-ghost:hover { color: var(--ink); border-color: var(--muted); }
-
-  /* ── ARCH layers ── */
-  .layers { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
-  .layer {
-    display: flex; gap: 14px; align-items: baseline;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 8px; padding: 13px 16px;
-  }
-  .layer .lnum {
-    font-family: 'DM Mono', monospace; font-size: 12px; color: var(--amber);
-    flex-shrink: 0; width: 118px;
-  }
-  .layer .lbody { font-size: 13.5px; }
-  .layer .lbody b { color: var(--ink); }
-  .layer .lbody span { color: var(--muted); }
-
-  /* ── PRINCIPLE ── */
-  .principle {
-    margin-top: 44px;
-    background: linear-gradient(135deg, #1a1410 0%, var(--bg-card) 60%);
-    border: 1px solid var(--amber-dim); border-radius: 12px;
-    padding: 26px 28px; position: relative; overflow: hidden;
-  }
-  .principle::before {
-    content: ''; position: absolute; top: -40%; right: -10%;
-    width: 220px; height: 220px;
-    background: radial-gradient(circle, rgba(240,165,0,0.08), transparent 70%);
-  }
-  .principle-eyebrow {
-    font-family: 'DM Mono', monospace; font-size: 10.5px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--amber); margin-bottom: 10px;
-  }
-  .principle-text {
-    font-family: 'Fraunces', serif; font-size: 19px; font-weight: 300;
-    line-height: 1.45; color: var(--ink); max-width: 660px;
-  }
-  .principle-text strong { font-weight: 600; color: var(--amber); }
-
-  .footer {
-    margin-top: 44px; text-align: center;
-    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--border);
-  }
-  .footer span { color: var(--amber); opacity: 0.6; }
+  /* ─── EL SELLO, versión sellada: aquí las casillas ya están cumplidas ─── */
+  .sello { border-color: color-mix(in srgb, var(--signal) 45%, transparent); }
+  /* El aspa se traza cuando la sección entra en pantalla: no es interactiva
+     como en el ROADMAP. */
+  .revealed .sello use { stroke-dashoffset: 0; }
+  .revealed .sello use:nth-of-type(2) { transition-delay: .09s; }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="bg" aria-hidden="true">
+  <div class="bg-grain"></div>
+  <svg class="bg-contours" id="contours" preserveAspectRatio="none" viewBox="0 0 1200 1200"></svg>
+</div>
 
-  <div class="topnav">
-    <a href="../ROADMAP.html">← Bitácora del roadmap</a>
-    <div class="navgroup">
-      <a href="../artefacto-2/index.html">← Artefacto 2 (RAG)</a>
-      <a href="https://github.com/denysporynets/AI-Roadmap/tree/main/3_Harness_de_evaluacion" target="_blank">Ver código en GitHub ↗</a>
-      <a href="https://denysporynets.github.io">Portfolio ↗</a>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="sello-a" viewBox="0 0 20 20"><path d="M4.2 4.8 C 8.4 8.1, 12.1 11.6, 16.1 15.4"/></symbol>
+  <symbol id="sello-b" viewBox="0 0 20 20"><path d="M15.8 4.6 C 12.2 8.3, 8.1 11.9, 4.4 15.2"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="back" href="../ROADMAP.html"><span class="arw">←</span> Bitácora</a>
+    <div class="nav-right">
+      <span class="brand"><b>DS-Nexus</b> Protocol Based</span>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Cambiar a modo noche" title="Modo noche / día">
+        <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
     </div>
   </div>
+</header>
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-eyebrow">
-      <span>Artefacto 3 · Mes 2–3</span>
-      <span class="badge-done">✓ Completo · herramienta interna</span>
+<main>
+  <!-- ═══ HERO ═══ -->
+  <section class="wrap hero">
+    <div class="eyebrow reveal">
+      <span class="tag">Artefacto 3 de 6 · Mes 2–3</span>
+      <span class="estado">Completo · herramienta interna</span>
     </div>
-    <h1 class="hero-title">Harness de evaluación<br><strong>el RAG deja de calificarse a ojo</strong></h1>
-    <p class="hero-sub">
-      Un banco de pruebas que <strong>puntúa el RAG</strong> contra un dataset de casos "verdad de campo",
+    <h1 class="reveal">El RAG deja de calificarse <em>a ojo</em>.</h1>
+    <p class="lede reveal">
+      Un banco de pruebas que <strong>puntúa el RAG</strong> contra un dataset de casos «verdad de campo»,
       usa <strong>jueces LLM</strong> para medir fidelidad y relevancia, compara cada versión con la anterior
-      y <strong>bloquea las regresiones con una puerta de calidad</strong>. Cuando tocas algo del RAG,
-      obtienes un número que dice si mejoró o empeoró — no una opinión. Tercer artefacto de la ruta
+      y <strong>bloquea las regresiones</strong> con una puerta de calidad. Cuando tocas algo, obtienes un
+      número que dice si mejoró o empeoró — no una opinión. Tercer artefacto de la ruta
       <strong>Data Science → AI Engineering</strong>.
     </p>
-  </div>
 
-  <!-- QUÉ HACE -->
-  <div class="section">
-    <div class="sec-eyebrow">Qué hace</div>
-    <div class="sec-title">Medir el RAG, no opinar sobre él</div>
-    <p class="sec-p">
+    <div class="telemetry reveal">
+      <div class="tcell"><b class="num">5</b><span>piezas, una red</span></div>
+      <div class="tcell"><b class="num">2</b><span>jueces LLM · gpt-4o</span></div>
+      <div class="tcell"><b class="num">0 €</b><span>coste de la puerta</span></div>
+      <div class="tcell"><b class="num">0,12 s</b><span>en decidir</span></div>
+    </div>
+  </section>
+
+  <div class="wrap"><hr class="rule"></div>
+
+  <!-- ═══ LA IDEA ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">La idea</span>
+    <h2>Se evalúa una vez, <em>se testea mil</em></h2>
+    <p>
       Construir un RAG es fácil; saber <strong>si funciona</strong> y detectar <strong>cuándo una versión
-      nueva empeora</strong> es lo que separa un portfolio de un prototipo. El harness convierte esa pregunta
-      en un pipeline con dos velocidades de coste: se <strong>evalúa una vez (caro)</strong> y se
-      <strong>testea mil veces (gratis)</strong>.
+      nueva empeora</strong> es lo que separa un sistema de un prototipo. El harness convierte esa pregunta
+      en un pipeline con dos velocidades de coste: solo el primer paso gasta dinero — los otros dos leen su
+      salida ya guardada, así que la puerta puede correr en <strong>cada cambio</strong> gratis.
     </p>
 
-    <div class="pipeline">
-      <div class="pipe-step">
-        <div class="pe">Evaluar</div>
-        <div class="pt">RAG + jueces LLM</div>
-        <div class="pd">fidelidad · relevancia · citas</div>
-        <div class="pcost caro">● cuesta API</div>
+    <div class="chain">
+      <div class="chain-step">
+        <span class="tag">Evaluar</span>
+        <b>RAG + jueces LLM</b>
+        <span>fidelidad · relevancia · citas</span>
+        <span class="coste caro">● cuesta API</span>
       </div>
-      <div class="pipe-arrow">→</div>
-      <div class="pipe-step">
-        <div class="pe">Comparar</div>
-        <div class="pt">diff vs línea base</div>
-        <div class="pd">tolerancias · marca regresiones</div>
-        <div class="pcost free">○ gratis</div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">
+        <span class="tag">Comparar</span>
+        <b>diff vs línea base</b>
+        <span>tolerancias · marca regresiones</span>
+        <span class="coste free">○ gratis</span>
       </div>
-      <div class="pipe-arrow">→</div>
-      <div class="pipe-step">
-        <div class="pe">Puerta</div>
-        <div class="pt">pytest</div>
-        <div class="pd">🟢 pasa · 🔴 bloquea</div>
-        <div class="pcost free">○ gratis</div>
-      </div>
-    </div>
-    <p class="sec-p">
-      Solo el primer paso gasta dinero. Los otros dos leen su salida ya guardada, así que la puerta puede
-      correr en <strong>cada cambio</strong> sin coste — lista para un pipeline de CI.
-    </p>
-  </div>
-
-  <!-- LA DECISIÓN CLAVE -->
-  <div class="section">
-    <div class="sec-eyebrow">La decisión de diseño</div>
-    <div class="sec-title">Una sola definición de "regresión"</div>
-    <p class="sec-p">
-      El informe que se lee y la puerta que bloquea <strong>comparten la misma lógica</strong>: el test de
-      calidad <strong>importa y reutiliza</strong> el comparador, no reimplementa su propio criterio. Así es
-      imposible que el informe diga "todo bien" mientras el test dice "roto". Una definición, dos caras: un
-      informe legible y un <code style="color:var(--amber)">exit code</code> que un pipeline entiende.
-    </p>
-
-    <div class="codecard">
-      <div class="code-head"><span>test_calidad.py · el corazón de la puerta</span><span class="tag">reutiliza comparar.py</span></div>
-<pre><code><span class="c-key">import</span> comparar   <span class="c-com"># la MISMA lógica que produce el informe</span>
-
-<span class="c-key">def</span> <span class="c-grn">test_ninguna_alucinacion_nueva</span>(diff):
-    <span class="c-com"># responder algo AUSENTE del corpus = alucinación.</span>
-    <span class="c-com"># es la métrica que distingue a este RAG (sabe callarse),</span>
-    <span class="c-com"># por eso tiene su propio assert dedicado.</span>
-    alucinaciones = [r <span class="c-key">for</span> r <span class="c-key">in</span> diff[<span class="c-str">"regresiones"</span>] <span class="c-key">if</span> <span class="c-str">"FALSO POSITIVO"</span> <span class="c-key">in</span> r]
-    <span class="c-key">assert</span> <span class="c-key">not</span> alucinaciones</code></pre>
-    </div>
-  </div>
-
-  <!-- EL HALLAZGO -->
-  <div class="section">
-    <div class="sec-eyebrow">Por qué un harness gana su sueldo</div>
-    <div class="sec-title">Cazó una alucinación real y la arregló</div>
-    <p class="sec-p">
-      No es una demo de juguete: al correr el harness sobre el RAG en producción, <strong>detectó un falso
-      positivo</strong>. La pregunta <em>"irse de casa"</em> —ausente del corpus— se colaba como respondida
-      porque el umbral de confianza estaba <strong>blando</strong> (0.40). El prompt no llegó a alucinar,
-      pero la puerta avisó de que el umbral dejaba pasar lo que no debía.
-    </p>
-
-    <div class="codecard">
-      <div class="code-head"><span>experimento reversible · candidato con umbral 0.40</span><span class="tag">la puerta se pone roja</span></div>
-<pre><code><span class="c-gry">$ HARNESS_CAND=resultados_u040.json pytest -v</span>
-
-<span class="c-red">test_ninguna_alucinacion_nueva ........... FAILED</span>
-<span class="c-yel">E   AssertionError: Alucinación nueva:</span>
-<span class="c-yel">E     · T1 FALSO POSITIVO — "irse de casa" (AUSENTE) a sim 0.421</span>
-
-<span class="c-com"># subir el umbral 0.40 → 0.43: decisión 86% → 100%, cero regresiones</span>
-<span class="c-grn">===== 6 passed in 0.12s =====</span>   <span class="c-com"># puerta verde, desplegado a Cloud Run</span></code></pre>
-    </div>
-    <p class="sec-p">
-      El cambio se probó como <strong>experimento reversible</strong> (subir el umbral a 0.43 sin tocar el
-      motor), la puerta pasó a verde, se verificó que no rompía nada más y se <strong>desplegó a producción</strong>.
-      El harness no solo mide: <strong>encontró un fallo y guió su corrección</strong>.
-    </p>
-  </div>
-
-  <!-- CÓMO ESTÁ CONSTRUIDO -->
-  <div class="section">
-    <div class="sec-eyebrow">Cómo está construido</div>
-    <div class="sec-title">Cinco piezas, una red de seguridad</div>
-    <div class="layers">
-      <div class="layer">
-        <div class="lnum">dataset</div>
-        <div class="lbody"><b>dataset_eval.json</b> — <span>casos "golden" etiquetados a mano: preguntas directas, de síntesis, trampas (ausentes) y de frontera. Arranca pequeño y crece.</span></div>
-      </div>
-      <div class="layer">
-        <div class="lnum">jueces</div>
-        <div class="lbody"><b>eval_jueces.py</b> — <span>dos jueces LLM (<code>gpt-4o</code>, superior al generador para evitar auto-preferencia) puntúan <i>faithfulness</i> y <i>relevancia</i>, temperatura 0, salida JSON forzada.</span></div>
-      </div>
-      <div class="layer">
-        <div class="lnum">evaluación</div>
-        <div class="lbody"><b>evaluar.py</b> — <span>corre el RAG sobre el dataset, mide decisión-umbral + fidelidad + relevancia + citas y emite un informe JSON+HTML. <i>Es el paso que cuesta API.</i></span></div>
-      </div>
-      <div class="layer">
-        <div class="lnum">comparación</div>
-        <div class="lbody"><b>comparar.py</b> — <span>fija una <b>línea base</b> y detecta regresiones contra ella con tolerancias. Prioriza la <i>decisión rota</i> sobre las medias: caza la alucinación aunque los promedios suban.</span></div>
-      </div>
-      <div class="layer">
-        <div class="lnum">puerta</div>
-        <div class="lbody"><b>test_calidad.py</b> — <span>envuelve el comparador en asserts de <code>pytest</code>. Verde si nada empeoró, rojo si algo cayó. No gasta API: solo lee dos JSON.</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- LO QUE SE ENTREGÓ -->
-  <div class="section">
-    <div class="sec-eyebrow">Lo que se entregó</div>
-    <div class="sec-title">Los criterios, cumplidos</div>
-    <div class="checks">
-      <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">Dataset de evaluación etiquetado a mano</div>
-          <div class="cdesc">Casos golden con respuesta esperada: directas, síntesis, trampas ausentes y frontera. Empieza pequeño, ampliable.</div>
-        </div>
-      </div>
-      <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">LLM-as-judge para fidelidad y relevancia</div>
-          <div class="cdesc">Juez más fuerte que el generador para evitar auto-preferencia; temperatura 0 y JSON forzado para que la nota sea estable.</div>
-        </div>
-      </div>
-      <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">Reporte que compara versiones y marca regresiones</div>
-          <div class="cdesc">Línea base + detección de regresiones con tolerancias; prioriza la decisión rota por encima de las medias.</div>
-        </div>
-      </div>
-      <div class="check">
-        <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#0d1117" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div>
-          <div class="ctitle">Puerta de calidad con pytest (extra)</div>
-          <div class="cdesc">Quality gate que reutiliza el comparador y se pone roja ante una alucinación nueva. Verificado con la regresión reintroducida a propósito.</div>
-        </div>
+      <span class="chain-arrow">→</span>
+      <div class="chain-step">
+        <span class="tag">Puerta</span>
+        <b>pytest</b>
+        <span>verde pasa · rojo bloquea</span>
+        <span class="coste free">○ gratis · 0,12 s</span>
       </div>
     </div>
 
     <div class="dod">
-      <div class="dod-label">Definición de "hecho" — cumplida</div>
-      <div class="dod-text">Cambias algo del RAG, corres el harness y obtienes un número que dice si mejoró o empeoró. La evaluación a ojo no cuenta — y aquí no cuenta.</div>
+      <span class="tag">Definición de «hecho»</span>
+      <em>Cambias algo del RAG, corres el harness y obtienes un número que dice si mejoró o empeoró.</em>
+      <span class="no"> La evaluación a ojo no cuenta — y aquí no cuenta.</span>
+    </div>
+  </section>
+
+  <!-- ═══ LA DECISIÓN DE DISEÑO ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">La decisión de diseño</span>
+    <h2>Una sola definición de <em>regresión</em></h2>
+    <p>
+      El informe que se lee y la puerta que bloquea <strong>comparten la misma lógica</strong>: el test de
+      calidad <strong>importa y reutiliza</strong> el comparador, no reimplementa su propio criterio. Así es
+      imposible que el informe diga «todo bien» mientras el test dice «roto». Una definición, dos caras: un
+      informe legible y un <code>exit code</code> que un pipeline entiende.
+    </p>
+    <div class="code">
+      <div class="code-head"><span>test_calidad.py · el corazón de la puerta</span><span>reutiliza comparar.py</span></div>
+<pre><code><span class="c-key">import</span> comparar   <span class="c-com"># la MISMA lógica que produce el informe</span>
+
+<span class="c-key">def</span> test_ninguna_alucinacion_nueva(diff):
+    <span class="c-com"># responder algo AUSENTE del corpus = alucinación.</span>
+    <span class="c-com"># es la métrica que distingue a este RAG (sabe callarse),</span>
+    <span class="c-com"># por eso tiene su propio assert dedicado.</span>
+    alucinaciones = [r <span class="c-key">for</span> r <span class="c-key">in</span> diff["regresiones"] <span class="c-key">if</span> "FALSO POSITIVO" <span class="c-key">in</span> r]
+    <span class="c-key">assert not</span> alucinaciones</code></pre>
+    </div>
+  </section>
+
+  <!-- ═══ EL INSTRUMENTO: la caza, paso a paso ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">El instrumento</span>
+    <h2>La caza, <em>paso a paso</em></h2>
+    <p>
+      No es una demo de juguete: al correr sobre el RAG en producción, el harness <strong>cazó un falso
+      positivo real</strong> y guió su corrección. Este es el replay de aquella caza, tal y como quedó en
+      la bitácora.
+    </p>
+
+    <div class="caza">
+      <div class="caza-head">
+        <span>La caza del falso positivo · 4 pasos</span>
+        <span class="caza-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span>
+      </div>
+      <div class="caza-body" aria-live="polite">
+        <div class="caza-step">
+          <span class="tag">Paso 1 · la trampa entra al dataset</span>
+<pre><code><span class="c-com"># dataset_eval.json · un caso «golden» etiquetado a mano</span>
+{ "id":       "T1",
+  "pregunta": "irse de casa",
+  "esperado": <span class="c-key">"AUSENTE"</span>   <span class="c-com"># el corpus NO lo contiene:</span>
+                          <span class="c-com"># la respuesta correcta es callar</span> }</code></pre>
+          <p class="caza-foot">
+            <b>Las trampas son preguntas que el corpus no sabe responder.</b> Un RAG honesto debe decir
+            «no guardo ese recuerdo» — y esa honestidad también se mide, con casos dedicados.
+          </p>
+        </div>
+        <div class="caza-step">
+          <span class="tag">Paso 2 · la sonda la deja pasar</span>
+<pre><code><span class="c-com"># evaluar.py · el RAG responde con el umbral de entonces (0,40)</span>
+T1 "irse de casa" ....... sim 0.421 ≥ 0.40 → banda "posible"
+                          <span class="c-bad">respondida ✗  (esperado: AUSENTE)</span>
+                          <span class="c-bad">→ FALSO POSITIVO</span></code></pre>
+          <p class="caza-foot">
+            <b>El prompt no llegó a alucinar: fue el umbral, blando, el que dejó pasar lo que no debía.</b>
+            Sin la trampa en el dataset, nadie lo habría visto — las medias seguían con buena cara.
+          </p>
+        </div>
+        <div class="caza-step">
+          <span class="tag">Paso 3 · la puerta se pone roja</span>
+<pre><code><span class="c-com">$ HARNESS_CAND=resultados_u040.json pytest -v</span>
+
+<span class="c-bad">test_ninguna_alucinacion_nueva ........... FAILED</span>
+E   AssertionError: Alucinación nueva:
+E     · T1 FALSO POSITIVO — "irse de casa" (AUSENTE) a sim 0.421</code></pre>
+          <p class="caza-foot">
+            <span class="veredicto ko">bloquea</span>
+            <b>La decisión rota manda sobre las medias.</b> Aunque todos los promedios subieran, un falso
+            positivo nuevo cierra la puerta — por eso ese assert tiene nombre propio.
+          </p>
+        </div>
+        <div class="caza-step">
+          <span class="tag">Paso 4 · el experimento reversible</span>
+<pre><code><span class="c-com"># candidato: umbral 0.40 → 0.43, sin tocar el motor</span>
+decisión ............ 86 % → <span class="c-ok">100 %</span>
+regresiones ......... <span class="c-ok">0</span>
+
+<span class="c-ok">===== 6 passed in 0.12s =====</span>   <span class="c-com"># puerta verde → desplegado a Cloud Run</span></code></pre>
+          <p class="caza-foot">
+            <span class="veredicto ok">cazada y corregida</span>
+            <b>El harness no solo mide: encontró un fallo real y guió su corrección.</b> La
+            <a href="../artefacto-2/index.html">sonda del Artefacto 2</a> navega hoy con ese 0,43 —
+            son la misma historia, contada desde las dos orillas.
+          </p>
+        </div>
+      </div>
+      <div class="caza-nav" hidden>
+        <button class="caza-btn" id="cazaPrev" type="button" disabled>← anterior</button>
+        <button class="caza-btn" id="cazaNext" type="button">siguiente →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CÓMO ESTÁ CONSTRUIDO ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Cómo está construido</span>
+    <h2>Cinco piezas, <em>una red de seguridad</em></h2>
+    <div class="layers">
+      <div class="layer">
+        <span class="lnum">dataset</span>
+        <span class="lbody"><b>dataset_eval.json</b> — casos «golden» etiquetados a mano: preguntas directas, de síntesis, trampas (ausentes) y de frontera. Arranca pequeño y crece.</span>
+      </div>
+      <div class="layer">
+        <span class="lnum">jueces</span>
+        <span class="lbody"><b>eval_jueces.py</b> — dos jueces LLM (<code>gpt-4o</code>, superior al generador para evitar auto-preferencia) puntúan <em>faithfulness</em> y relevancia; temperatura 0, salida JSON forzada.</span>
+      </div>
+      <div class="layer">
+        <span class="lnum">evaluación</span>
+        <span class="lbody"><b>evaluar.py</b> — corre el RAG sobre el dataset, mide decisión-umbral + fidelidad + relevancia + citas y emite un informe JSON+HTML. <em>Es el paso que cuesta API.</em></span>
+      </div>
+      <div class="layer">
+        <span class="lnum">comparación</span>
+        <span class="lbody"><b>comparar.py</b> — fija una <b>línea base</b> y detecta regresiones contra ella con tolerancias. Prioriza la <em>decisión rota</em> sobre las medias: caza la alucinación aunque los promedios suban.</span>
+      </div>
+      <div class="layer">
+        <span class="lnum">puerta</span>
+        <span class="lbody"><b>test_calidad.py</b> — envuelve el comparador en asserts de <code>pytest</code>. Verde si nada empeoró, rojo si algo cayó. No gasta API: solo lee dos JSON.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ ENTREGADO ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Lo que se entregó</span>
+    <h2>Los criterios, cumplidos</h2>
+    <div class="checks">
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Dataset de evaluación etiquetado a mano</b><span>Casos golden con respuesta esperada: directas, síntesis, trampas ausentes y frontera.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>LLM-as-judge para fidelidad y relevancia</b><span>Juez más fuerte que el generador para evitar auto-preferencia; temperatura 0 y JSON forzado para que la nota sea estable.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Reporte que compara versiones y marca regresiones</b><span>Línea base + tolerancias; prioriza la decisión rota por encima de las medias.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Puerta de calidad con pytest, y se la ha visto morder</b><span>Reutiliza el comparador y se pone roja ante una alucinación nueva — verificado con la regresión reintroducida a propósito.</span></span>
+      </div>
     </div>
 
-    <div class="note">
+    <p class="note-brass">
       <strong>Herramienta interna, no un servicio.</strong> El harness no se despliega: se <em>integra</em>.
-      Su valor es proteger a los otros artefactos — de hecho, ya guió una corrección del RAG del Artefacto 2
-      que sí está en producción. Por eso el contador de "desplegados" sigue en 2/6, pero esta pieza está
-      100% completa.
-    </div>
+      Su valor es proteger a los otros artefactos — ya guió una corrección del RAG del Artefacto 2 que sí
+      está en producción, y su filosofía es la semilla de la puerta CI del Artefacto 5.
+    </p>
 
     <div class="chips">
-      <span class="chip"><strong>Python</strong> · pytest</span>
-      <span class="chip"><strong>gpt-4o</strong> LLM-as-judge</span>
-      <span class="chip"><strong>faithfulness</strong> + relevancia</span>
-      <span class="chip"><strong>línea base</strong> + regresiones</span>
-      <span class="chip"><strong>quality gate</strong></span>
-      <span class="chip"><strong>informes</strong> JSON + HTML</span>
+      <span class="chip"><b>Python</b> · pytest</span>
+      <span class="chip"><b>gpt-4o</b> LLM-as-judge</span>
+      <span class="chip"><b>faithfulness</b> + relevancia</span>
+      <span class="chip"><b>línea base</b> + regresiones</span>
+      <span class="chip"><b>quality gate</b></span>
+      <span class="chip"><b>informes</b> JSON + HTML</span>
     </div>
 
-    <div class="cta-row">
-      <a class="cta cta-primary" href="https://github.com/denysporynets/AI-Roadmap/tree/main/3_Harness_de_evaluacion" target="_blank">Ver código en GitHub ↗</a>
-      <a class="cta cta-ghost" href="../ROADMAP.html">Ver el roadmap completo →</a>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="https://github.com/denysporynets/AI-Roadmap/tree/main/3_Harness_de_evaluacion" target="_blank" rel="noopener">Ver el código ↗</a>
+      <a class="btn btn-ghost" href="../artefacto-2/index.html">← Artefacto 2 · el RAG</a>
+      <a class="btn btn-ghost" href="../artefacto-4/index.html">Artefacto 4 · el agente →</a>
+      <a class="btn btn-ghost" href="../ROADMAP.html">Bitácora completa →</a>
     </div>
-  </div>
+  </section>
 
-  <!-- PRINCIPIO -->
-  <div class="principle">
-    <div class="principle-eyebrow">Por qué este artefacto importa</div>
-    <p class="principle-text">
-      Prompt engineering sin evaluación es <strong>superstición</strong>. Un harness convierte "creo que
-      mejoró" en "mejoró un 14%, sin regresiones" — y es <strong>lo que más te distingue en el mercado</strong>:
-      no construir el RAG, sino <strong>saber demostrar que funciona</strong>.
+  <!-- ═══ PRINCIPIO ═══ -->
+  <section class="wrap principle reveal">
+    <span class="tag">Por qué este artefacto importa</span>
+    <p>
+      Prompt engineering sin evaluación es <em>superstición</em>. Un harness convierte «creo que mejoró»
+      en «mejoró un 14 %, sin regresiones» — y eso es lo que distingue: no construir el RAG, sino
+      <em>saber demostrar que funciona</em>.
     </p>
-  </div>
+  </section>
 
-  <div class="footer">protocolo ds-nexus · constante <span>2.51</span> · artefacto 3 de 6</div>
+  <div class="wrap"><hr class="rule"></div>
 
-</div>
+  <footer class="wrap">
+    <div class="foot-row">
+      <span class="tag">protocolo ds-nexus · constante 2.51 · artefacto 3 de 6</span>
+      <span class="tag"><a href="https://denysporynets.github.io/">← volver al portfolio</a></span>
+    </div>
+  </footer>
+</main>
+
+<script>
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ── reveal "enfoque de instrumento" ──
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add("revealed"); io.unobserve(e.target); }
+    }
+  }, { threshold: 0.08 });
+  document.querySelectorAll(".reveal").forEach((el) => { if (!el.closest(".hero")) io.observe(el); });
+  requestAnimationFrame(() => {
+    document.querySelectorAll(".hero .reveal").forEach((el, i) => {
+      setTimeout(() => el.classList.add("revealed"), 90 * i);
+    });
+  });
+
+  // ── modo noche / día (misma clave que la home: el tema viaja con el visitante) ──
+  (function tema() {
+    const root = document.documentElement;
+    const btn = document.getElementById("themeToggle");
+    const CLAVE = "portfolio-tema";
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function aplicar(t) {
+      if (t === "dark") { root.setAttribute("data-theme", "dark"); btn.setAttribute("aria-label", "Cambiar a modo día"); }
+      else { root.removeAttribute("data-theme"); btn.setAttribute("aria-label", "Cambiar a modo noche"); }
+    }
+    function guardado() { try { return localStorage.getItem(CLAVE); } catch (e) { return null; } }
+    // El tema ya lo aplicó el script del <head>; aquí solo se pone al día la etiqueta del botón.
+    aplicar(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
+    btn.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      aplicar(next);
+      try { localStorage.setItem(CLAVE, next); } catch (e) {}
+    });
+    mq.addEventListener("change", (e) => { if (!guardado()) aplicar(e.matches ? "dark" : "light"); });
+  })();
+
+  // ── fondo: contornos tipo carta náutica ──
+  (function drawContours() {
+    const svg = document.getElementById("contours");
+    if (!svg || reduce) return;
+    const W = 1200, H = 1200, lines = 26;
+    let frag = "";
+    for (let i = 0; i < lines; i++) {
+      const baseY = (H / (lines - 1)) * i;
+      const amp = 20 + (i % 5) * 5;
+      const phase = i * 0.7;
+      const freq = 0.0055 + (i % 3) * 0.0011;
+      let d = "";
+      for (let x = 0; x <= W; x += 40) {
+        const y = baseY + Math.sin(x * freq + phase) * amp;
+        d += (x === 0 ? "M" : "L") + x + " " + y.toFixed(1) + " ";
+      }
+      const index = (i % 5 === 0);
+      frag += '<path d="' + d.trim() + '" stroke-width="' + (index ? 1.5 : 0.8) + '"/>';
+    }
+    svg.innerHTML = frag;
+  })();
+
+  // ── parallax del fondo ──
+  (function parallax() {
+    const el = document.getElementById("contours");
+    if (!el || reduce) return;
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        el.style.transform = "translateY(" + (window.scrollY * -0.07).toFixed(1) + "px)";
+        ticking = false;
+      });
+    }, { passive: true });
+  })();
+
+  // ── la caza, paso a paso: pasar página por el replay del falso positivo ──
+  (function caza() {
+    const pasos = Array.from(document.querySelectorAll(".caza-step"));
+    const nav = document.querySelector(".caza-nav");
+    const prev = document.getElementById("cazaPrev");
+    const next = document.getElementById("cazaNext");
+    const dots = Array.from(document.querySelectorAll(".caza-dots i"));
+    if (!pasos.length || !nav || !prev || !next) return;
+    let i = 0;
+    function pintar() {
+      pasos.forEach((p, k) => { p.hidden = k !== i; });
+      dots.forEach((d, k) => d.classList.toggle("on", k <= i));
+      prev.disabled = i === 0;
+      next.disabled = i === pasos.length - 1;
+    }
+    prev.addEventListener("click", () => { if (i > 0) { i--; pintar(); } });
+    next.addEventListener("click", () => { if (i < pasos.length - 1) { i++; pintar(); } });
+    // Sin JS los cuatro pasos se leen apilados como bitácora; con JS se pasa página.
+    nav.hidden = false;
+    pintar();
+  })();
+</script>
 </body>
 </html>
