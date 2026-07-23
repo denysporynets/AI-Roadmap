@@ -41,7 +41,9 @@
     --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     --pad:clamp(20px,5vw,40px);
+    color-scheme:light;
   }
+  :root[data-theme="dark"] { color-scheme:dark; }
   :root[data-theme="dark"] {
     --paper:#161F1C; --paper-2:#1D2724; --paper-3:#26302C;
     --ink:#E4E0D5; --pine:#A9C6B8; --signal:#D6603C; --signal-ink:#E8825C;
@@ -68,7 +70,7 @@
     position:absolute; inset:0; opacity:0.16; mix-blend-mode:multiply;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  .bg-contours { position:absolute; left:0; right:0; top:-20vh; height:160vh; width:100%; opacity:0.07; will-change:transform; }
+  .bg-contours { position:absolute; left:0; right:0; top:-20vh; height:160vh; width:100%; opacity:0.07; }
   .bg-contours path { fill:none; stroke:var(--pine); }
   :root[data-theme="dark"] .bg-grain { mix-blend-mode:screen; opacity:0.05; }
   :root[data-theme="dark"] .bg-contours { opacity:0.12; }
@@ -80,8 +82,9 @@
   /* ─── nav ─── */
   header.nav {
     position:sticky; top:0; z-index:50;
+    background:var(--paper);
     background:color-mix(in srgb, var(--paper) 86%, transparent);
-    backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
   }
   .nav-inner { display:flex; align-items:center; justify-content:space-between; gap:16px; height:58px; }
   .brand { font-family:var(--font-mono); font-size:0.82rem; font-weight:600; letter-spacing:0.02em; color:var(--pine); }
@@ -187,7 +190,7 @@
   .carta {
     border:1px solid var(--line); border-radius:5px; overflow:hidden;
     background:color-mix(in srgb, var(--paper-2) 82%, transparent);
-    backdrop-filter:blur(2px); margin-top:16px; padding:22px 24px;
+    -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); margin-top:16px; padding:22px 24px;
   }
   .carta h3 {
     font-family:var(--font-display); font-weight:600; font-size:1.1rem; color:var(--pine);
