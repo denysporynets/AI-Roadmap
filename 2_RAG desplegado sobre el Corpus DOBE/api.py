@@ -91,10 +91,27 @@ def preguntar(p: Pregunta, _=Depends(exigir_token)) -> dict:
 
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
+class StaticNoCache(StaticFiles):
+    """StaticFiles + 'Cache-Control: no-cache' en lo que sirve el frontend.
+
+    'no-cache' NO es 'no cachear': el navegador guarda la copia pero DEBE
+    revalidarla con el ETag en cada visita. Si nada cambió → 304 (barato); si
+    redesplegamos → 200 con lo nuevo al instante. Sin esto, el navegador aplica
+    caché heurística y sigue enseñando la versión vieja tras un redeploy.
+    """
+    async def get_response(self, *args, **kwargs):
+        # *args/**kwargs: reenviamos la firma tal cual, para no atarnos a la
+        # versión de Starlette (get_response(path, scope) hoy, pero así aguanta
+        # cambios de firma sin romper).
+        resp = await super().get_response(*args, **kwargs)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
 # Si static/ existe (Fase 3), FastAPI sirve ahí el index.html en la raíz. Mientras
 # no exista, una pista para que la API no parezca "rota" al abrirla en el navegador.
 if STATIC.is_dir():
-    app.mount("/", StaticFiles(directory=STATIC, html=True), name="static")
+    app.mount("/", StaticNoCache(directory=STATIC, html=True), name="static")
 else:
     @app.get("/", response_class=HTMLResponse)
     def raiz() -> str:
