@@ -409,78 +409,8 @@
   </footer>
 </main>
 
+<script src="../assets/laton.js" onerror="document.querySelectorAll(&quot;.reveal&quot;).forEach(function(e){e.classList.add(&quot;revealed&quot;)})"></script>
 <script>
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  // ── reveal "enfoque de instrumento" ──
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (e.isIntersecting) { e.target.classList.add("revealed"); io.unobserve(e.target); }
-    }
-  }, { threshold: 0.08 });
-  document.querySelectorAll(".reveal").forEach((el) => { if (!el.closest(".hero")) io.observe(el); });
-  requestAnimationFrame(() => {
-    document.querySelectorAll(".hero .reveal").forEach((el, i) => {
-      setTimeout(() => el.classList.add("revealed"), 90 * i);
-    });
-  });
-
-  // ── modo noche / día (misma clave que la home: el tema viaja con el visitante) ──
-  (function tema() {
-    const root = document.documentElement;
-    const btn = document.getElementById("themeToggle");
-    const CLAVE = "portfolio-tema";
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    function aplicar(t) {
-      if (t === "dark") { root.setAttribute("data-theme", "dark"); btn.setAttribute("aria-label", "Cambiar a modo día"); }
-      else { root.removeAttribute("data-theme"); btn.setAttribute("aria-label", "Cambiar a modo noche"); }
-    }
-    function guardado() { try { return localStorage.getItem(CLAVE); } catch (e) { return null; } }
-    aplicar(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
-    btn.addEventListener("click", () => {
-      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
-      aplicar(next);
-      try { localStorage.setItem(CLAVE, next); } catch (e) {}
-    });
-    mq.addEventListener("change", (e) => { if (!guardado()) aplicar(e.matches ? "dark" : "light"); });
-  })();
-
-  // ── fondo: contornos tipo carta náutica ──
-  (function drawContours() {
-    const svg = document.getElementById("contours");
-    if (!svg || reduce) return;
-    const W = 1200, H = 1200, lines = 26;
-    let frag = "";
-    for (let i = 0; i < lines; i++) {
-      const baseY = (H / (lines - 1)) * i;
-      const amp = 20 + (i % 5) * 5;
-      const phase = i * 0.7;
-      const freq = 0.0055 + (i % 3) * 0.0011;
-      let d = "";
-      for (let x = 0; x <= W; x += 40) {
-        const y = baseY + Math.sin(x * freq + phase) * amp;
-        d += (x === 0 ? "M" : "L") + x + " " + y.toFixed(1) + " ";
-      }
-      const index = (i % 5 === 0);
-      frag += '<path d="' + d.trim() + '" stroke-width="' + (index ? 1.5 : 0.8) + '"/>';
-    }
-    svg.innerHTML = frag;
-  })();
-
-  // ── parallax del fondo ──
-  (function parallax() {
-    const el = document.getElementById("contours");
-    if (!el || reduce) return;
-    let ticking = false;
-    window.addEventListener("scroll", () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        el.style.transform = "translateY(" + (window.scrollY * -0.07).toFixed(1) + "px)";
-        ticking = false;
-      });
-    }, { passive: true });
-  })();
 
   // ── LA BITÁCORA EN VIVO: el simulador que recalcula las consultas del DoD ──
   (function bitacoraViva() {
