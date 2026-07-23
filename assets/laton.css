@@ -218,6 +218,12 @@ header.nav {
   margin: 0; padding: 15px; overflow-x: auto;
   font-family: var(--font-mono); font-size: 0.79rem; line-height: 1.75; color: var(--ink);
 }
+/* El estilo de código INLINE (.sec code, para la prosa) no debe colarse en los
+   bloques: dentro de CUALQUIER pre (.code, paneles de pieza propia…), el <code>
+   es transparente — sin esto, cada línea del bloque sale con su cajita gris.
+   El segundo selector existe por especificidad: `pre code` a secas (0,0,2)
+   perdería contra `.sec code` (0,1,1). */
+pre code, .sec pre code { background: none; border: 0; padding: 0; font-size: inherit; border-radius: 0; }
 .c-com { color: var(--sage); }
 .c-key { color: var(--brass); }
 .c-ok  { color: var(--pine); font-weight: 500; }

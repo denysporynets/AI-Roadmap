@@ -598,19 +598,23 @@
         <span class="phase-chevron" aria-hidden="true">▸</span>
       </button>
       <div class="phase-body">
-        <p class="phase-why">El cierre del ciclo, y donde la base de M7 MLOps (GCP, MLflow, Airflow) da ventaja. Lo que diferencia un script que corre en tu portátil de un sistema que sobrevive en producción.</p>
+        <p class="phase-why">El cierre del ciclo. Desplegar ya se había hecho dos veces — lo que diferencia un script que corre en tu portátil de un sistema que sobrevive en producción es <strong>saber qué hace cuando no miras</strong>: la observabilidad.</p>
 
         <div class="item deliverable" data-id="d6" data-deliverable="true" data-desplegado role="checkbox" tabindex="0" aria-checked="false">
           <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
           <span>
             <span class="tag">Artefacto</span>
-            <span class="item-text">Un servicio en contenedor, con monitorización y coste por petición, corriendo donde alguien lo usa de verdad (sobre EOH-INE o el RAG DOBE).</span>
+            <span class="item-text">Un servicio en contenedor, con monitorización y coste por petición, corriendo donde alguien lo usa de verdad — el agente de empleo, instrumentado.</span>
           </span>
         </div>
         <div class="dod">
           <span class="tag">Definición de «hecho»</span>
           <em>El servicio está desplegado, alcanzable, y puedes decir cuánto cuesta cada petición y cuántas fallan.</em>
           <span class="no"> Correr en local no es producción.</span>
+        </div>
+        <p class="note-brass personal"><strong>El DoD se respondió con consultas, no con fe.</strong> Un medidor con carril por petición (<code>ContextVar</code>), una bitácora JSON que Cloud Logging indexa campo a campo, y las respuestas con datos de producción: <b>$0.0020 por petición · 0 fallos duros o blandos</b>. Y el error 500 declara su coste — un medidor que anota $0 en los fallos sufre sesgo de supervivencia.</p>
+        <div class="btn-row personal">
+          <a class="btn btn-ghost" href="artefacto-6/">Ver artefacto desplegado →</a>
         </div>
 
         <div class="item-list">
@@ -624,7 +628,7 @@
           </div>
           <div class="item" data-id="s6-3" role="checkbox" tabindex="0" aria-checked="false">
             <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
-            <span class="item-text">Apoyo en el stack de M7 MLOps (MLflow para tracking, Airflow si hay pipeline)</span>
+            <span class="item-text">Decisión razonada sobre el stack M7: MLflow y Airflow evaluados y <strong>descartados con argumento</strong> — no hay pipeline que lo justifique</span>
           </div>
         </div>
 
@@ -758,7 +762,7 @@
 
   // ── bitácora: estado, sellos y escala ──
   (function bitacora() {
-    const CLAVE = "ai-eng-roadmap-v6";
+    const CLAVE = "ai-eng-roadmap-v9";
 
     // Estado real "horneado": lo que ya está entregado y verificado, para que un
     // visitante nuevo (sin localStorage) vea la progresión verdadera y no 0/6.
@@ -767,11 +771,12 @@
     // Al tocarlo, SUBIR la versión de CLAVE: si no, quien ya visitó la página
     // conserva su estado guardado y nunca vería lo nuevo.
     const HORNEADO = {
-      d1:true, "s1-1":true, "s1-2":true, "s1-3":true,
-      d2:true, "s2-1":true, "s2-2":true, "s2-3":true,
+      d1:true, "s1-1":true, "s1-2":true, "s1-3":true, "c1-1":true, "c1-2":true,
+      d2:true, "s2-1":true, "s2-2":true, "s2-3":true, "c2-1":true, "c2-2":true,
       d3:true, "s3-1":true, "s3-2":true, "s3-3":true, "c3-1":true,
       d4:true, "s4-1":true, "s4-2":true, "s4-3":true, "c4-1":true,
-      d5:true, "s5-1":true, "s5-2":true, "s5-3":true, "s5-4":true, "s5-5":true, "c5-1":true
+      d5:true, "s5-1":true, "s5-2":true, "s5-3":true, "s5-4":true, "s5-5":true, "c5-1":true, "c5-2":true,
+      d6:true, "s6-1":true, "s6-2":true, "s6-3":true, "c6-1":true
     };
 
     function cargar() {

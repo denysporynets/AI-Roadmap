@@ -1,0 +1,298 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="El medidor y la bitácora salieron del Mac: aduana de privacidad, un renombrado a 56 manos, la puerta CI dando su veredicto, un 401 inesperado que resultó ser el portero haciendo su trabajo, y las dos preguntas del DoD respondidas con datos de producción.">
+<meta name="color-scheme" content="light dark">
+<title>17 · El primer día en la carretera</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%9B%A3%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#DEDCD5; --paper-2:#E5E4DE; --paper-3:#D6D3C8;
+  --ink:#20272A; --pine:#1E3A34; --signal:#C8502A; --signal-ink:#A83E1E;
+  --brass:#9A7420; --sage:#6E7A6F;
+  --line:rgba(30,58,52,.16); --line-2:rgba(30,58,52,.09);
+  --font-display:"Spectral",Georgia,serif;
+  --font-body:"IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --measure:68ch; --pad:clamp(20px,5vw,40px);
+}
+:root[data-theme="dark"]{
+  --paper:#161F1C; --paper-2:#1D2724; --paper-3:#26302C;
+  --ink:#E4E0D5; --pine:#A9C6B8; --signal:#D6603C; --signal-ink:#E8825C;
+  --brass:#CBA24D; --sage:#93A096;
+  --line:rgba(196,214,204,.16); --line-2:rgba(196,214,204,.09);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--font-body); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease,color .4s ease;
+}
+#velo{position:fixed; inset:0; pointer-events:none; z-index:9999;
+      background:#FF8A1E; mix-blend-mode:multiply; opacity:0; transition:opacity .3s ease}
+
+.wrap{max-width:var(--measure); margin:0 auto; padding:0 var(--pad) 100px}
+
+.mandos{position:sticky; top:0; z-index:50; background:color-mix(in srgb,var(--paper) 92%,transparent);
+        backdrop-filter:blur(8px); border-bottom:1px solid var(--line-2); margin-bottom:56px}
+.mandos-in{max-width:var(--measure); margin:0 auto; padding:10px var(--pad);
+           display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.mandos .tag{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+             text-transform:uppercase; color:var(--sage); margin-right:auto}
+.mandos label{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+              text-transform:uppercase; color:var(--sage)}
+input[type=range]{width:110px; accent-color:var(--brass); vertical-align:middle}
+.tbtn{font:500 12px/1 var(--font-mono); letter-spacing:.08em; text-transform:uppercase;
+      background:transparent; color:var(--ink); border:1px solid var(--line);
+      border-radius:999px; padding:7px 14px; cursor:pointer; transition:all .2s ease}
+.tbtn:hover{border-color:var(--brass); color:var(--brass)}
+
+header{padding:26px 0 12px}
+.kicker{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.18em;
+        text-transform:uppercase; color:var(--signal); margin:0 0 14px}
+h1{font-family:var(--font-display); font-weight:600; font-size:clamp(30px,6vw,44px);
+   line-height:1.14; letter-spacing:-.015em; margin:0 0 16px}
+.lede{font-size:19px; color:color-mix(in srgb,var(--ink) 78%,var(--paper));
+      border-left:2px solid var(--brass); padding-left:18px; margin:0 0 8px}
+.meta{font-family:var(--font-mono); font-size:12px; color:var(--sage); margin-top:26px}
+
+h2{font-family:var(--font-display); font-weight:600; font-size:26px; line-height:1.25;
+   letter-spacing:-.01em; margin:64px 0 4px; padding-top:22px; border-top:1px solid var(--line-2)}
+h2 .num{font-family:var(--font-mono); font-size:12px; color:var(--brass);
+        letter-spacing:.14em; display:block; margin-bottom:9px; font-weight:500}
+h3{font-family:var(--font-body); font-weight:600; font-size:17px; margin:34px 0 6px; color:var(--pine)}
+:root[data-theme="dark"] h3{color:var(--pine)}
+p{margin:14px 0}
+strong{font-weight:600}
+em{font-family:var(--font-display); font-style:italic}
+code{font-family:var(--font-mono); font-size:.88em; background:var(--paper-3);
+     padding:1px 5px; border-radius:3px}
+:root[data-theme="dark"] code{background:var(--paper-3)}
+
+pre{font-family:var(--font-mono); font-size:13px; line-height:1.6; background:var(--paper-2);
+    border:1px solid var(--line-2); border-left:2px solid var(--brass);
+    padding:16px 18px; border-radius:4px; overflow-x:auto; margin:20px 0}
+pre b{color:var(--signal); font-weight:500}
+pre i{color:var(--sage); font-style:normal}
+
+.tabla-caja{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+   color:var(--sage); font-weight:500; border-bottom:1px solid var(--line)}
+td.n{font-family:var(--font-mono); white-space:nowrap}
+.ok{color:var(--pine); font-weight:600}
+.no{color:var(--signal-ink); font-weight:600}
+:root[data-theme="dark"] .no{color:var(--signal-ink)}
+
+.nota{background:var(--paper-2); border:1px solid var(--line-2);
+      border-left:3px solid var(--signal); padding:16px 20px; border-radius:4px; margin:26px 0}
+.nota .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--signal); display:block; margin-bottom:7px}
+.clave{background:var(--paper-2); border:1px solid var(--line-2);
+       border-left:3px solid var(--brass); padding:16px 20px; border-radius:4px; margin:26px 0}
+.clave .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--brass); display:block; margin-bottom:7px}
+blockquote{font-family:var(--font-display); font-size:21px; line-height:1.45; font-style:italic;
+           margin:34px 0; padding-left:20px; border-left:2px solid var(--brass); color:var(--pine)}
+ul{padding-left:20px} li{margin:8px 0}
+hr{border:0; border-top:1px solid var(--line-2); margin:56px 0}
+.marca{text-align:center; color:var(--brass); font-family:var(--font-mono);
+       font-size:12px; letter-spacing:.5em; margin:56px 0}
+footer{border-top:1px solid var(--line); margin-top:64px; padding-top:22px;
+       font-family:var(--font-mono); font-size:12px; color:var(--sage)}
+a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+</style>
+
+<div id="velo"></div>
+
+<div class="mandos"><div class="mandos-in">
+  <span class="tag">Libro 17 · Artefacto 6</span>
+  <label for="hora">Hora</label>
+  <input type="range" id="hora" min="0" max="100" value="0" aria-label="Filtro de luz cálida">
+  <button class="tbtn" id="tema">Noche</button>
+</div></div>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">Artefacto 6 · Monitorización · Fase 3 · el despliegue</p>
+  <h1>El primer día en la carretera</h1>
+  <p class="lede">El medidor y la bitácora funcionaban en el Mac, revisados y con la red de seguridad pasada. Quedaba el viaje: sacar el código del taller y ponerlo a rodar. Este libro cuenta ese viaje — la aduana que revisa lo que sale, el peaje que valida dos cargas de un golpe, un 401 que parecía un bug y era el portero haciendo su trabajo, y el momento en que las líneas <em>prometidas</em> aparecieron de verdad en Cloud Logging.</p>
+  <p class="meta">23 de julio de 2026 · commit 6ae4d23 · puerta CI en verde 4m22s · revisión 00004-fvk · DoD respondido con datos de producción</p>
+</header>
+
+<h2><span class="num">01</span>Del taller a la carretera</h2>
+
+<p>El Artefacto 3 mide la <em>calidad</em> del agente antes de desplegar: es el espejo del taller. El Artefacto 6 mide su <em>salud</em> después: el espejo de la carretera. Hasta hoy, todo el trabajo del Art. 6 —el medidor con su carril por petición, la bitácora que canta una línea JSON por petición— vivía en el taller. Verificado con ejecuciones reales, sí, pero locales: el contenedor de Cloud Run seguía sirviendo la versión <em>a oscuras</em>, la que gasta sin contar y falla sin dejar constancia.</p>
+
+<p>Desplegar no es un gesto único: es una cadena con puntos de control, y cada punto existe porque en algún momento del roadmap algo se rompió (o estuvo a punto) justo ahí. El viaje de hoy los recorrió todos:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Punto de control</th><th>Pregunta que responde</th><th>Hoy</th></tr>
+  <tr><td>Aduana de privacidad</td><td>¿sale algo del Mac que no deba salir?</td><td class="ok">✓ limpio</td></tr>
+  <tr><td>Puerta CI</td><td>¿los cambios movieron alguna nota?</td><td class="ok">✓ verde, 4m22s</td></tr>
+  <tr><td>Redeploy</td><td>¿la revisión nueva arranca y sirve?</td><td class="ok">✓ 00004-fvk al 100%</td></tr>
+  <tr><td>Verificación end-to-end</td><td>¿el servicio vivo se comporta como el local?</td><td class="ok">✓ 200/401 correctos</td></tr>
+  <tr><td>Consultas del DoD</td><td>¿puedo responder coste y fallos con datos?</td><td class="ok">✓ $0.001974 · 0 fallos</td></tr>
+</table>
+</div>
+
+<h2><span class="num">02</span>La aduana: dos listas para dos viajes</h2>
+
+<p>Antes de empujar nada, la pregunta de siempre: ¿qué está a punto de salir del Mac? La respuesta tiene truco, porque el código hace <strong>dos viajes distintos</strong>, y cada uno tiene su propia lista de equipaje:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Viaje</th><th>Lista</th><th>Regla de oro</th></tr>
+  <tr><td>git push → GitHub (público)</td><td class="n">.gitignore</td><td>el CV con datos de contacto NO viaja (<code>datos_personales/</code> bloqueado)</td></tr>
+  <tr><td>gcloud deploy → imagen (privada)</td><td class="n">.gcloudignore</td><td>el CV SÍ viaja (el agente lo necesita para trabajar) — el <code>.env</code>, jamás</td></tr>
+</table>
+</div>
+
+<p>El mismo fichero, <code>cv_denys.md</code>, está prohibido en un viaje y es obligatorio en el otro. Por eso son dos listas y no una: sin <code>.gcloudignore</code> propio, gcloud usa el <code>.gitignore</code> como suplente — y construiría una imagen <em>sin CV</em>, un agente desplegado en verde que no sabe quién eres. Otra vez la trampa del libro 06: el fallo no estaría en la construcción sino en el primer uso.</p>
+
+<p>La aduana de hoy: <code>grep</code> sobre el diff completo buscando patrones de secreto (claves, emails, teléfonos, tokens). Todo lo que mencionaba «token» eran comentarios explicando el diseño — la palabra, no el valor. Los libros 15 y 16, limpios. Dictamen: nada sensible en el equipaje.</p>
+
+<h2><span class="num">03</span>Renombrar a 56 manos sin romper nada</h2>
+
+<p>El commit llevaba un polizón deliberado: saldar la deuda de vocabulario («corrida» → «ejecución») que quedaba en los ficheros de evaluación. Parece un buscar-y-reemplazar trivial; no lo es, porque la misma palabra vivía en <strong>tres papeles distintos</strong>, y cada papel tolera el cambio de forma diferente:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Papel</th><th>Ejemplo</th><th>¿Se puede tocar?</th></tr>
+  <tr><td>Clave de un JSON</td><td class="n">"corrida": {...}</td><td class="no">solo si TODO el código que la lee cambia a la vez</td></tr>
+  <tr><td>Identificador de código</td><td class="n">def _puerta(corrida)</td><td class="ok">sí, con convención: sin tilde (<code>ejecucion</code>)</td></tr>
+  <tr><td>Texto visible</td><td class="n">"ejecución #14 añadida"</td><td class="ok">sí, con tilde y gramática correcta</td></tr>
+</table>
+</div>
+
+<p>Primera comprobación: ¿es clave de JSON en algún sitio? No — solo valores de texto. Segunda: ¿el hash de la puerta CI cubre estos ficheros? Tampoco — el sha256 se calcula <em>solo</em> sobre el texto de los prompts, así que cambiar descripciones no invalida ninguna ejecución histórica. Con eso, el cambio se vuelve seguro… si se hace en el orden correcto: <strong>primero los identificadores</strong> (patrones exactos, a <code>ejecucion</code> sin tilde, siguiendo la convención que el propio repo ya usaba en <code>_anadir_al_historial</code>), <strong>después el texto libre</strong> (a «ejecución» con tilde).</p>
+
+<p>Y una sorpresa de gramática que ningún buscar-y-reemplazar habría avisado: el viejo truco del plural <code>corrida(s)</code> funcionaba porque «corridas» es «corrida» + s. Pero «ejecución» <em>cambia de forma</em> en plural — el resultado automático era <code>13 ejecución(s)</code>, un pequeño Frankenstein. El arreglo, plural de verdad:</p>
+
+<pre>n_ejecuciones = f"{n} {<b>'ejecución' if n == 1 else 'ejecuciones'</b>}"
+<i># «1 ejecución» / «13 ejecuciones» — la palabra cambia, el código lo sabe</i></pre>
+
+<div class="clave">
+  <span class="et">La idea que se lleva uno</span>
+  Un renombrado seguro es una <strong>escalera de verificación</strong>, no un reemplazo: (1) ¿en qué papeles vive la palabra? (2) ¿algo ejecutable depende de ella? (3) cambio por capas, identificadores antes que prosa; (4) verificar cada peldaño — <code>py_compile</code> para la sintaxis, <code>json.load</code> para los datos, y una ejecución real para lo que la sintaxis no ve.
+</div>
+
+<h2><span class="num">04</span>El peaje que valida dos cargas</h2>
+
+<p>El push despertó a la puerta CI del anexo, como estaba previsto — y ahí estaba la gracia de meter el vocabulario en <em>este</em> commit: la puerta cuesta lo mismo la pase una carga o dos. Una sola ejecución (~8 céntimos, 4m22s) validó a la vez que <strong>instrumentar el agente no movió ninguna nota</strong> (el medidor observa, no toca — y ahora hay una ejecución en verde que lo demuestra, no solo la intención) y que <strong>el renombrado no rompió la báscula</strong> (los prompts intactos, el hash intacto, los listones intactos).</p>
+
+<blockquote>La puerta no sabe cuántas cosas cambiaron: solo sabe si el agente sigue dando la talla. Por eso agrupar cambios seguros en un commit es eficiencia, no pereza.</blockquote>
+
+<h2><span class="num">05</span>El relevo de las revisiones</h2>
+
+<p>Con la puerta en verde, el redeploy: <code>gcloud run deploy dobe-agente --source .</code> — el mismo comando documentado en el libro 04, sin tocar una letra. Cloud Run no <em>sustituye</em> el servicio: crea una <strong>revisión</strong> nueva (<code>dobe-agente-00004-fvk</code>) junto a la vieja, y cuando la nueva demuestra que arranca, le pasa el 100% del tráfico. Si hubiera reventado al arrancar —el fallo de arranque del libro 16—, la revisión anterior habría seguido sirviendo como si nada: el relevo solo se consuma si el relevista llega vivo.</p>
+
+<p>Ese es el seguro que hace del despliegue un acto reversible: la revisión vieja no se borra, queda en el banquillo. Volver atrás (<em>rollback</em>) es señalarla de nuevo, no reconstruir nada.</p>
+
+<h2><span class="num">06</span>El 401 que era una lección disfrazada</h2>
+
+<p>Primera prueba contra el servicio recién desplegado, con el token del <code>.env</code> local: <strong>401</strong>. ¿Bug del despliegue? La tentación era reintentar, tocar algo, volver a probar. En su lugar, un paso atrás y una pregunta: ¿qué token espera <em>realmente</em> el servicio?</p>
+
+<p>La comparación se hizo con una técnica que merece quedarse: en vez de imprimir los dos tokens para mirarlos (un secreto en pantalla es un secreto en el historial de la terminal, en un pantallazo, en esta conversación), se compararon sus <strong>huellas</strong> — longitud y sha256. Resultado: el <code>.env</code> local guardaba un token de 20 caracteres; Secret Manager sirve uno de 32. <em>Nunca fueron el mismo token.</em></p>
+
+<pre>local  : len 20 · sha 9a95f6bd…   <i># el .env se quedó atrás</i>
+secreto: len 32 · sha dba70fb8…   <i># lo que el servicio espera de verdad</i></pre>
+
+<p>Dos lecciones en una. La primera, de arquitectura: cuando un secreto vive en dos sitios, uno de los dos es la <strong>fuente de verdad</strong> y el otro una copia que puede quedarse vieja — y en producción la fuente de verdad es Secret Manager, no el fichero del Mac. La segunda, de perspectiva: el 401 no fue un fallo del sistema sino <strong>el sistema funcionando</strong> — el portero con <code>compare_digest</code> rechazando un token incorrecto exactamente como debía, y la bitácora anotando el intento con su <code>WARNING</code> y sin campos de coste. Hicimos de gorrón sin querer, y quedó retratado.</p>
+
+<div class="nota">
+  <span class="et">El cabo que deja este hallazgo</span>
+  Sincronizar el <code>.env</code> local con el secreto real, para que las pruebas locales contra producción dejen de dar 401. La copia se actualiza; la fuente de verdad, se respeta.
+</div>
+
+<h2><span class="num">07</span>Las líneas prometidas</h2>
+
+<p>Y entonces, el momento por el que existe todo el artefacto. La petición auténtica —una oferta de Data Scientist junior— cruzó el portero, el agente giró sus 7 llamadas, y la respuesta volvió con la factura del taxi a bordo: <code>coste_usd: 0.001974</code>. Veinte segundos después, en Cloud Logging:</p>
+
+<pre>INFO     11:30:44  estado 200 · 23395 ms · coste 0.001974 · llamadas 7 · completado True
+WARNING  11:29:54  estado 401 ·     0 ms · coste —        · llamadas —  · completado —
+WARNING  11:29:36  estado 401 ·     0 ms · coste —        · llamadas —  · completado —</pre>
+
+<p>Ninguna de estas líneas se escribió en Cloud Logging: se escribieron en <strong>stdout</strong>, con un <code>print</code>. La plataforma hizo el resto — recogió cada línea, vio que era JSON válido, y la indexó <em>campo a campo</em>: <code>severity</code> se volvió el nivel del log, y <code>estado</code>, <code>coste_usd</code>, <code>latencia_ms</code> quedaron consultables como columnas de una tabla. Es el principio 12-factor del libro 15 (<em>logs as event streams</em>) cerrando el círculo: el programa habla por stdout, la plataforma escucha, y nadie instaló nada.</p>
+
+<p>Fíjate en lo que <em>no</em> está: los 401 no llevan coste ni llamadas. No es un hueco — es información. La ausencia del campo dice «el agente ni se ejecutó, tu cartera ni se abrió». El portero protege el gasto, y la bitácora lo demuestra.</p>
+
+<h2><span class="num">08</span>El DoD, respondido con datos</h2>
+
+<p>La definición de hecho del Artefacto 6 era una frase: <em>«puedes decir cuánto cuesta cada petición y cuántas fallan»</em>. Con las líneas indexadas, esas dos preguntas dejan de ser estimaciones y se vuelven <strong>consultas</strong> — filtrar y agregar sobre los campos de la bitácora:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Pregunta</th><th>Consulta</th><th>Respuesta (hoy, producción)</th></tr>
+  <tr><td>¿Cuánto cuesta cada petición?</td><td class="n">media de coste_usd donde estado=200</td><td class="ok">$0.001974</td></tr>
+  <tr><td>¿Cuántas fallan (duras)?</td><td class="n">contar estado ≥ 500</td><td class="ok">0 de 3</td></tr>
+  <tr><td>¿Cuántas fallan (blandas)?</td><td class="n">contar completado = False</td><td class="ok">0 de 3</td></tr>
+</table>
+</div>
+
+<p>Y un detalle que vale como prueba de consistencia del medidor: la petición de producción costó <strong>$0.001974</strong>, y las verificaciones locales de las fases 1 y 2 habían dado $0.0024 y $0.002102. Tres ejecuciones, tres ofertas distintas, mismo orden de magnitud — el medidor cuenta lo mismo en el taller que en la carretera. Si el número de prod hubiera salido 10× mayor, tocaría desconfiar de algo: del medidor o del despliegue.</p>
+
+<div class="clave">
+  <span class="et">La idea que se lleva uno</span>
+  Una métrica no se «instala»: se <strong>destila de los logs</strong>. La bitácora escribe hechos crudos (una línea por petición); las preguntas de negocio (coste medio, tasa de fallos) son consultas sobre esos hechos. Si mañana surge una pregunta nueva —¿latencia p95? ¿coste por hora del día?— los datos ya están ahí, esperándola.
+</div>
+
+<h2><span class="num">09</span>Las palabras que se lleva el CV</h2>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Término</th><th>Lo que significa aquí</th></tr>
+  <tr><td class="n">build context</td><td>el equipaje que viaja al construir la imagen; <code>.gcloudignore</code> es su lista, distinta de la de git</td></tr>
+  <tr><td class="n">source of truth</td><td>Secret Manager manda sobre el token; el <code>.env</code> local es una copia que puede quedarse vieja</td></tr>
+  <tr><td class="n">revision / rollback</td><td>cada deploy crea una revisión nueva junto a la vieja; volver atrás es re-señalar, no reconstruir</td></tr>
+  <tr><td class="n">structured logging</td><td>JSON por stdout → Cloud Logging indexa campo a campo, sin instalar agentes</td></tr>
+  <tr><td class="n">log-based metrics</td><td>las métricas se destilan de los logs con consultas; los hechos crudos ya contienen las respuestas futuras</td></tr>
+  <tr><td class="n">safe rename</td><td>renombrar por capas (claves → identificadores → prosa) verificando cada peldaño antes del siguiente</td></tr>
+</table>
+</div>
+
+<h2><span class="num">10</span>Lo que queda abierto</h2>
+
+<ul>
+  <li><strong>El DoD en frío (Fase 4):</strong> que las dos consultas salgan de tus manos, en la consola de GCP, sin nadie guiando — la diferencia entre «lo vi funcionar» y «sé hacerlo». Y la decisión honesta sobre s6-3: ¿MLflow/Airflow aportan algo a este sistema, o serían postureo?</li>
+  <li><strong>Sincronizar el <code>.env</code></strong> con el token real de Secret Manager (el cabo del capítulo 06).</li>
+  <li><strong>Lucirlo (Fase 5):</strong> la gemela <code>artefacto-6/</code> con su pieza interactiva propia, y el ROADMAP horneado a 6/6 — el último sello del cuaderno.</li>
+</ul>
+
+<p class="marca">· · ·</p>
+
+<footer>
+Libro 17 · Artefacto 6 · Monitorización (Fase 3 · el despliegue) · 23 jul 2026<br>
+Sigue a <a href="16_la_red_de_seguridad.html">16 · La red de seguridad</a> · protocolo ds-nexus
+</footer>
+</div>
+
+<script>
+(function(){
+  var raiz=document.documentElement, btn=document.getElementById('tema');
+  function pinta(t){ raiz.setAttribute('data-theme',t); btn.textContent = t==='dark' ? 'Día' : 'Noche';
+                     try{localStorage.setItem('a6dep-tema',t)}catch(e){} }
+  var g=null; try{g=localStorage.getItem('a6dep-tema')}catch(e){}
+  pinta(g || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  btn.addEventListener('click',function(){
+    pinta(raiz.getAttribute('data-theme')==='dark'?'light':'dark');
+  });
+
+  var hora=document.getElementById('hora'), velo=document.getElementById('velo');
+  function calor(v){ velo.style.opacity=(v/100*0.42).toFixed(3);
+                     try{localStorage.setItem('a6dep-hora',v)}catch(e){} }
+  var h=null; try{h=localStorage.getItem('a6dep-hora')}catch(e){}
+  if(h!==null){ hora.value=h; }
+  calor(hora.value);
+  hora.addEventListener('input',function(){ calor(this.value); });
+})();
+</script>

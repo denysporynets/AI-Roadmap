@@ -1,0 +1,299 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Cómo se usa y cómo se interpreta el Explorador de registros de Google Cloud Logging: la anatomía de la pantalla, el embudo de tres cedazos, jsonPayload contra textPayload, los dos relojes, y un recetario de consultas para interrogar la bitácora del agente.">
+<meta name="color-scheme" content="light dark">
+<title>18 · La sala de lectura</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%94%8E%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#DEDCD5; --paper-2:#E5E4DE; --paper-3:#D6D3C8;
+  --ink:#20272A; --pine:#1E3A34; --signal:#C8502A; --signal-ink:#A83E1E;
+  --brass:#9A7420; --sage:#6E7A6F;
+  --line:rgba(30,58,52,.16); --line-2:rgba(30,58,52,.09);
+  --font-display:"Spectral",Georgia,serif;
+  --font-body:"IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --measure:68ch; --pad:clamp(20px,5vw,40px);
+}
+:root[data-theme="dark"]{
+  --paper:#161F1C; --paper-2:#1D2724; --paper-3:#26302C;
+  --ink:#E4E0D5; --pine:#A9C6B8; --signal:#D6603C; --signal-ink:#E8825C;
+  --brass:#CBA24D; --sage:#93A096;
+  --line:rgba(196,214,204,.16); --line-2:rgba(196,214,204,.09);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--font-body); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease,color .4s ease;
+}
+#velo{position:fixed; inset:0; pointer-events:none; z-index:9999;
+      background:#FF8A1E; mix-blend-mode:multiply; opacity:0; transition:opacity .3s ease}
+
+.wrap{max-width:var(--measure); margin:0 auto; padding:0 var(--pad) 100px}
+
+.mandos{position:sticky; top:0; z-index:50; background:color-mix(in srgb,var(--paper) 92%,transparent);
+        backdrop-filter:blur(8px); border-bottom:1px solid var(--line-2); margin-bottom:56px}
+.mandos-in{max-width:var(--measure); margin:0 auto; padding:10px var(--pad);
+           display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.mandos .tag{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+             text-transform:uppercase; color:var(--sage); margin-right:auto}
+.mandos label{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+              text-transform:uppercase; color:var(--sage)}
+input[type=range]{width:110px; accent-color:var(--brass); vertical-align:middle}
+.tbtn{font:500 12px/1 var(--font-mono); letter-spacing:.08em; text-transform:uppercase;
+      background:transparent; color:var(--ink); border:1px solid var(--line);
+      border-radius:999px; padding:7px 14px; cursor:pointer; transition:all .2s ease}
+.tbtn:hover{border-color:var(--brass); color:var(--brass)}
+
+header{padding:26px 0 12px}
+.kicker{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.18em;
+        text-transform:uppercase; color:var(--signal); margin:0 0 14px}
+h1{font-family:var(--font-display); font-weight:600; font-size:clamp(30px,6vw,44px);
+   line-height:1.14; letter-spacing:-.015em; margin:0 0 16px}
+.lede{font-size:19px; color:color-mix(in srgb,var(--ink) 78%,var(--paper));
+      border-left:2px solid var(--brass); padding-left:18px; margin:0 0 8px}
+.meta{font-family:var(--font-mono); font-size:12px; color:var(--sage); margin-top:26px}
+
+h2{font-family:var(--font-display); font-weight:600; font-size:26px; line-height:1.25;
+   letter-spacing:-.01em; margin:64px 0 4px; padding-top:22px; border-top:1px solid var(--line-2)}
+h2 .num{font-family:var(--font-mono); font-size:12px; color:var(--brass);
+        letter-spacing:.14em; display:block; margin-bottom:9px; font-weight:500}
+h3{font-family:var(--font-body); font-weight:600; font-size:17px; margin:34px 0 6px; color:var(--pine)}
+:root[data-theme="dark"] h3{color:var(--pine)}
+p{margin:14px 0}
+strong{font-weight:600}
+em{font-family:var(--font-display); font-style:italic}
+code{font-family:var(--font-mono); font-size:.88em; background:var(--paper-3);
+     padding:1px 5px; border-radius:3px}
+:root[data-theme="dark"] code{background:var(--paper-3)}
+
+pre{font-family:var(--font-mono); font-size:13px; line-height:1.6; background:var(--paper-2);
+    border:1px solid var(--line-2); border-left:2px solid var(--brass);
+    padding:16px 18px; border-radius:4px; overflow-x:auto; margin:20px 0}
+pre b{color:var(--signal); font-weight:500}
+pre i{color:var(--sage); font-style:normal}
+
+.tabla-caja{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+   color:var(--sage); font-weight:500; border-bottom:1px solid var(--line)}
+td.n{font-family:var(--font-mono); white-space:nowrap}
+.ok{color:var(--pine); font-weight:600}
+.no{color:var(--signal-ink); font-weight:600}
+:root[data-theme="dark"] .no{color:var(--signal-ink)}
+
+.nota{background:var(--paper-2); border:1px solid var(--line-2);
+      border-left:3px solid var(--signal); padding:16px 20px; border-radius:4px; margin:26px 0}
+.nota .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--signal); display:block; margin-bottom:7px}
+.clave{background:var(--paper-2); border:1px solid var(--line-2);
+       border-left:3px solid var(--brass); padding:16px 20px; border-radius:4px; margin:26px 0}
+.clave .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--brass); display:block; margin-bottom:7px}
+blockquote{font-family:var(--font-display); font-size:21px; line-height:1.45; font-style:italic;
+           margin:34px 0; padding-left:20px; border-left:2px solid var(--brass); color:var(--pine)}
+ul{padding-left:20px} li{margin:8px 0}
+hr{border:0; border-top:1px solid var(--line-2); margin:56px 0}
+.marca{text-align:center; color:var(--brass); font-family:var(--font-mono);
+       font-size:12px; letter-spacing:.5em; margin:56px 0}
+footer{border-top:1px solid var(--line); margin-top:64px; padding-top:22px;
+       font-family:var(--font-mono); font-size:12px; color:var(--sage)}
+a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+</style>
+
+<div id="velo"></div>
+
+<div class="mandos"><div class="mandos-in">
+  <span class="tag">Libro 18 · Artefacto 6</span>
+  <label for="hora">Hora</label>
+  <input type="range" id="hora" min="0" max="100" value="0" aria-label="Filtro de luz cálida">
+  <button class="tbtn" id="tema">Noche</button>
+</div></div>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">Artefacto 6 · Monitorización · Fase 4 · la herramienta</p>
+  <h1>La sala de lectura</h1>
+  <p class="lede">La bitácora escribe; alguien tiene que leer. El <strong>Explorador de registros</strong> de Google Cloud Logging es la sala donde se lee todo lo que el proyecto cuenta de sí mismo — y como toda sala de lectura seria, tiene sus normas: qué hay en las estanterías, cómo se pide un libro, y cómo se interpreta lo que pone. Este libro es el manual de uso de esa sala, escrito el día que la estrenamos.</p>
+  <p class="meta">23 de julio de 2026 · consola de GCP · proyecto dprag-dobe · primera lectura real: 3 líneas, 2 advertencias y una factura</p>
+</header>
+
+<h2><span class="num">01</span>Qué hay en las estanterías</h2>
+
+<p>Lo primero que sorprende al entrar: la sala no guarda solo <em>tus</em> logs. Cloud Logging es el archivo central de <strong>todo el proyecto</strong>, y ahí desemboca todo lo que cualquier pieza de GCP tiene que contar:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Quién escribe</th><th>Qué cuenta</th><th>Ejemplo real del proyecto</th></tr>
+  <tr><td>Tus contenedores</td><td>el stdout de tu código</td><td>las líneas de <code>bitacora()</code>, el «✅ Agente listo»</td></tr>
+  <tr><td>Cloud Run (la plataforma)</td><td>peticiones HTTP, arranques, escala</td><td>cada request con su código de estado, visto desde fuera</td></tr>
+  <tr><td>Cloud Build</td><td>la construcción de imágenes</td><td>el build de cada <code>gcloud run deploy --source</code></td></tr>
+  <tr><td>Logs de auditoría</td><td>quién tocó qué en el proyecto</td><td>la consulta precargada que había que borrar era justo esto</td></tr>
+  <tr><td>Secret Manager</td><td>accesos a secretos</td><td>cada vez que una revisión lee <code>APP_TOKEN_AGENTE</code></td></tr>
+</table>
+</div>
+
+<p>Por eso ninguna consulta útil empieza «enséñamelo todo»: el todo es un océano. Leer bien es, antes que nada, <strong>filtrar bien</strong>.</p>
+
+<h2><span class="num">02</span>Anatomía de la pantalla</h2>
+
+<p>El Explorador tiene cuatro zonas, y cada una responde una pregunta distinta:</p>
+
+<h3>El editor de consultas (arriba)</h3>
+<p>Donde se escribe el filtro, en un lenguaje propio (<strong>LQL</strong>, Logging Query Language). Es la petición al bibliotecario: «tráeme solo esto». Se puede escribir a mano o construir clicando — los desplegables de recurso/gravedad y el panel de campos <em>escriben LQL por ti</em> en esta misma caja. Verlo aparecer ahí es la mejor forma de aprender el lenguaje.</p>
+
+<h3>El cronograma (la gráfica)</h3>
+<p>El <em>electrocardiograma</em> del servicio: el tiempo en horizontal, el volumen de líneas en vertical, coloreado por gravedad. No se lee línea a línea — se lee de un vistazo: ¿hay pulso? ¿hay picos? ¿una racha naranja de errores a las 3 de la mañana? El cronograma responde «¿cuándo pasó algo raro?» antes de que sepas <em>qué</em> pasó. Arrastrar sobre él acota el rango de tiempo: es zoom, no decoración.</p>
+
+<h3>La tabla de resultados</h3>
+<p>Una fila por línea de log que pasó el filtro: <strong>Gravedad</strong> (el <code>severity</code> del JSON convertido en icono — ⚠️ naranja los WARNING, ℹ️ azul los INFO, 🔴 los ERROR), <strong>Hora</strong> (¡ojo, en tu zona horaria! — ver capítulo 05) y <strong>Resumen</strong> (el JSON crudo, truncado). La flechita <strong>▸</strong> de cada fila despliega el registro completo en árbol; dentro, el tesoro es el bloque <code>jsonPayload</code>: tus diez campos, uno a uno.</p>
+
+<h3>El panel «Campos» (izquierda)</h3>
+<p>El más infravalorado. La consola <em>aprende</em> de los logs que está mostrando y te ofrece sus valores como facetas clicables: «Gravedad: Advertencia 2 · Información 1», «Service name: dobe-agente»… Dos usos: como <strong>atajo</strong> (clicar añade el filtro al editor) y como <strong>resumen instantáneo</strong> — ese recuento por gravedad ya es media consulta del DoD respondida sin escribir nada.</p>
+
+<h2><span class="num">03</span>El embudo de tres cedazos</h2>
+
+<p>La consulta con la que se estrenó la sala, línea a línea — con un <strong>AND implícito</strong> entre líneas (un registro debe cumplir las tres):</p>
+
+<pre>resource.type="cloud_run_revision"      <i># cedazo 1: la plataforma</i>
+resource.labels.service_name="dobe-agente"   <i># cedazo 2: el servicio</i>
+jsonPayload.evento="peticion"           <i># cedazo 3: la línea — y este es TUYO</i></pre>
+
+<p><strong>Cedazo 1 — plataforma.</strong> De todo el océano del capítulo 01, solo lo emitido por contenedores de Cloud Run. El nombre fino importa: <code>cloud_run_<b>revision</b></code>, no «service» — quien ejecuta código y escribe logs es la revisión concreta (la <code>00004-fvk</code> del libro 17), no el servicio abstracto.</p>
+
+<p><strong>Cedazo 2 — servicio.</strong> El proyecto tiene dos servicios (<code>dobe-agente</code> y <code>dobe-rag</code>); sin esta línea sus logs saldrían mezclados. Es la misma etiqueta que un día separará las consultas del copiloto de llamadas de las del agente.</p>
+
+<p><strong>Cedazo 3 — la línea, el cedazo de autor.</strong> Dentro del stdout del agente conviven la bitácora, el saludo de arranque, los logs de uvicorn… El campo <code>evento: "peticion"</code> <strong>lo inventó el autor de la bitácora exactamente para esto</strong>: es la marca de agua que separa las mediciones del ruido de consola. La observabilidad se diseña en la escritura para que exista en la lectura.</p>
+
+<div class="clave">
+  <span class="et">La idea que se lleva uno</span>
+  Filtrar en Cloud Logging es la misma lógica que los filtros de metadata en Pinecone: cada nivel de etiqueta rebana el océano por una dimensión distinta (plataforma → servicio → tipo de línea), y la dimensión más valiosa es la que definiste tú al diseñar el dato.
+</div>
+
+<h2><span class="num">04</span>La frontera: jsonPayload contra textPayload</h2>
+
+<p>Cuando Cloud Logging recoge una línea de stdout, la <em>huele</em>. Si es JSON válido, la desmonta e indexa <strong>campo a campo</strong> bajo <code>jsonPayload</code> — y cada campo se vuelve consultable (<code>jsonPayload.estado</code>, <code>jsonPayload.coste_usd</code>…) y algunos hasta cambian el comportamiento: el campo <code>severity</code> asciende a nivel oficial del registro y pinta el icono de gravedad. Si la línea es texto normal, queda entera como <code>textPayload</code>: una cadena opaca donde solo se pueden buscar palabras.</p>
+
+<pre><i># El mismo print, dos destinos:</i>
+print("✅ Agente listo.")                    <i>→ textPayload (prosa: solo se busca)</i>
+print(json.dumps({"evento": "peticion"...})) <i>→ jsonPayload (dato: se consulta)</i></pre>
+
+<p>Esta es la frontera del libro 15 vista desde el otro lado: en la escritura parecía una elección estética (¿prosa o JSON?); en la sala de lectura se revela como la diferencia entre <strong>buscar y consultar</strong>. Y no hubo que instalar nada para cruzarla: el contrato «si imprimes JSON, te indexo» viene de serie.</p>
+
+<h2><span class="num">05</span>Los dos relojes</h2>
+
+<p>Una misma petición, dos horas: la columna <strong>Hora</strong> decía <code>13:30:44</code> y dentro del JSON, <code>hora_utc: 11:30:44</code>. No es un error — son dos relojes con dos oficios. La consola traduce a la zona del espectador (Madrid, UTC+2 en verano) porque los humanos leen en hora local; la bitácora guarda <strong>UTC</strong> porque los sistemas comparan en hora universal.</p>
+
+<p>La regla práctica: <strong>se escribe en UTC, se lee en local</strong> — y cuando dos fuentes discrepen en dos horas exactas, antes de sospechar un bug, sospecha del reloj. (Y un matiz de ingeniería: aunque la consola ya traduce, el <code>hora_utc</code> propio no sobra — si un día los logs se exportan a un CSV o a otra herramienta, el campo viaja con el dato; la traducción de la consola, no.)</p>
+
+<h2><span class="num">06</span>Leer lo que no está</h2>
+
+<p>La lectura más fina de la primera sesión no fue un campo — fue una <strong>ausencia</strong>. Las dos líneas de los 401 no llevan <code>coste_usd</code>, ni <code>llamadas_llm</code>, ni <code>completado</code>. Un lector ingenuo diría «datos incompletos». El lector que diseñó la bitácora sabe que esa ausencia es un mensaje: <em>el portero rechazó al gorrón antes de que el agente arrancara — la cartera ni se abrió</em>.</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Lo que se ve</th><th>Lo que significa</th></tr>
+  <tr><td>WARNING con <code>estado: 401</code> y sin campos de coste</td><td>intento rechazado gratis: el token no pasó, el LLM ni se enteró</td></tr>
+  <tr><td>INFO con <code>completado: true</code> y <code>coste_usd</code></td><td>petición redonda, con su factura del taxi</td></tr>
+  <tr><td>INFO con <code>completado: false</code></td><td>fallo <em>blando</em>: el 200 dice «terminé», este campo dice «pero sin acabar la faena» (guardarraíl de turnos)</td></tr>
+  <tr><td>ERROR con <code>estado: 500</code> <em>y</em> <code>coste_usd</code></td><td>fallo duro que costó dinero — el arreglo de Wald del libro 16 en acción</td></tr>
+  <tr><td>Muchos 401 seguidos en el cronograma</td><td>alguien insiste contra el portero; molesto quizá, caro no</td></tr>
+</table>
+</div>
+
+<blockquote>En una bitácora bien diseñada, hasta el campo que falta está diciendo algo. La interpretación no es leer los datos: es saber qué esperaba encontrar y notar la diferencia.</blockquote>
+
+<h2><span class="num">07</span>Recetario de consultas</h2>
+
+<p>Las recetas que interrogan la bitácora del agente. Todas comparten los dos primeros cedazos (recurso + servicio); se lista solo lo que cambia. Los operadores del LQL que usan: <code>=</code> igual, <code>!=</code> distinto, <code>&gt;=</code> / <code>&lt;</code> comparación numérica, <code>:*</code> «el campo existe», y <code>AND</code>/<code>OR</code>/<code>NOT</code> para combinar.</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Pregunta</th><th>Se añade al embudo</th></tr>
+  <tr><td>Solo las peticiones redondas</td><td class="n">jsonPayload.estado=200</td></tr>
+  <tr><td>Fallos duros (DoD)</td><td class="n">jsonPayload.estado&gt;=500</td></tr>
+  <tr><td>Fallos blandos (DoD)</td><td class="n">jsonPayload.completado=false</td></tr>
+  <tr><td>Todo lo que no fue bien</td><td class="n">severity&gt;=WARNING</td></tr>
+  <tr><td>Peticiones lentas (más de 15 s)</td><td class="n">jsonPayload.latencia_ms&gt;=15000</td></tr>
+  <tr><td>Las que costaron dinero</td><td class="n">jsonPayload.coste_usd:*</td></tr>
+  <tr><td>Las del futuro copiloto, aparte</td><td class="n">jsonPayload.ruta="/preparar-llamada"</td></tr>
+</table>
+</div>
+
+<p>Y la receta de interpretación general, en orden: <strong>(1)</strong> cronograma — ¿cuándo?; <strong>(2)</strong> panel de campos — ¿cuánto de cada?; <strong>(3)</strong> filtro fino — ¿cuáles exactamente?; <strong>(4)</strong> desplegar el registro — ¿qué pasó en esta?</p>
+
+<h2><span class="num">08</span>Lo que la sala no hace (y dónde está el límite honesto)</h2>
+
+<p>El Explorador <strong>filtra, muestra y cuenta — pero no agrega</strong>. Puede decirte «hay 47 líneas con estado 200», no «la media de su <code>coste_usd</code> es $0.0021». Para las preguntas de agregación hay tres caminos, de menos a más maquinaria:</p>
+
+<ul>
+  <li><strong><code>gcloud logging read</code> + un puñado de Python</strong> — el filtro LQL viaja tal cual al comando, y la agregación se hace en local. Es como se respondió el DoD la primera vez. Para el volumen del agente (decenas de líneas), sobra.</li>
+  <li><strong>Métricas basadas en logs</strong> (log-based metrics) — le enseñas a Cloud Logging a destilar un número de cada línea (p. ej. la distribución de <code>coste_usd</code>) y se convierte en una métrica de Cloud Monitoring, con gráficas y alertas. El siguiente escalón natural si el tráfico crece.</li>
+  <li><strong>Log Analytics</strong> — SQL directo sobre los logs, estilo BigQuery. Artillería para cuando las preguntas se vuelven de analista.</li>
+</ul>
+
+<div class="nota">
+  <span class="et">El aviso del archivero</span>
+  Las estanterías no son infinitas: los logs del bucket por defecto se guardan <strong>30 días</strong> y luego se purgan. Para la operación diaria basta y sobra; si algún día hace falta historia larga (¿cuánto costó el agente este trimestre?), el camino es exportarlos (un <em>sink</em> hacia BigQuery o Storage) — decisión consciente, con su coste, que hoy no toca.
+</div>
+
+<h2><span class="num">09</span>Las palabras que se lleva el CV</h2>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Término</th><th>Lo que significa aquí</th></tr>
+  <tr><td class="n">Logs Explorer / LQL</td><td>la sala de lectura y su lenguaje de filtros; los desplegables escriben LQL por ti</td></tr>
+  <tr><td class="n">jsonPayload vs textPayload</td><td>dato consultable campo a campo vs prosa opaca; la frontera la decide tu print</td></tr>
+  <tr><td class="n">severity mapping</td><td>el campo <code>severity</code> del JSON asciende a nivel oficial del registro (iconos, filtros)</td></tr>
+  <tr><td class="n">facets (panel Campos)</td><td>la consola aprende los valores de tus logs y los ofrece como filtros clicables con recuento</td></tr>
+  <tr><td class="n">log-based metrics</td><td>destilar números de las líneas y graficarlos/alertarlos en Monitoring; el escalón siguiente</td></tr>
+  <tr><td class="n">log retention / sink</td><td>30 días por defecto; la historia larga se exporta a propósito, no se hereda gratis</td></tr>
+</table>
+</div>
+
+<h2><span class="num">10</span>Lo que queda abierto</h2>
+
+<ul>
+  <li><strong>El DoD en frío, de principio a fin:</strong> las dos preguntas respondidas por el operario del sistema —tú— sin guía delante. Las recetas del capítulo 07 son la chuleta.</li>
+  <li><strong>La decisión honesta de s6-3:</strong> ¿MLflow/Airflow aportan algo a <em>este</em> sistema o serían postureo? Con la sala de lectura funcionando, la respuesta se puede razonar con criterio y no con miedo a que falte una sigla.</li>
+  <li><strong>Una alerta, algún día:</strong> el paso natural cuando haya tráfico real — que la sala avise sola (p. ej. «más de N fallos duros en una hora») en vez de esperar a que alguien venga a leer.</li>
+</ul>
+
+<p class="marca">· · ·</p>
+
+<footer>
+Libro 18 · Artefacto 6 · Monitorización (Fase 4 · la herramienta) · 23 jul 2026<br>
+Sigue a <a href="17_el_primer_dia_en_la_carretera.html">17 · El primer día en la carretera</a> · protocolo ds-nexus
+</footer>
+</div>
+
+<script>
+(function(){
+  var raiz=document.documentElement, btn=document.getElementById('tema');
+  function pinta(t){ raiz.setAttribute('data-theme',t); btn.textContent = t==='dark' ? 'Día' : 'Noche';
+                     try{localStorage.setItem('a6gcl-tema',t)}catch(e){} }
+  var g=null; try{g=localStorage.getItem('a6gcl-tema')}catch(e){}
+  pinta(g || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  btn.addEventListener('click',function(){
+    pinta(raiz.getAttribute('data-theme')==='dark'?'light':'dark');
+  });
+
+  var hora=document.getElementById('hora'), velo=document.getElementById('velo');
+  function calor(v){ velo.style.opacity=(v/100*0.42).toFixed(3);
+                     try{localStorage.setItem('a6gcl-hora',v)}catch(e){} }
+  var h=null; try{h=localStorage.getItem('a6gcl-hora')}catch(e){}
+  if(h!==null){ hora.value=h; }
+  calor(hora.value);
+  hora.addEventListener('input',function(){ calor(this.value); });
+})();
+</script>

@@ -104,3 +104,8 @@ material-visual/
 
 # Cerrojo del historial: fichero de sincronizacion local, no es contenido
 **/historial.json.lock
+
+# ── Material personal DataCamp (23/07): certificado, CSV del examen y deck ──
+# Viven dentro de la carpeta del Artefacto 2 pero son ajenos al proyecto público
+# (y el dataset del examen puede tener restricciones de redistribución).
+**/DataCampProyect/

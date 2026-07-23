@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Artefacto 6: el agente desplegado deja de estar a oscuras. Un medidor de coste por petición con aislamiento entre peticiones concurrentes, una bitácora JSON que Cloud Logging indexa campo a campo, y las dos preguntas del DoD respondidas con datos de producción.">
+<meta name="author" content="Denys Porynets">
+<meta name="color-scheme" content="light dark">
+<title>Artefacto 6 — Monitorización en producción</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A1%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/laton.css">
+<noscript><style>.reveal{opacity:1;filter:none;transform:none}.viva-botones{display:none}</style></noscript>
+<script>
+  // Mismo guardián que la home y el ROADMAP: el tema se aplica ANTES del primer
+  // pintado. Si se deja para el script del final, quien abre en modo noche ve un
+  // destello blanco en cada carga.
+  (function () {
+    try {
+      var CLAVE = "portfolio-tema";
+      var t = localStorage.getItem(CLAVE);
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    } catch (e) {}
+  })();
+</script>
+<style>
+  /* Lo compartido del sistema "latón sobre papel" vive en ../assets/laton.css.
+     Aquí queda SOLO lo propio de este artefacto: los carriles del medidor,
+     la anatomía de la línea y la bitácora en vivo con sus consultas del DoD. */
+
+  /* ─── CARRILES (la idea del ContextVar, dibujada) ─── */
+  .carriles { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 22px; max-width: 720px; }
+  .carril {
+    display: grid; grid-template-columns: 11ch 1fr auto; gap: 12px; align-items: center;
+    border: 1px solid var(--line); border-radius: 3px; padding: 10px 14px;
+    background: color-mix(in srgb, var(--paper-2) 62%, transparent);
+  }
+  .carril .quien { font-family: var(--font-mono); font-size: 0.74rem; color: var(--sage); }
+  .carril .ruta { position: relative; height: 6px; border-radius: 3px; background: var(--paper-3); border: 1px solid var(--line-2); overflow: hidden; }
+  .carril .ruta i {
+    position: absolute; inset: 0; width: var(--w, 60%); border-radius: 2px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--brass) 55%, transparent), var(--brass));
+  }
+  .carril.rojo .ruta i { background: linear-gradient(90deg, color-mix(in srgb, var(--signal) 50%, transparent), var(--signal)); }
+  .carril .cuenta { font-family: var(--font-mono); font-size: 0.78rem; color: var(--pine); white-space: nowrap; }
+  .carril.rojo .cuenta { color: var(--signal-ink); }
+
+  /* ─── ANATOMÍA DE LA LÍNEA ─── */
+  .anatomia { border: 1px solid var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 20px;
+              background: color-mix(in srgb, var(--paper-2) 82%, transparent); }
+  .anatomia pre { margin: 0; padding: 16px 15px; overflow-x: auto;
+                  font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.9; color: var(--ink); }
+  .anatomia .leyenda { border-top: 1px solid var(--line-2); padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 6px 18px;
+                       font-family: var(--font-mono); font-size: 0.7rem; color: var(--sage); }
+  .anatomia .leyenda b { font-weight: 500; }
+  .l-sev b { color: var(--signal-ink); } .l-dod b { color: var(--brass); } .l-uso b { color: var(--pine); }
+  .an-sev { color: var(--signal-ink); } .an-dod { color: var(--brass); } .an-uso { color: var(--pine); }
+
+  /* ─── LA BITÁCORA EN VIVO (pieza propia de esta página) ─── */
+  .viva { border: 1px solid var(--line); border-radius: 5px; overflow: hidden;
+          background: color-mix(in srgb, var(--paper-2) 82%, transparent); margin: 8px 0 22px; backdrop-filter: blur(2px); }
+  .viva-botones { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--line); }
+  .viva-btn {
+    flex: 1 1 auto; font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.03em;
+    padding: 12px 14px; background: transparent; border: 0; border-right: 1px solid var(--line-2);
+    color: var(--ink); cursor: pointer; text-align: left; transition: background .16s ease;
+  }
+  .viva-btn:last-child { border-right: 0; }
+  .viva-btn:hover { background: color-mix(in srgb, var(--paper-3) 60%, transparent); }
+  .viva-btn small { display: block; font-size: 0.66rem; color: var(--sage); margin-top: 2px; }
+  .viva-btn .dot { margin-right: 7px; }
+  .viva-btn[data-tipo="ok"] .dot, .viva-btn[data-tipo="blando"] .dot { color: var(--pine); }
+  .viva-btn[data-tipo="gorron"] .dot { color: var(--brass); }
+  .viva-btn[data-tipo="crash"] .dot { color: var(--signal); }
+  .viva-log { margin: 0; padding: 16px 15px; min-height: 132px; max-height: 240px; overflow: auto;
+              font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.95; color: var(--ink); }
+  .viva-log .vacia { color: var(--sage); }
+  .viva-log .sev-INFO { color: var(--pine); } .viva-log .sev-WARNING { color: var(--brass); } .viva-log .sev-ERROR { color: var(--signal-ink); }
+  .viva-log .linea { display: block; white-space: nowrap; }
+  .viva-log .linea:first-child { animation: entra .35s ease; }
+  @keyframes entra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .viva-log .linea:first-child { animation: none; } }
+
+  /* Las consultas del DoD, recalculadas en vivo */
+  .viva-dod { border-top: 1px solid var(--line); display: grid;
+              grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line-2); }
+  .viva-cell { background: color-mix(in srgb, var(--paper-2) 92%, transparent); padding: 12px 15px; }
+  .viva-cell b { display: block; font-family: var(--font-mono); font-size: 1.1rem; font-weight: 500; color: var(--signal-ink); }
+  .viva-cell span { display: block; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.04em; color: var(--sage); margin-top: 4px; }
+  .viva-cell .consulta { font-size: 0.62rem; color: var(--sage); opacity: 0.85; margin-top: 2px; }
+  .viva-foot { border-top: 1px solid var(--line-2); padding: 12px 16px; font-size: 0.85rem; color: var(--ink); }
+  .viva-foot b { color: var(--pine); }
+
+  /* ─── EL SELLO, versión sellada (igual que la gemela 5) ─── */
+  .sello { border-color: color-mix(in srgb, var(--signal) 45%, transparent); }
+  .revealed .sello use { stroke-dashoffset: 0; }
+  .revealed .sello use:nth-of-type(2) { transition-delay: .09s; }
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <div class="bg-grain"></div>
+  <svg class="bg-contours" id="contours" preserveAspectRatio="none" viewBox="0 0 1200 1200"></svg>
+</div>
+
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="sello-a" viewBox="0 0 20 20"><path d="M4.2 4.8 C 8.4 8.1, 12.1 11.6, 16.1 15.4"/></symbol>
+  <symbol id="sello-b" viewBox="0 0 20 20"><path d="M15.8 4.6 C 12.2 8.3, 8.1 11.9, 4.4 15.2"/></symbol>
+</svg>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="back" href="../ROADMAP.html"><span class="arw">←</span> Bitácora</a>
+    <div class="nav-right">
+      <span class="brand"><b>DS-Nexus</b> Protocol Based</span>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Cambiar a modo noche" title="Modo noche / día">
+        <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.6 6.6 0 0 0 9.8 9.8z"/></svg>
+        <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ═══ HERO ═══ -->
+  <section class="wrap hero">
+    <div class="eyebrow reveal">
+      <span class="tag">Artefacto 6 de 6 · Mes 5–6</span>
+      <span class="estado">Desplegado · observado en producción</span>
+    </div>
+    <h1 class="reveal">Puedo decir cuánto cuesta cada petición — <em>y cuántas fallan</em>.</h1>
+    <p class="lede reveal">
+      No es una app nueva: es el <strong>mismo agente</strong> de los Artefactos 4 y 5, que ya vivía en Cloud Run —
+      pero <em>a oscuras</em>. Este artefacto le enciende la luz: un <strong>medidor de coste por petición</strong>
+      con aislamiento entre peticiones concurrentes, una <strong>bitácora JSON</strong> que Cloud Logging indexa
+      campo a campo, y la definición de hecho respondida con <strong>consultas sobre datos de producción</strong>.
+    </p>
+
+    <div class="telemetry reveal">
+      <div class="tcell"><b class="num">$0.0020</b><span>coste por petición · medido en prod</span></div>
+      <div class="tcell"><b class="num">7</b><span>llamadas LLM por petición</span></div>
+      <div class="tcell"><b class="num">1</b><span>línea JSON por petición · stdout</span></div>
+      <div class="tcell"><b class="num">0</b><span>fallos duros o blandos · primer día en prod</span></div>
+    </div>
+  </section>
+
+  <div class="wrap"><hr class="rule"></div>
+
+  <!-- ═══ LA IDEA ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">La idea</span>
+    <h2>Desplegar era lo fácil: lo difícil es <em>saber qué pasa</em></h2>
+    <p>
+      Cuando arrancó este artefacto, «desplegar en producción» ya estaba hecho dos veces (el RAG y el agente, ambos en
+      Cloud Run). Pero ambos servicios eran cajas cerradas: cada petición gastaba tokens que nadie contaba y los fallos
+      no dejaban rastro. La factura de OpenAI llegaba a fin de mes como un total mudo — sin saber qué viaje costó qué.
+      El trabajo real del artefacto no era el contenedor: era la <strong>observabilidad</strong>.
+    </p>
+    <div class="dod">
+      <span class="tag">Definición de «hecho»</span>
+      <em>Puedes decir cuánto cuesta cada petición y cuántas fallan.</em>
+      <span class="no"> «Creo que va bien» no cuenta.</span>
+    </div>
+  </section>
+
+  <!-- ═══ EL MEDIDOR ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">El instrumento · 1</span>
+    <h2>Un contador con un carril <em>por petición</em></h2>
+    <p>
+      Cada respuesta del modelo trae un objeto <code>usage</code> con los tokens exactos que costó esa llamada — y hasta
+      este artefacto, se tiraba sin mirarlo. El hallazgo que dimensiona el problema: <strong>una petición no es una
+      llamada</strong>. Una sola oferta dispara el bucle del agente más las herramientas por dentro: 7 llamadas al LLM
+      que hay que sumar en la cuenta correcta.
+    </p>
+    <p>
+      ¿Y cuál es «la cuenta correcta» cuando Cloud Run atiende <strong>dos peticiones a la vez</strong> en el mismo
+      contenedor? Un contador global mezclaría los tokens de una con los de otra. La solución es un
+      <code>ContextVar</code>: se usa como una variable global, pero cada petición ve su <strong>propio carril</strong> —
+      el mismo principio de aislamiento estructural que los namespaces de Pinecone, ahora aplicado a la concurrencia.
+    </p>
+
+    <div class="carriles" role="img" aria-label="Dos peticiones concurrentes, cada una con su contador aislado">
+      <div class="carril">
+        <span class="quien">petición A</span>
+        <span class="ruta" style="--w:72%"><i></i></span>
+        <span class="cuenta num">7 llamadas · $0.0020</span>
+      </div>
+      <div class="carril rojo">
+        <span class="quien">petición B</span>
+        <span class="ruta" style="--w:38%"><i></i></span>
+        <span class="cuenta num">3 llamadas · $0.0009 · en curso</span>
+      </div>
+    </div>
+
+    <p>
+      La tabla de precios vive en el propio módulo (entrada y salida se cobran distinto: <em>generar</em> cuesta ~4× más
+      que <em>leer</em>), y un modelo sin fila devuelve <code>coste: null</code> — un «no sé» honesto antes que un número
+      inventado. Y la lectura fina que se lleva el CV: la entrada supera a la salida 5 a 1, porque el bucle
+      <em>stateless</em> reenvía todo el contexto en cada turno. <strong>En agentes, el coste dominante es releer</strong>
+      — por eso existe el prompt caching.
+    </p>
+  </section>
+
+  <!-- ═══ LA BITÁCORA ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">El instrumento · 2</span>
+    <h2>Una línea JSON por petición, y <em>stdout es el canal</em></h2>
+    <p>
+      El contenedor de Cloud Run <strong>escala a cero</strong>: cuando no hay tráfico, se apaga — y con él muere
+      cualquier métrica guardada en memoria. La bitácora resuelve el problema con el principio 12-factor de
+      <em>logs as event streams</em>: cada petición emite una línea JSON por stdout (con <code>flush</code>, que el búfer
+      también muere), y la plataforma hace el resto. Si la línea es JSON válido, Cloud Logging la indexa
+      <strong>campo a campo</strong> — cada clave inventada aquí se vuelve una columna consultable allí.
+    </p>
+
+    <div class="anatomia">
+<pre><code>{"<span class="an-sev">severity</span>":"INFO", "evento":"peticion", "ruta":"/preguntar", "estado":200,
+ "latencia_ms":23395, "<span class="an-dod">completado</span>":true, "turnos":4,
+ "<span class="an-uso">llamadas_llm</span>":7, "<span class="an-uso">tokens_entrada</span>":7270, "<span class="an-uso">tokens_salida</span>":1473, "<span class="an-uso">coste_usd</span>":0.001974}</code></pre>
+      <div class="leyenda">
+        <span class="l-sev"><b>severity</b> — asciende a nivel oficial del log (icono, filtros)</span>
+        <span class="l-dod"><b>completado</b> — el fallo blando que el código HTTP no cuenta</span>
+        <span class="l-uso"><b>uso</b> — la factura del taxi, cerrada por el medidor</span>
+      </div>
+    </div>
+
+    <p class="note-brass">
+      <strong>El arreglo de Wald.</strong> La revisión pre-deploy cazó que la línea del error 500 salía sin coste — para
+      las consultas, los fallos eran gratis. Es el <em>sesgo de supervivencia</em>: medir solo a los que vuelven. Ahora
+      la petición que revienta cierra su cuenta con lo gastado hasta el crash (el <code>ContextVar</code> sigue vivo en
+      el mismo hilo tras la excepción) — y los fallos, que son justo los viajes caros sin recompensa, declaran lo suyo.
+    </p>
+  </section>
+
+  <!-- ═══ LA BITÁCORA EN VIVO ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Pruébalo</span>
+    <h2>La bitácora, <em>en vivo</em></h2>
+    <p>
+      Cuatro tipos de petición pueden llegarle al agente. Lánzalas y mira lo que la bitácora escribe — y cómo las
+      <strong>dos consultas del DoD</strong> se recalculan debajo con cada línea. Los rangos de tokens y latencia son los
+      medidos en producción, y el coste se calcula con la tabla de precios real del medidor.
+    </p>
+
+    <div class="viva">
+      <div class="viva-botones">
+        <button class="viva-btn" type="button" data-tipo="ok"><span class="dot" aria-hidden="true">●</span>petición buena<small>200 · el agente completa su faena</small></button>
+        <button class="viva-btn" type="button" data-tipo="gorron"><span class="dot" aria-hidden="true">●</span>gorrón sin token<small>401 · el portero, antes de gastar</small></button>
+        <button class="viva-btn" type="button" data-tipo="crash"><span class="dot" aria-hidden="true">●</span>crash a mitad<small>500 · con su coste, por Wald</small></button>
+        <button class="viva-btn" type="button" data-tipo="blando"><span class="dot" aria-hidden="true">●</span>fallo blando<small>200 · completado: false</small></button>
+      </div>
+      <pre class="viva-log" id="vivaLog" aria-live="polite"><span class="vacia">— la bitácora está vacía: lanza una petición —</span></pre>
+      <div class="viva-dod">
+        <div class="viva-cell"><b class="num" id="dodCoste">—</b><span>coste medio por petición</span><span class="consulta">media de coste_usd · estado=200</span></div>
+        <div class="viva-cell"><b class="num" id="dodDuros">0</b><span>fallos duros</span><span class="consulta">contar estado ≥ 500</span></div>
+        <div class="viva-cell"><b class="num" id="dodBlandos">0</b><span>fallos blandos</span><span class="consulta">contar completado=false</span></div>
+        <div class="viva-cell"><b class="num" id="dodTotal">0</b><span>peticiones anotadas</span><span class="consulta">una línea por petición</span></div>
+      </div>
+      <div class="viva-foot" id="vivaFoot"><b>Fíjate en las ausencias:</b> el 401 no lleva campos de coste — el agente ni se ejecutó, la cartera ni se abrió. En una bitácora bien diseñada, hasta el campo que falta está diciendo algo.</div>
+    </div>
+  </section>
+
+  <div class="wrap"><hr class="rule"></div>
+
+  <!-- ═══ EL VIAJE ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">El viaje a producción</span>
+    <h2>Nada llegó a la carretera <em>sin pasar controles</em></h2>
+    <p>
+      Entre «funciona en el Mac» y «sirve tráfico real» hubo una cadena de puntos de control, cada uno heredado de una
+      lección anterior del roadmap:
+    </p>
+    <div class="checks">
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Aduana de privacidad — dos listas para dos viajes</b><span>El mismo <code>cv_denys.md</code> está prohibido en el viaje a GitHub (público) y es obligatorio en el viaje a la imagen (el agente lo necesita). Por eso <code>.gitignore</code> y <code>.gcloudignore</code> son ficheros distintos, revisados antes de cada salida.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>La puerta del Artefacto 5, dando su veredicto</b><span>El push despertó la puerta de regresión: 4m22s y verde. Instrumentar el agente no movió ninguna nota — el medidor observa, no toca, y ahora hay una ejecución que lo demuestra en vez de una intención que lo promete.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>El relevo de revisiones de Cloud Run</b><span>El deploy no sustituye: crea la revisión nueva junto a la vieja y solo le pasa el tráfico si arranca viva. Volver atrás es re-señalar la anterior, no reconstruir nada.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Un 401 que era el sistema funcionando</b><span>La primera prueba contra producción falló — y la depuración (comparando <em>huellas</em> sha256, nunca los secretos en claro) reveló un token local desactualizado. La fuente de verdad es Secret Manager; el <code>.env</code> es una copia que se sincroniza, no un original que se discute.</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ LA DECISIÓN HONESTA ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">La decisión honesta</span>
+    <h2>Lo que este artefacto <em>no</em> usa, y por qué</h2>
+    <p>
+      El plan original decía «MLflow/Airflow <em>si hay pipeline</em>». La condición no se cumple, y la decisión razonada
+      vale más que las siglas: <strong>Airflow</strong> orquestaría un único trabajo semanal que ya orquesta el cron de
+      GitHub Actions — un servicio permanente de varios contenedores para un solo vuelo que ya despega solo. Y la
+      trazabilidad de experimentos que daría <strong>MLflow</strong> ya existe a medida: el historial apéndice-solo del
+      Artefacto 5, con el hash de cada prompt y el informe que se regenera de los datos. Saber cuándo <em>no</em> usar
+      una herramienta también es criterio de ingeniería — y se defiende mejor en una entrevista que el adorno.
+    </p>
+  </section>
+
+  <div class="wrap"><hr class="rule"></div>
+
+  <!-- ═══ LOS LIBROS ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Documentación viva</span>
+    <h2>Los cuatro cuadernos del artefacto</h2>
+    <p>
+      Cada concepto del recorrido, escrito como cuaderno propio en el momento en que se aprendió. Estos cuatro son los de
+      la monitorización; hay dieciocho en total.
+    </p>
+    <div class="libros">
+      <a class="libro" href="../4_Agente_de_busqueda_de_empleo/conceptos/15_el_servicio_a_oscuras.html">
+        <span class="tag">Libro 15</span>
+        <b>El servicio a oscuras</b>
+        <span>El medidor con carril por petición, la bitácora JSON, y por qué en un contenedor que escala a cero las métricas no pueden vivir en memoria.</span>
+      </a>
+      <a class="libro" href="../4_Agente_de_busqueda_de_empleo/conceptos/16_la_red_de_seguridad.html">
+        <span class="tag">Libro 16</span>
+        <b>La red de seguridad</b>
+        <span>La revisión pre-deploy que encontró dos despliegues rotos antes de que ocurrieran, un medidor con sesgo de supervivencia y un portero que chivaba por el reloj.</span>
+      </a>
+      <a class="libro" href="../4_Agente_de_busqueda_de_empleo/conceptos/17_el_primer_dia_en_la_carretera.html">
+        <span class="tag">Libro 17</span>
+        <b>El primer día en la carretera</b>
+        <span>El viaje a producción: la aduana, el peaje doble de la puerta, el relevo de revisiones, el 401 disfrazado y las líneas prometidas apareciendo en Cloud Logging.</span>
+      </a>
+      <a class="libro" href="../4_Agente_de_busqueda_de_empleo/conceptos/18_la_sala_de_lectura.html">
+        <span class="tag">Libro 18</span>
+        <b>La sala de lectura</b>
+        <span>El manual del Explorador de registros: el embudo de tres cedazos, jsonPayload contra textPayload, leer las ausencias y un recetario de consultas LQL.</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ═══ ENTREGADO ═══ -->
+  <section class="wrap sec reveal">
+    <span class="tag">Lo que se entregó</span>
+    <h2>Los criterios, cumplidos</h2>
+    <div class="checks">
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Coste por petición, medido de verdad</b><span><code>medidor.py</code> recoge el <code>usage</code> de las 7 llamadas de cada petición en un carril aislado por <code>ContextVar</code> y cierra la cuenta en dólares con la tabla de precios del modelo.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Bitácora estructurada en los cuatro caminos</b><span>200, 400, 401 y 500 — todos dejan su línea JSON en stdout, y el 500 la deja <em>con su coste</em>. La instrumentación es pasiva por contrato: jamás tumba la petición que observa.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>Desplegado tras revisión y puerta en verde</b><span>Ocho hallazgos del pre-deploy review arreglados y verificados, la puerta CI validando que nada regresó, y la revisión <code>00004-fvk</code> sirviendo el 100% del tráfico.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>El DoD respondido con consultas, no con fe</b><span>Media de <code>coste_usd</code>, fallos duros (<code>estado ≥ 500</code>) y blandos (<code>completado = false</code>) — respondidos sobre Cloud Logging con datos de producción, y el coste local cuadrando con el de prod.</span></span>
+      </div>
+      <div class="check">
+        <span class="sello" aria-hidden="true"><svg viewBox="0 0 20 20"><use href="#sello-a"/><use href="#sello-b"/></svg></span>
+        <span><b>La decisión razonada sobre lo que no se usa</b><span>MLflow y Airflow evaluados y descartados con argumento — no hay pipeline que orquestar, y la trazabilidad ya existe a medida. La condición del plan («si hay pipeline») se respetó con honestidad.</span></span>
+      </div>
+    </div>
+
+    <div class="chips">
+      <span class="chip"><b>ContextVar</b> aislamiento por petición</span>
+      <span class="chip"><b>structured logging</b> JSON → stdout</span>
+      <span class="chip"><b>Cloud Logging</b> LQL</span>
+      <span class="chip"><b>12-factor</b> logs as event streams</span>
+      <span class="chip"><b>survivorship bias</b> el arreglo de Wald</span>
+      <span class="chip"><b>Cloud Run</b> revisions + rollback</span>
+      <span class="chip"><b>Secret Manager</b> fuente de verdad</span>
+      <span class="chip"><b>log-based metrics</b> el siguiente escalón</span>
+    </div>
+
+    <div class="btn-row">
+      <a class="btn btn-primary" href="https://dobe-agente-1015586629315.europe-southwest1.run.app" target="_blank" rel="noopener">Ver el agente en vivo ↗</a>
+      <a class="btn btn-ghost" href="https://github.com/denysporynets/AI-Roadmap/tree/main/4_Agente_de_busqueda_de_empleo" target="_blank" rel="noopener">Ver el código ↗</a>
+      <a class="btn btn-ghost" href="../artefacto-5/index.html">← Artefacto 5 · la disciplina</a>
+      <a class="btn btn-ghost" href="../ROADMAP.html">Bitácora completa →</a>
+    </div>
+  </section>
+
+  <!-- ═══ PRINCIPIO ═══ -->
+  <section class="wrap principle reveal">
+    <span class="tag">Por qué este artefacto importa</span>
+    <p>
+      Desplegar lo consigue cualquiera con un tutorial. Saber qué hace tu servicio <em>cuando no estás mirando</em> —
+      cuánto cuesta, cuánto falla, y poder demostrarlo con una consulta — eso es operar en producción.
+    </p>
+  </section>
+
+  <div class="wrap"><hr class="rule"></div>
+
+  <footer class="wrap">
+    <div class="foot-row">
+      <span class="tag">protocolo ds-nexus · constante 2.51 · artefacto 6 de 6</span>
+      <span class="tag"><a href="https://denysporynets.github.io/">← volver al portfolio</a></span>
+    </div>
+  </footer>
+</main>
+
+<script>
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ── reveal "enfoque de instrumento" ──
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (e.isIntersecting) { e.target.classList.add("revealed"); io.unobserve(e.target); }
+    }
+  }, { threshold: 0.08 });
+  document.querySelectorAll(".reveal").forEach((el) => { if (!el.closest(".hero")) io.observe(el); });
+  requestAnimationFrame(() => {
+    document.querySelectorAll(".hero .reveal").forEach((el, i) => {
+      setTimeout(() => el.classList.add("revealed"), 90 * i);
+    });
+  });
+
+  // ── modo noche / día (misma clave que la home: el tema viaja con el visitante) ──
+  (function tema() {
+    const root = document.documentElement;
+    const btn = document.getElementById("themeToggle");
+    const CLAVE = "portfolio-tema";
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function aplicar(t) {
+      if (t === "dark") { root.setAttribute("data-theme", "dark"); btn.setAttribute("aria-label", "Cambiar a modo día"); }
+      else { root.removeAttribute("data-theme"); btn.setAttribute("aria-label", "Cambiar a modo noche"); }
+    }
+    function guardado() { try { return localStorage.getItem(CLAVE); } catch (e) { return null; } }
+    aplicar(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
+    btn.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      aplicar(next);
+      try { localStorage.setItem(CLAVE, next); } catch (e) {}
+    });
+    mq.addEventListener("change", (e) => { if (!guardado()) aplicar(e.matches ? "dark" : "light"); });
+  })();
+
+  // ── fondo: contornos tipo carta náutica ──
+  (function drawContours() {
+    const svg = document.getElementById("contours");
+    if (!svg || reduce) return;
+    const W = 1200, H = 1200, lines = 26;
+    let frag = "";
+    for (let i = 0; i < lines; i++) {
+      const baseY = (H / (lines - 1)) * i;
+      const amp = 20 + (i % 5) * 5;
+      const phase = i * 0.7;
+      const freq = 0.0055 + (i % 3) * 0.0011;
+      let d = "";
+      for (let x = 0; x <= W; x += 40) {
+        const y = baseY + Math.sin(x * freq + phase) * amp;
+        d += (x === 0 ? "M" : "L") + x + " " + y.toFixed(1) + " ";
+      }
+      const index = (i % 5 === 0);
+      frag += '<path d="' + d.trim() + '" stroke-width="' + (index ? 1.5 : 0.8) + '"/>';
+    }
+    svg.innerHTML = frag;
+  })();
+
+  // ── parallax del fondo ──
+  (function parallax() {
+    const el = document.getElementById("contours");
+    if (!el || reduce) return;
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        el.style.transform = "translateY(" + (window.scrollY * -0.07).toFixed(1) + "px)";
+        ticking = false;
+      });
+    }, { passive: true });
+  })();
+
+  // ── LA BITÁCORA EN VIVO: el simulador que recalcula las consultas del DoD ──
+  (function bitacoraViva() {
+    // La tabla de precios REAL de medidor.py: $/millón, entrada y salida distintas.
+    const PRECIO = { entrada: 0.15, salida: 0.60 };
+    const log = document.getElementById("vivaLog");
+    const celdas = {
+      coste: document.getElementById("dodCoste"),
+      duros: document.getElementById("dodDuros"),
+      blandos: document.getElementById("dodBlandos"),
+      total: document.getElementById("dodTotal"),
+    };
+    if (!log) return;
+    const lineas = [];   // los "hechos crudos"; las consultas se destilan de aquí
+    const MAX_VISIBLES = 9;
+
+    const azar = (a, b) => Math.round(a + Math.random() * (b - a));
+    const coste = (tIn, tOut) => +(tIn / 1e6 * PRECIO.entrada + tOut / 1e6 * PRECIO.salida).toFixed(6);
+    const horaUtc = () => new Date().toISOString().slice(11, 19);
+
+    // Cada receta usa los rangos medidos en producción (libro 17).
+    const RECETAS = {
+      ok() {
+        const tIn = azar(6600, 9900), tOut = azar(1050, 1950);
+        return { severity: "INFO", estado: 200, latencia_ms: azar(17000, 26000),
+                 turnos: azar(3, 4), completado: true, llamadas_llm: 7,
+                 tokens_entrada: tIn, tokens_salida: tOut, coste_usd: coste(tIn, tOut) };
+      },
+      gorron() {
+        return { severity: "WARNING", estado: 401, latencia_ms: azar(0, 2) };
+      },
+      crash() {
+        // Revienta a mitad: menos llamadas, pero las ya hechas se pagaron — Wald.
+        const n = azar(2, 5), tIn = azar(1800, 6400), tOut = azar(220, 900);
+        return { severity: "ERROR", estado: 500, latencia_ms: azar(4000, 12000),
+                 llamadas_llm: n, tokens_entrada: tIn, tokens_salida: tOut, coste_usd: coste(tIn, tOut) };
+      },
+      blando() {
+        // El guardarraíl de turnos corta la faena: HTTP dice 200, completado dice la verdad.
+        const tIn = azar(11000, 16000), tOut = azar(1700, 2600);
+        return { severity: "INFO", estado: 200, latencia_ms: azar(30000, 44000),
+                 turnos: 6, completado: false, llamadas_llm: azar(10, 12),
+                 tokens_entrada: tIn, tokens_salida: tOut, coste_usd: coste(tIn, tOut) };
+      },
+    };
+
+    function consultas() {
+      // Las mismas tres consultas del DoD, sobre los hechos acumulados.
+      // OJO: la media es "coste donde estado=200" — igual que el rótulo de la
+      // celda. El fallo blando también es un 200 con coste y entra en la media.
+      const ok = lineas.filter(l => l.estado === 200 && l.coste_usd != null);
+      const duros = lineas.filter(l => l.estado >= 500).length;
+      const blandos = lineas.filter(l => l.completado === false).length;
+      celdas.coste.textContent = ok.length
+        ? "$" + (ok.reduce((s, l) => s + l.coste_usd, 0) / ok.length).toFixed(6)
+        : "—";
+      celdas.duros.textContent = duros;
+      celdas.blandos.textContent = blandos;
+      celdas.total.textContent = lineas.length;
+    }
+
+    function pintar(l) {
+      const span = document.createElement("span");
+      span.className = "linea sev-" + l.severity;
+      span.textContent = JSON.stringify({ ...l, evento: "peticion", hora_utc: horaUtc() });
+      const vacia = log.querySelector(".vacia");
+      if (vacia) vacia.remove();
+      log.prepend(span);
+      while (log.children.length > MAX_VISIBLES) log.lastChild.remove();
+    }
+
+    document.querySelectorAll(".viva-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const l = RECETAS[btn.dataset.tipo]();
+        lineas.push(l);
+        pintar(l);
+        consultas();
+      });
+    });
+  })();
+</script>
+</body>
+</html>
