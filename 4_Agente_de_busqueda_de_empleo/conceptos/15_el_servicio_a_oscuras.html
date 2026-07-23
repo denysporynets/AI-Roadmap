@@ -1,0 +1,307 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="El agente llevaba semanas en producción y nadie podía decir cuánto costaba una petición ni cuántas fallaban. Encender la luz: el usage que se tiraba, el carril de cada petición y el print que es telemetría.">
+<meta name="color-scheme" content="light dark">
+<title>15 · El servicio a oscuras</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%94%A6%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#DEDCD5; --paper-2:#E5E4DE; --paper-3:#D6D3C8;
+  --ink:#20272A; --pine:#1E3A34; --signal:#C8502A; --signal-ink:#A83E1E;
+  --brass:#9A7420; --sage:#6E7A6F;
+  --line:rgba(30,58,52,.16); --line-2:rgba(30,58,52,.09);
+  --font-display:"Spectral",Georgia,serif;
+  --font-body:"IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --measure:68ch; --pad:clamp(20px,5vw,40px);
+}
+:root[data-theme="dark"]{
+  --paper:#161F1C; --paper-2:#1D2724; --paper-3:#26302C;
+  --ink:#E4E0D5; --pine:#A9C6B8; --signal:#D6603C; --signal-ink:#E8825C;
+  --brass:#CBA24D; --sage:#93A096;
+  --line:rgba(196,214,204,.16); --line-2:rgba(196,214,204,.09);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--font-body); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease,color .4s ease;
+}
+#velo{position:fixed; inset:0; pointer-events:none; z-index:9999;
+      background:#FF8A1E; mix-blend-mode:multiply; opacity:0; transition:opacity .3s ease}
+
+.wrap{max-width:var(--measure); margin:0 auto; padding:0 var(--pad) 100px}
+
+.mandos{position:sticky; top:0; z-index:50; background:color-mix(in srgb,var(--paper) 92%,transparent);
+        backdrop-filter:blur(8px); border-bottom:1px solid var(--line-2); margin-bottom:56px}
+.mandos-in{max-width:var(--measure); margin:0 auto; padding:10px var(--pad);
+           display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.mandos .tag{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+             text-transform:uppercase; color:var(--sage); margin-right:auto}
+.mandos label{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+              text-transform:uppercase; color:var(--sage)}
+input[type=range]{width:110px; accent-color:var(--brass); vertical-align:middle}
+.tbtn{font:500 12px/1 var(--font-mono); letter-spacing:.08em; text-transform:uppercase;
+      background:transparent; color:var(--ink); border:1px solid var(--line);
+      border-radius:999px; padding:7px 14px; cursor:pointer; transition:all .2s ease}
+.tbtn:hover{border-color:var(--brass); color:var(--brass)}
+
+header{padding:26px 0 12px}
+.kicker{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.18em;
+        text-transform:uppercase; color:var(--signal); margin:0 0 14px}
+h1{font-family:var(--font-display); font-weight:600; font-size:clamp(30px,6vw,44px);
+   line-height:1.14; letter-spacing:-.015em; margin:0 0 16px}
+.lede{font-size:19px; color:color-mix(in srgb,var(--ink) 78%,var(--paper));
+      border-left:2px solid var(--brass); padding-left:18px; margin:0 0 8px}
+.meta{font-family:var(--font-mono); font-size:12px; color:var(--sage); margin-top:26px}
+
+h2{font-family:var(--font-display); font-weight:600; font-size:26px; line-height:1.25;
+   letter-spacing:-.01em; margin:64px 0 4px; padding-top:22px; border-top:1px solid var(--line-2)}
+h2 .num{font-family:var(--font-mono); font-size:12px; color:var(--brass);
+        letter-spacing:.14em; display:block; margin-bottom:9px; font-weight:500}
+h3{font-family:var(--font-body); font-weight:600; font-size:17px; margin:34px 0 6px; color:var(--pine)}
+:root[data-theme="dark"] h3{color:var(--pine)}
+p{margin:14px 0}
+strong{font-weight:600}
+em{font-family:var(--font-display); font-style:italic}
+code{font-family:var(--font-mono); font-size:.88em; background:var(--paper-3);
+     padding:1px 5px; border-radius:3px}
+:root[data-theme="dark"] code{background:var(--paper-3)}
+
+pre{font-family:var(--font-mono); font-size:13px; line-height:1.6; background:var(--paper-2);
+    border:1px solid var(--line-2); border-left:2px solid var(--brass);
+    padding:16px 18px; border-radius:4px; overflow-x:auto; margin:20px 0}
+pre b{color:var(--signal); font-weight:500}
+pre i{color:var(--sage); font-style:normal}
+
+.tabla-caja{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+   color:var(--sage); font-weight:500; border-bottom:1px solid var(--line)}
+td.n{font-family:var(--font-mono); white-space:nowrap}
+.ok{color:var(--pine); font-weight:600}
+.no{color:var(--signal-ink); font-weight:600}
+:root[data-theme="dark"] .no{color:var(--signal-ink)}
+
+.nota{background:var(--paper-2); border:1px solid var(--line-2);
+      border-left:3px solid var(--signal); padding:16px 20px; border-radius:4px; margin:26px 0}
+.nota .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--signal); display:block; margin-bottom:7px}
+.clave{background:var(--paper-2); border:1px solid var(--line-2);
+       border-left:3px solid var(--brass); padding:16px 20px; border-radius:4px; margin:26px 0}
+.clave .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--brass); display:block; margin-bottom:7px}
+blockquote{font-family:var(--font-display); font-size:21px; line-height:1.45; font-style:italic;
+           margin:34px 0; padding-left:20px; border-left:2px solid var(--brass); color:var(--pine)}
+ul{padding-left:20px} li{margin:8px 0}
+hr{border:0; border-top:1px solid var(--line-2); margin:56px 0}
+.marca{text-align:center; color:var(--brass); font-family:var(--font-mono);
+       font-size:12px; letter-spacing:.5em; margin:56px 0}
+footer{border-top:1px solid var(--line); margin-top:64px; padding-top:22px;
+       font-family:var(--font-mono); font-size:12px; color:var(--sage)}
+a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+</style>
+
+<div id="velo"></div>
+
+<div class="mandos"><div class="mandos-in">
+  <span class="tag">Libro 15 · Artefacto 6</span>
+  <label for="hora">Hora</label>
+  <input type="range" id="hora" min="0" max="100" value="0" aria-label="Filtro de luz cálida">
+  <button class="tbtn" id="tema">Noche</button>
+</div></div>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">Artefacto 6 · Monitorización · Fases 0–2</p>
+  <h1>El servicio a oscuras</h1>
+  <p class="lede">El agente llevaba semanas desplegado, con su token, su contenedor y su URL. Funcionaba. Y sin embargo, a dos preguntas de negocio elementales —¿cuánto cuesta cada petición? ¿cuántas fallan?— no había forma de responder. Este libro es el acto de encender la luz.</p>
+  <p class="meta">22 de julio de 2026 · agente de búsqueda de empleo · 2 ejecuciones reales · medio céntimo</p>
+</header>
+
+<h2><span class="num">01</span>Qué falta cuando todo funciona</h2>
+
+<p>El último artefacto del roadmap se llama «despliegue en producción real», y su primer paso —Docker, API, nube— ya estaba hecho dos veces antes de empezar: el RAG y el agente viven en Cloud Run desde hace semanas. Lo que en junio parecía la montaña del artefacto resultó ser un sello ya estampado.</p>
+
+<p>Lo que quedaba es más sutil y vale más. La definición de «hecho» de la bitácora no pide que el servicio corra: pide poder decir <strong>cuánto cuesta cada petición y cuántas fallan</strong>. Eso tiene nombre propio: <strong>observabilidad</strong> — la diferencia entre un sistema que funciona y un sistema del que puedes <em>afirmar cosas</em>.</p>
+
+<blockquote>Un servicio sin métricas no está roto. Está a oscuras, que es peor: no sabrías decir si está roto.</blockquote>
+
+<p>Y hay una segunda razón, específica de esta disciplina: latencia y tasa de errores son la observabilidad clásica de cualquier API, pero <strong>tokens y coste por petición</strong> son la métrica propia de los sistemas LLM. En una empresa real, la primera pregunta sobre un producto con modelo dentro es siempre la misma: <em>¿cuánto nos cuesta esto por usuario?</em> Saber responderla con un número es lo que distingue «desplegué un LLM» de «operé un LLM».</p>
+
+<h2><span class="num">02</span>Los datos que se tiraban</h2>
+
+<p>La sorpresa de la primera inspección: no había que pedir ningún dato nuevo.</p>
+
+<p>Cada respuesta de la API de OpenAI trae un objeto <code>usage</code> con los tokens exactos que costó esa llamada — cuántos leyó el modelo (<code>prompt_tokens</code>) y cuántos escribió (<code>completion_tokens</code>). Llega en <em>todas</em> las respuestas, desde el primer día del agente. Nunca lo habíamos mirado.</p>
+
+<div class="clave">
+  <span class="et">La idea que se lleva uno</span>
+  La monitorización no empieza instalando nada. Empieza <strong>dejando de ignorar los datos que ya pasan por delante</strong>. El contador de la luz ya estaba girando; solo faltaba leerlo.
+</div>
+
+<p>Y el precio de esos tokens es público: tanto por millón de entrada, tanto por millón de salida. Generar cuesta unas cuatro veces más que leer — para <code>gpt-4o-mini</code>, $0,15 el millón leído y $0,60 el millón escrito. Con la tabla de precios y el <code>usage</code>, el coste de una llamada es una multiplicación.</p>
+
+<h2><span class="num">03</span>Una petición no es una llamada</h2>
+
+<p>Aquí estaba la trampa que habría hecho mentir al contador desde el primer día.</p>
+
+<p>El bucle del agente (libro 01) da hasta seis vueltas, y cada vuelta es una llamada al modelo. Pero las herramientas que el bucle ejecuta —analizar la oferta, calcular el encaje, redactar la carta— <strong>también llaman al modelo por dentro</strong>, a través del embudo de <code>_parsear()</code> (libro 11). Una candidatura completa resultó ser:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Quién gasta</th><th>Llamadas</th><th>Qué hace</th></tr>
+  <tr><td>El bucle</td><td class="n">4</td><td>orquestar: decidir qué herramienta toca</td></tr>
+  <tr><td>Las herramientas</td><td class="n">3</td><td>trabajar: extraer, encajar, redactar</td></tr>
+  <tr><td><strong>Total</strong></td><td class="n"><strong>7</strong></td><td>una petición del usuario</td></tr>
+</table>
+</div>
+
+<p>Si el medidor hubiera vivido solo en el bucle, habría contado 4 llamadas de 7 y declarado la mitad del gasto real. Un contador que existe y está mal es peor que ninguno: <strong>da confianza sin dar verdad</strong>.</p>
+
+<h2><span class="num">04</span>El carril de cada petición</h2>
+
+<p>Si el gasto ocurre en dos ficheros distintos, hace falta un punto donde se sume. La tentación obvia es una variable global: <code>total_tokens = 0</code>, y que todos sumen ahí. En el portátil funcionaría siempre. En producción, no.</p>
+
+<p>Cloud Run atiende <strong>varias peticiones a la vez</strong> dentro del mismo contenedor. Con un contador global, los tokens de la petición de un visitante se sumarían a los de otro que llegó medio segundo después: contaminación cruzada, y ningún error que te avise. La respuesta de Python a este problema es <code>ContextVar</code>: se usa como una global, pero cada petición ve <strong>su propio carril</strong>.</p>
+
+<div class="clave">
+  <span class="et">Un eco de los namespaces</span>
+  Es el mismo principio que el multitenancy de Pinecone del Artefacto 2: cuando dos inquilinos comparten un edificio, el aislamiento tiene que ser <strong>estructural</strong> —cada uno su partición— y no una convención que confía en que nadie se cruce.
+</div>
+
+<p>De ahí nace <code>medidor.py</code>, un módulo de tres verbos: <code>iniciar()</code> abre el contador a cero al arrancar el bucle; <code>registrar(usage)</code> lo llama cada punto de gasto —una línea en el bucle, una línea en el embudo de las herramientas—; <code>resumen(modelo)</code> cierra la cuenta y le pone precio. Dos detalles de criterio:</p>
+
+<ul>
+  <li><strong>La cuenta se cierra también en la salida de fallo.</strong> El guardarraíl de <code>max_turnos</code> devuelve su cuenta igual que el camino feliz, porque una petición fallida no es gratis — <em>un medidor que solo cuenta éxitos es un medidor que miente</em>.</li>
+  <li><strong>Modelo sin fila en la tabla de precios → coste <code>None</code>.</strong> Mejor un «no sé» honesto que un número inventado. El eco de los <code>null</code> del molde de la Oferta (libro 11): la ausencia declarada vale más que el relleno.</li>
+</ul>
+
+<h2><span class="num">05</span>La cuenta de la primera ejecución</h2>
+
+<p>Con el medidor cableado, la primera candidatura real medida de la historia del agente:</p>
+
+<pre>completado : True · 4 turnos · analizar → match → redactar
+latencia   : 24,7 s
+llamadas   : 7 · entrada 8.500 tok · salida 1.874 tok
+coste      : <b>$0.0024</b></pre>
+
+<p>Tres lecturas, de menor a mayor:</p>
+
+<p><strong>Un cuarto de céntimo por candidatura.</strong> Podrías analizar cuatrocientas ofertas por un dólar. Tener este número concreto, medido y defendible es media definición de «hecho» del artefacto.</p>
+
+<p><strong>La entrada pesa 4,5 veces más que la salida.</strong> No es casualidad: es la consecuencia directa de algo que el libro 01 ya contaba — la API es sin estado, y el bucle reenvía <em>toda</em> la conversación acumulada en cada vuelta. El turno cuatro relee todo lo que pasó en los turnos uno, dos y tres.</p>
+
+<div class="clave">
+  <span class="et">La frase para la entrevista</span>
+  En sistemas agénticos, <strong>el coste dominante no es generar: es releer contexto</strong>. Por eso los proveedores inventaron el <em>prompt caching</em> —cobrar barato lo ya leído— y por eso entrada y salida se cobran a precio distinto.
+</div>
+
+<p><strong>El número se mueve con la carga real.</strong> La segunda ejecución, con una oferta más corta, dio $0.0021 con 7.628 tokens de entrada. El medidor distingue peticiones distintas — no repite una cifra fija, mide.</p>
+
+<h2><span class="num">06</span>Un print bien formado es telemetría</h2>
+
+<p>Medir dentro del motor resuelve la mitad del problema. La otra mitad: ¿dónde se <em>guarda</em> la cuenta? Y aquí vuelve un viejo conocido — Cloud Run <strong>escala a cero</strong> (libro 04). El contenedor muere entre visitas, y con él muere cualquier variable, lista o fichero local. Las métricas no pueden vivir en la aplicación: tienen que salir.</p>
+
+<p>La doctrina estándar de los servicios en la nube (los «doce factores») lo resuelve con una elegancia que desarma: la aplicación <strong>no escribe ficheros de log ni se conecta a ningún sistema de métricas</strong>. Escupe una línea por evento a la salida estándar, y la plataforma se encarga del resto. El <code>stdout</code> —el sitio donde siempre imprimiste tus <code>print()</code> de andar por casa— <em>es</em> el canal de telemetría.</p>
+
+<p>Con un matiz que lo cambia todo: si la línea es <strong>JSON válido</strong>, Cloud Logging no la guarda como texto — la indexa <strong>campo a campo</strong>. La diferencia se ve comparando:</p>
+
+<pre><i># log de prosa: para leerlo a ojo, grep y llorar</i>
+Petición procesada en 24.7s, costó $0.0024
+
+<i># log estructurado: una fila de una tabla consultable</i>
+{"estado": 200, "latencia_ms": 24700, "coste_usd": 0.0024}</pre>
+
+<p>El primero se lee; el segundo se <em>consulta</em>: «media de <code>coste_usd</code> donde estado=200», «cuántas líneas con estado≥500 esta semana». Las dos preguntas del artefacto son literalmente dos consultas sobre esta bitácora. ¿Y el patrón te suena? Es el <code>historial.json</code> de la báscula (libro 07): registro append-only, una fila por evento, campos fijos — la misma disciplina, pero por petición y gestionada por la plataforma.</p>
+
+<div class="nota">
+  <span class="et">El detalle del búfer</span>
+  Cada línea se emite con <code>flush=True</code>. Sin él, el <code>print</code> puede quedarse en el búfer del proceso — y si el contenedor muere ahí (escala a cero, otra vez), la línea se pierde. Normalmente justo la línea que querías ver, porque los contenedores mueren después de las peticiones raras, no de las normales.
+</div>
+
+<h2><span class="num">07</span>Los cuatro caminos de una petición</h2>
+
+<p>La función <code>bitacora()</code> vive en la API y escribe una línea por petición, pase lo que pase. El endpoint tiene cuatro salidas —token malo, oferta vacía, reventón, éxito— y las cuatro dejan constancia. Las líneas reales de la verificación en local:</p>
+
+<pre>{"severity": "WARNING", "estado": 401, "latencia_ms": 0, ...}
+{"severity": "WARNING", "estado": 400, "latencia_ms": 0, ...}
+{"severity": "INFO", "estado": 200, "latencia_ms": 25481,
+ "turnos": 4, "completado": true, "llamadas_llm": 7,
+ "tokens_entrada": 7628, "tokens_salida": 1596,
+ "coste_usd": 0.002102}</pre>
+
+<p>La clave <code>severity</code> es un idioma que Cloud Logging entiende: INFO para el éxito, WARNING para los rechazos, ERROR para el reventón. «¿Cuántas fallan?» se responde filtrando por ella.</p>
+
+<p>Pero lo más elocuente de esas líneas es lo que <strong>no</strong> está. Las dos fallidas: cero milisegundos y ningún campo de coste. No es un hueco — es la prueba de que el portero del token (libro 03) hace exactamente lo que prometía: rechaza <em>antes</em> de que el agente gire. Un desconocido probando tokens contra tu URL te cuesta $0,000, y ahora hay una bitácora que lo demuestra.</p>
+
+<div class="clave">
+  <span class="et">La ausencia es información</span>
+  En un log estructurado, que un campo no esté cuenta tanto como su valor. La línea del 401 sin <code>coste_usd</code> dice: «aquí la cartera ni se abrió».
+</div>
+
+<h3>El fallo que el código HTTP no cuenta</h3>
+
+<p>Queda un caso traicionero: el guardarraíl de <code>max_turnos</code> devuelve HTTP 200 —la petición se atendió— pero con <code>completado: false</code>, porque el agente agotó sus vueltas sin cerrar. Es un <strong>fallo blando</strong>: un monitor que solo mirase códigos HTTP diría «todo bien» mientras el agente da vueltas sin llegar a nada. Por eso <code>completado</code> viaja en cada línea de éxito: la bitácora registra la verdad del agente, no solo la del protocolo.</p>
+
+<h2><span class="num">08</span>Las palabras que se lleva el CV</h2>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Término</th><th>Lo que significa aquí</th></tr>
+  <tr><td class="n">observability</td><td>poder afirmar cosas del sistema: coste, fallos, latencia — no solo «funciona»</td></tr>
+  <tr><td class="n">token usage accounting</td><td>leer el <code>usage</code> de cada llamada y sumarlo por petición, herramientas incluidas</td></tr>
+  <tr><td class="n">cost per request</td><td>la métrica de negocio de un sistema LLM: $0.002/candidatura, medido, no estimado</td></tr>
+  <tr><td class="n">request-scoped state</td><td><code>ContextVar</code>: un carril por petición, sin contaminación cruzada bajo concurrencia</td></tr>
+  <tr><td class="n">structured logging</td><td>una línea JSON por evento a stdout; la plataforma la indexa campo a campo</td></tr>
+  <tr><td class="n">twelve-factor logs</td><td>la app no gestiona sus logs: los emite como flujo y la plataforma los captura</td></tr>
+  <tr><td class="n">soft failure</td><td>HTTP 200 con <code>completado: false</code> — el fallo que el código de estado no ve</td></tr>
+</table>
+</div>
+
+<h2><span class="num">09</span>Lo que queda abierto</h2>
+
+<ul>
+  <li><strong>Nada de esto ha pisado producción todavía.</strong> Medidor y bitácora están verificados en local; el despliegue es la fase siguiente, con su <code>/code-review</code> delante como red de seguridad.</li>
+  <li><strong>La lista blanca del Dockerfile no conoce <code>medidor.py</code>.</strong> La trampa del libro 06, tercera aparición: en el Mac todo funciona, en la nube reventaría al primer <code>import</code>. Ya está fichada — es lo primero que se arregla antes de desplegar.</li>
+  <li><strong>Las consultas agregadas</strong> —la media de coste, el recuento de fallos, la respuesta formal a las dos preguntas del artefacto— se montan sobre Cloud Logging cuando las líneas lleguen de verdad allí.</li>
+  <li><strong>El tercer paso del artefacto</strong> (MLflow/Airflow «si hay pipeline») está pendiente de una decisión honesta: si no hay pipeline que lo justifique, la respuesta correcta es documentar por qué no — no instalar herramientas para la foto.</li>
+</ul>
+
+<p class="marca">· · ·</p>
+
+<footer>
+Libro 15 · Artefacto 6 · Monitorización (Fases 0–2) · 22 jul 2026<br>
+Sigue a <a href="14_el_canario_y_la_prueba_del_rojo.html">14 · El canario y la prueba del rojo</a> · protocolo ds-nexus
+</footer>
+</div>
+
+<script>
+(function(){
+  var raiz=document.documentElement, btn=document.getElementById('tema');
+  function pinta(t){ raiz.setAttribute('data-theme',t); btn.textContent = t==='dark' ? 'Día' : 'Noche';
+                     try{localStorage.setItem('a6obs-tema',t)}catch(e){} }
+  var g=null; try{g=localStorage.getItem('a6obs-tema')}catch(e){}
+  pinta(g || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  btn.addEventListener('click',function(){
+    pinta(raiz.getAttribute('data-theme')==='dark'?'light':'dark');
+  });
+
+  var hora=document.getElementById('hora'), velo=document.getElementById('velo');
+  function calor(v){ velo.style.opacity=(v/100*0.42).toFixed(3);
+                     try{localStorage.setItem('a6obs-hora',v)}catch(e){} }
+  var h=null; try{h=localStorage.getItem('a6obs-hora')}catch(e){}
+  if(h!==null){ hora.value=h; }
+  calor(hora.value);
+  hora.addEventListener('input',function(){ calor(this.value); });
+})();
+</script>

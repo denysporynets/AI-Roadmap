@@ -1,0 +1,291 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Antes de desplegar la monitorización, una revisión de código encontró 8 hallazgos: dos despliegues rotos que aún no habían ocurrido, un medidor con sesgo de supervivencia y un portero que chivaba. Este libro cuenta lo que ven unos ojos frescos.">
+<meta name="color-scheme" content="light dark">
+<title>16 · La red de seguridad</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%9B%9F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#DEDCD5; --paper-2:#E5E4DE; --paper-3:#D6D3C8;
+  --ink:#20272A; --pine:#1E3A34; --signal:#C8502A; --signal-ink:#A83E1E;
+  --brass:#9A7420; --sage:#6E7A6F;
+  --line:rgba(30,58,52,.16); --line-2:rgba(30,58,52,.09);
+  --font-display:"Spectral",Georgia,serif;
+  --font-body:"IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --measure:68ch; --pad:clamp(20px,5vw,40px);
+}
+:root[data-theme="dark"]{
+  --paper:#161F1C; --paper-2:#1D2724; --paper-3:#26302C;
+  --ink:#E4E0D5; --pine:#A9C6B8; --signal:#D6603C; --signal-ink:#E8825C;
+  --brass:#CBA24D; --sage:#93A096;
+  --line:rgba(196,214,204,.16); --line-2:rgba(196,214,204,.09);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--font-body); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease,color .4s ease;
+}
+#velo{position:fixed; inset:0; pointer-events:none; z-index:9999;
+      background:#FF8A1E; mix-blend-mode:multiply; opacity:0; transition:opacity .3s ease}
+
+.wrap{max-width:var(--measure); margin:0 auto; padding:0 var(--pad) 100px}
+
+.mandos{position:sticky; top:0; z-index:50; background:color-mix(in srgb,var(--paper) 92%,transparent);
+        backdrop-filter:blur(8px); border-bottom:1px solid var(--line-2); margin-bottom:56px}
+.mandos-in{max-width:var(--measure); margin:0 auto; padding:10px var(--pad);
+           display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.mandos .tag{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+             text-transform:uppercase; color:var(--sage); margin-right:auto}
+.mandos label{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+              text-transform:uppercase; color:var(--sage)}
+input[type=range]{width:110px; accent-color:var(--brass); vertical-align:middle}
+.tbtn{font:500 12px/1 var(--font-mono); letter-spacing:.08em; text-transform:uppercase;
+      background:transparent; color:var(--ink); border:1px solid var(--line);
+      border-radius:999px; padding:7px 14px; cursor:pointer; transition:all .2s ease}
+.tbtn:hover{border-color:var(--brass); color:var(--brass)}
+
+header{padding:26px 0 12px}
+.kicker{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.18em;
+        text-transform:uppercase; color:var(--signal); margin:0 0 14px}
+h1{font-family:var(--font-display); font-weight:600; font-size:clamp(30px,6vw,44px);
+   line-height:1.14; letter-spacing:-.015em; margin:0 0 16px}
+.lede{font-size:19px; color:color-mix(in srgb,var(--ink) 78%,var(--paper));
+      border-left:2px solid var(--brass); padding-left:18px; margin:0 0 8px}
+.meta{font-family:var(--font-mono); font-size:12px; color:var(--sage); margin-top:26px}
+
+h2{font-family:var(--font-display); font-weight:600; font-size:26px; line-height:1.25;
+   letter-spacing:-.01em; margin:64px 0 4px; padding-top:22px; border-top:1px solid var(--line-2)}
+h2 .num{font-family:var(--font-mono); font-size:12px; color:var(--brass);
+        letter-spacing:.14em; display:block; margin-bottom:9px; font-weight:500}
+h3{font-family:var(--font-body); font-weight:600; font-size:17px; margin:34px 0 6px; color:var(--pine)}
+:root[data-theme="dark"] h3{color:var(--pine)}
+p{margin:14px 0}
+strong{font-weight:600}
+em{font-family:var(--font-display); font-style:italic}
+code{font-family:var(--font-mono); font-size:.88em; background:var(--paper-3);
+     padding:1px 5px; border-radius:3px}
+:root[data-theme="dark"] code{background:var(--paper-3)}
+
+pre{font-family:var(--font-mono); font-size:13px; line-height:1.6; background:var(--paper-2);
+    border:1px solid var(--line-2); border-left:2px solid var(--brass);
+    padding:16px 18px; border-radius:4px; overflow-x:auto; margin:20px 0}
+pre b{color:var(--signal); font-weight:500}
+pre i{color:var(--sage); font-style:normal}
+
+.tabla-caja{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+   color:var(--sage); font-weight:500; border-bottom:1px solid var(--line)}
+td.n{font-family:var(--font-mono); white-space:nowrap}
+.ok{color:var(--pine); font-weight:600}
+.no{color:var(--signal-ink); font-weight:600}
+:root[data-theme="dark"] .no{color:var(--signal-ink)}
+
+.nota{background:var(--paper-2); border:1px solid var(--line-2);
+      border-left:3px solid var(--signal); padding:16px 20px; border-radius:4px; margin:26px 0}
+.nota .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--signal); display:block; margin-bottom:7px}
+.clave{background:var(--paper-2); border:1px solid var(--line-2);
+       border-left:3px solid var(--brass); padding:16px 20px; border-radius:4px; margin:26px 0}
+.clave .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--brass); display:block; margin-bottom:7px}
+blockquote{font-family:var(--font-display); font-size:21px; line-height:1.45; font-style:italic;
+           margin:34px 0; padding-left:20px; border-left:2px solid var(--brass); color:var(--pine)}
+ul{padding-left:20px} li{margin:8px 0}
+hr{border:0; border-top:1px solid var(--line-2); margin:56px 0}
+.marca{text-align:center; color:var(--brass); font-family:var(--font-mono);
+       font-size:12px; letter-spacing:.5em; margin:56px 0}
+footer{border-top:1px solid var(--line); margin-top:64px; padding-top:22px;
+       font-family:var(--font-mono); font-size:12px; color:var(--sage)}
+a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+</style>
+
+<div id="velo"></div>
+
+<div class="mandos"><div class="mandos-in">
+  <span class="tag">Libro 16 · Artefacto 6</span>
+  <label for="hora">Hora</label>
+  <input type="range" id="hora" min="0" max="100" value="0" aria-label="Filtro de luz cálida">
+  <button class="tbtn" id="tema">Noche</button>
+</div></div>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">Artefacto 6 · Monitorización · Fase 3 · la revisión</p>
+  <h1>La red de seguridad</h1>
+  <p class="lede">El medidor y la bitácora funcionaban en local. El siguiente paso era desplegarlos. Entre ambos momentos se metió, por costumbre ya, una revisión de código — y esa costumbre encontró <strong>dos despliegues rotos que todavía no habían ocurrido</strong>, un medidor con sesgo de supervivencia y un portero que chivaba secretos por el reloj. Este libro es el acta de esa revisión.</p>
+  <p class="meta">22 de julio de 2026 · 8 hallazgos · 6 arreglos de código + 1 de git · verificado con sondas sin coste</p>
+</header>
+
+<h2><span class="num">01</span>Por qué se revisa lo que ya funciona</h2>
+
+<p>Todo lo que la revisión encontró estaba en código <strong>verificado</strong>: el medidor había contado tokens de verdad, la bitácora había cantado líneas JSON reales, los tres códigos de estado (200/401/400) estaban probados. Funcionaba. Y aun así salieron ocho hallazgos, dos de ellos capaces de tumbar el despliegue.</p>
+
+<p>No es contradicción: es la diferencia entre <em>probar</em> y <em>revisar</em>. Las pruebas confirman que el camino que ejercitaste hace lo que esperas. La revisión pregunta por los caminos que <strong>no</strong> ejercitaste: ¿qué pasa cuando la petición revienta a mitad? ¿cuando el proveedor devuelve un campo vacío? ¿cuando este código corre en la nube y no en tu Mac? Son preguntas de <em>ojos frescos</em> — la misma filosofía que el harness del Artefacto 3, pero apuntando al código en vez de a los prompts: una segunda mirada sistemática antes de que el error cueste caro.</p>
+
+<blockquote>Las pruebas responden «¿hace lo que quiero?». La revisión responde «¿qué hará cuando pase lo que no quiero?».</blockquote>
+
+<div class="clave">
+  <span class="et">La costumbre que ya es proceso</span>
+  Revisión antes de cada despliegue, siempre. En una empresa esto tiene nombre —<strong>pre-deploy code review</strong>— y suele ser obligatorio: nadie funde a producción sin que otros ojos pasen por encima. Aquí los ojos son un modelo, pero la disciplina es idéntica.
+</div>
+
+<h2><span class="num">02</span>La trampa que reincide: la lista blanca</h2>
+
+<p>El hallazgo más grave era viejo conocido. El Dockerfile copia a la imagen <strong>solo</strong> los ficheros nombrados uno a uno (la lista blanca del libro 06, que existe para que el <code>.env</code> jamás pueda colarse). Pero <code>medidor.py</code> es un módulo nuevo — y nadie lo había apuntado en la lista:</p>
+
+<pre><i># Antes — la imagen se construye SIN el módulo nuevo:</i>
+COPY herramientas.py agente.py api.py prompts.py ./
+<i># Después:</i>
+COPY herramientas.py agente.py api.py prompts.py <b>medidor.py</b> ./</pre>
+
+<p>Lo traicionero es <em>cuándo</em> habría fallado. La construcción de la imagen habría terminado en verde: copiar cuatro ficheros de cinco no es ningún error para Docker. El fallo habría esperado al <strong>arranque</strong> del contenedor en Cloud Run: <code>import medidor</code> → <code>ModuleNotFoundError</code> → el servicio nunca pasa el chequeo de salud → despliegue fallido.</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Momento</th><th>¿Qué habría dicho?</th><th>¿Por qué?</th></tr>
+  <tr><td>En el Mac</td><td class="ok">✓ funciona</td><td>el fichero está en la carpeta</td></tr>
+  <tr><td>Construir la imagen</td><td class="ok">✓ verde</td><td>copiar 4 de 5 ficheros no es error</td></tr>
+  <tr><td>Arrancar el contenedor</td><td class="no">✗ revienta</td><td><code>import medidor</code> no encuentra nada</td></tr>
+</table>
+</div>
+
+<p>Es la tercera aparición de esta trampa en el roadmap, y por eso merece nombre: <strong>fallo de arranque, no de construcción</strong> (run-time, no build-time). Los fallos de construcción se ven solos; los de arranque solo se ven desplegando — o revisando antes de desplegar.</p>
+
+<h2><span class="num">03</span>El gemelo que nadie había fichado</h2>
+
+<p>La revisión destapó que la trampa tenía un hermano gemelo. <code>medidor.py</code> tampoco estaba en el índice de <strong>git</strong>: era un fichero «sin trackear». Consecuencia: un commit de los tres ficheros modificados que olvidara añadir el nuevo habría subido código que importa un módulo… que no viaja en el commit. La puerta de CI —que importa <code>herramientas</code>, que importa <code>medidor</code>— se habría puesto en rojo en todos los pushes.</p>
+
+<p>Misma causa raíz, dos víctimas distintas. Y de ahí la lección general:</p>
+
+<div class="clave">
+  <span class="et">La idea que se lleva uno</span>
+  Un módulo nuevo no existe hasta que está dado de alta en <strong>todas las listas que empaquetan código</strong>: el índice de git (lo que viaja en el commit) y el COPY del Dockerfile (lo que viaja en la imagen). El fichero en la carpeta es solo la primera de tres altas.
+</div>
+
+<p>El arreglo del gemelo no fue código: fue <code>git add medidor.py</code>, hoy, para que ningún commit futuro pueda dejarlo atrás.</p>
+
+<h2><span class="num">04</span>El medidor que solo contaba a los supervivientes</h2>
+
+<p>El hallazgo más interesante conceptualmente. La bitácora registraba el coste en las peticiones que terminaban — con éxito o por el guardarraíl de turnos. Pero cuando una petición <strong>reventaba a mitad</strong> (una herramienta que falla en el turno 4, tras siete llamadas al modelo ya pagadas), la línea del 500 salía sin un solo dato de coste. Para la consulta del DoD, esa petición costó $0.</p>
+
+<p>Esto tiene nombre y es uno de los sesgos más famosos de la estadística: <strong>sesgo de supervivencia</strong>. En la Segunda Guerra Mundial, los aliados estudiaban los agujeros de bala de los bombarderos que <em>volvían</em>, para blindar esas zonas. Abraham Wald señaló el error: había que blindar donde los que volvían <em>no</em> tenían agujeros — porque los tocados ahí no volvían para contarlo. Un medidor que solo suma el gasto de las peticiones que terminan comete exactamente ese error: infradeclara el coste justo en los casos caros, los que fallan tras varias llamadas pagadas.</p>
+
+<pre><i># Antes — el 500 se anotaba, pero con la cartera «a cero»:</i>
+except Exception:
+    bitacora(500, t0)
+    raise
+<i># Después — lo gastado hasta el crash viaja en la línea:</i>
+except Exception:
+    bitacora(500, t0, <b>{"uso": medidor.resumen(MODELO)}</b>)
+    raise</pre>
+
+<p>¿Y por qué funciona pedirle el resumen al medidor <em>después</em> del crash? Porque el <code>ContextVar</code> del libro 15 sigue vivo: la excepción sube desde el bucle hasta la API <strong>por el mismo hilo</strong>, y el carril de esa petición conserva todo lo registrado hasta el momento del fallo. El aislamiento por petición que montamos para la concurrencia resulta que también es lo que permite cerrar la cuenta de una petición muerta.</p>
+
+<div class="nota">
+  <span class="et">Verificado con sonda</span>
+  La línea del 500 simulado salió con <code>coste_usd: 0.00027</code> — el gasto acumulado antes del fallo. Antes del arreglo, ese mismo caso habría cantado una línea sin campos de coste.
+</div>
+
+<h2><span class="num">05</span>El observador no tumba lo observado</h2>
+
+<p>Dos hallazgos compartían el mismo principio de fondo. Primero: <code>registrar()</code> asumía que el <code>usage</code> de la API nunca llega vacío — si algún día llega <code>None</code>, el medidor habría reventado la petición entera con un 500. Segundo: la bitácora leía las claves del resultado a pelo (<code>resultado["uso"]</code>) — un dict sin esa clave habría convertido un éxito ya pagado en un error, <em>después</em> de que el agente hiciera todo su trabajo.</p>
+
+<pre><i># La guarda del medidor: si no hay carril O no hay dato, no cuenta — jamás rompe.</i>
+if datos is None <b>or usage is None</b>:
+    return
+<i># La bitácora lee con .get(): observa lo que hay, no exige lo que falta.</i>
+linea.update(resultado<b>.get("uso")</b> or {})</pre>
+
+<div class="clave">
+  <span class="et">La idea que se lleva uno</span>
+  La instrumentación es <strong>pasiva por contrato</strong>: un medidor que tumba la petición que está midiendo deja de ser un medidor y pasa a ser un bug. Ante un dato ausente, la telemetría calla y sigue; nunca lanza. (El mismo <em>primum non nocere</em> de los médicos, aplicado a la observabilidad.)
+</div>
+
+<h2><span class="num">06</span>Escribir para el endpoint que aún no existe</h2>
+
+<p>Hallazgo pequeño con moraleja de diseño: la bitácora llevaba la ruta <code>"/preguntar"</code> cableada dentro. Con un solo endpoint, funciona; pero el roadmap ya tiene previsto un segundo (el copiloto de llamadas de filtro, extra del roadmap), y ese endpoint habría heredado en sus logs una ruta que miente — mezclando los números de los dos servicios en las consultas del DoD.</p>
+
+<pre>def bitacora(estado, t0, resultado=None, <b>ruta="/preguntar"</b>):
+    <i># cada endpoint declara la suya; las consultas no se mezclan</i></pre>
+
+<p>La regla de altitud: cuando un dato va a variar por quien llama, es un <strong>parámetro</strong>, no una constante enterrada. No hizo falta un middleware ni una abstracción — un argumento con valor por defecto es exactamente la cantidad de generalidad que este problema pide, ni más ni menos.</p>
+
+<h2><span class="num">07</span>El portero que chivaba por el reloj</h2>
+
+<p>El hallazgo de seguridad. Comparar el token con <code>!=</code> tiene un defecto invisible: la comparación de cadenas <strong>corta en el primer byte distinto</strong>. Un token que empieza bien tarda un pelín más en rechazarse que uno que empieza mal — y esa diferencia, medida muchas veces, permite inferir el secreto byte a byte. Se llama <strong>ataque de temporización</strong> (timing attack).</p>
+
+<pre><i># Antes — corta al primer byte distinto (el reloj chiva):</i>
+if x_token != APP_TOKEN or not APP_TOKEN:
+<i># Después — tarda LO MISMO acierte o falle:</i>
+if not APP_TOKEN or not <b>secrets.compare_digest(</b>x_token.encode(), APP_TOKEN.encode()<b>)</b>:</pre>
+
+<p><code>secrets.compare_digest</code> es la función de la librería estándar pensada exactamente para esto: comparar secretos en <strong>tiempo constante</strong>. ¿Es explotable de verdad un token largo a través de Internet, con el ruido de red por medio? Muy difícilmente. Pero el idioma correcto cuesta una línea, y en una revisión de una API con token, un revisor profesional lo señalará siempre — mejor tenerlo puesto que explicarlo.</p>
+
+<h2><span class="num">08</span>El contrato que mentía por omisión</h2>
+
+<p>El hallazgo más humilde: el docstring de <code>_correr_bucle</code> enumeraba las claves del dict que devuelve — y no mencionaba <code>uso</code>, la clave nueva. En un proyecto cualquiera sería una nimiedad; en uno cuyo propósito declarado es <em>documentación didáctica viva</em>, un contrato que omite es un contrato que miente. Una línea, arreglado.</p>
+
+<p>La lección menor pero real: <strong>cuando cambia lo que devuelve una función, cambia su docstring en el mismo gesto</strong>. La documentación que se actualiza «luego» es la que nunca se actualiza.</p>
+
+<h2><span class="num">09</span>Las palabras que se lleva el CV</h2>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Término</th><th>Lo que significa aquí</th></tr>
+  <tr><td class="n">pre-deploy code review</td><td>revisión sistemática antes de cada despliegue; aquí paró 2 despliegues rotos antes de existir</td></tr>
+  <tr><td class="n">survivorship bias</td><td>medir solo lo que termina bien; el 500 ahora viaja con su <code>coste_usd</code></td></tr>
+  <tr><td class="n">build-time vs run-time failure</td><td>la imagen se construye en verde y el contenedor revienta al arrancar: el fallo que solo se ve desplegando</td></tr>
+  <tr><td class="n">passive instrumentation</td><td>la telemetría observa y jamás lanza: guardas ante datos ausentes, <code>.get()</code> en vez de indexar a pelo</td></tr>
+  <tr><td class="n">constant-time comparison</td><td><code>secrets.compare_digest</code>: comparar secretos sin que el reloj chive (timing attack)</td></tr>
+  <tr><td class="n">fail-closed</td><td>sin token configurado, nadie pasa — la comparación nueva conserva la misma política</td></tr>
+</table>
+</div>
+
+<h2><span class="num">10</span>Lo que queda abierto</h2>
+
+<ul>
+  <li><strong>El despliegue, ahora sí.</strong> Con la lista blanca completa y el gemelo fichado en git, el redeploy de <code>dobe-agente</code> es el siguiente paso de la Fase 3 — commit, push (la puerta CI dará su veredicto) y a Cloud Run.</li>
+  <li><strong>Las consultas del DoD</strong> sobre Cloud Logging: la media de <code>coste_usd</code> y el recuento de fallos — que ahora incluirá el coste de los fallos, gracias al arreglo de Wald.</li>
+  <li><strong>El copiloto de llamadas</strong> (extra del roadmap) ya tiene el terreno preparado sin buscarlo: la bitácora acepta su ruta y el medidor le contará el gasto desde el primer día.</li>
+</ul>
+
+<p class="marca">· · ·</p>
+
+<footer>
+Libro 16 · Artefacto 6 · Monitorización (Fase 3 · la revisión) · 22 jul 2026<br>
+Sigue a <a href="15_el_servicio_a_oscuras.html">15 · El servicio a oscuras</a> · protocolo ds-nexus
+</footer>
+</div>
+
+<script>
+(function(){
+  var raiz=document.documentElement, btn=document.getElementById('tema');
+  function pinta(t){ raiz.setAttribute('data-theme',t); btn.textContent = t==='dark' ? 'Día' : 'Noche';
+                     try{localStorage.setItem('a6rev-tema',t)}catch(e){} }
+  var g=null; try{g=localStorage.getItem('a6rev-tema')}catch(e){}
+  pinta(g || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  btn.addEventListener('click',function(){
+    pinta(raiz.getAttribute('data-theme')==='dark'?'light':'dark');
+  });
+
+  var hora=document.getElementById('hora'), velo=document.getElementById('velo');
+  function calor(v){ velo.style.opacity=(v/100*0.42).toFixed(3);
+                     try{localStorage.setItem('a6rev-hora',v)}catch(e){} }
+  var h=null; try{h=localStorage.getItem('a6rev-hora')}catch(e){}
+  if(h!==null){ hora.value=h; }
+  calor(hora.value);
+  hora.addEventListener('input',function(){ calor(this.value); });
+})();
+</script>

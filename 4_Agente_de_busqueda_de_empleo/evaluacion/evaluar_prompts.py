@@ -15,7 +15,7 @@ Uso:
 
 Cada fila que se guarda lleva el HASH del prompt que se usó de verdad. Eso es lo
 que hace que el historial no pueda mentir: si alguien edita la v1 en vez de crear
-una v2, el hash cambia y las corridas viejas dejan de cuadrar. La regla "una
+una v2, el hash cambia y las ejecuciones viejas dejan de cuadrar. La regla "una
 versión publicada no se edita" pasa de ser un comentario a ser comprobable.
 """
 
@@ -162,7 +162,7 @@ def check_carta_control_sigue_siendo_carta(salida) -> tuple[bool, str]:
     #   · lo que ACEPTAMOS → 125. Cerrar una frase con sentido no cuadra con un
     #     recuento exacto; forzar las últimas 5 palabras mete relleno y empeora la
     #     carta. Se perdona el roce gramatical, no el desmadre.
-    # Verificado sobre las 13 corridas del historial (re-puntuadas sin llamar a la
+    # Verificado sobre las 13 ejecuciones del historial (re-puntuadas sin llamar a la
     # API): con aceptación 125 la regresión de v2 marca 0.55/0.45 y sigue cayendo
     # muy por debajo de su listón 0.90. A partir de 115 sí quedaríamos ciegos.
     if not (125 <= palabras <= 180):
@@ -206,7 +206,7 @@ COMPROBACIONES = {
     "cv_control_bloqueante_real": check_cv_control_bloqueante_real,
     "carta_bug_numerologia": check_carta_bug_numerologia,
     "carta_control_sigue_siendo_carta": check_carta_control_sigue_siendo_carta,
-    # Corrida #12 · la prueba de la redundancia '2 o 3 años o más', dos bloques:
+    # Ejecución #12 · la prueba de la redundancia '2 o 3 años o más', dos bloques:
     "of_bug_rango_python_o": check_of_bug_rango_python_o,          # bloque analizar_oferta
     "carta_bug_rango_numerologia": check_carta_bug_numerologia,    # bloque redactar_borrador (check REUTILIZADO)
 }
@@ -296,19 +296,19 @@ def _cerrojo(ruta: Path):
             fcntl.flock(f, fcntl.LOCK_UN)
 
 
-def _anadir_al_historial(corrida: dict) -> int:
-    """Añade una corrida al historial de forma segura y devuelve el total.
+def _anadir_al_historial(ejecucion: dict) -> int:
+    """Añade una ejecución al historial de forma segura y devuelve el total.
 
     Dentro del cerrojo el leer-añadir-escribir es indivisible: ningún otro proceso
     puede colarse en medio. La escritura es atómica —a un .tmp y luego renombrado—
-    para que un corte a media escritura no deje el JSON partido: o está la corrida
+    para que un corte a media escritura no deje el JSON partido: o está la ejecución
     entera o no está, nunca medio fichero.
     """
     with _cerrojo(RUTA_CERROJO):
         historial = []
         if RUTA_HISTORIAL.exists():
             historial = json.loads(RUTA_HISTORIAL.read_text(encoding="utf-8"))
-        historial.append(corrida)                # SOLO se añade: nada se reescribe
+        historial.append(ejecucion)                # SOLO se añade: nada se reescribe
         tmp = RUTA_HISTORIAL.with_suffix(".json.tmp")
         tmp.write_text(
             json.dumps(historial, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -321,15 +321,15 @@ def _anadir_al_historial(corrida: dict) -> int:
 # LA PUERTA (solo en --ci)
 # ─────────────────────────────────────────────────────────────
 # Un CI no lee tablas: lee el código de salida. 0 = pasa, ≠0 = bloquea.
-# La puerta compara la corrida contra los listones de umbral.json.
+# La puerta compara la ejecución contra los listones de umbral.json.
 #
-# Por qué NO se exige igualdad exacta con el baseline: dos corridas de
-# configuración IDÉNTICA ya dieron 0.833 y 0.9 (corridas #2 y #3). Ese hueco
+# Por qué NO se exige igualdad exacta con el baseline: dos ejecuciones de
+# configuración IDÉNTICA ya dieron 0.833 y 0.9 (ejecuciones #2 y #3). Ese hueco
 # es RUIDO del modelo, no una regresión. Un listón exacto haría fallar el CI
 # por azar, y un CI que falla por azar se acaba ignorando — que es la única
 # forma de que un quality gate no sirva para nada.
 
-def _puerta(corrida: dict) -> tuple[bool, list[str]]:
+def _puerta(ejecucion: dict) -> tuple[bool, list[str]]:
     """Devuelve (pasa, motivos). Los motivos explican SIEMPRE, pase o falle.
 
     Un listón POR CASO, no una media global: promediar casos deterministas con uno
@@ -338,7 +338,7 @@ def _puerta(corrida: dict) -> tuple[bool, list[str]]:
     listones = json.loads(RUTA_UMBRAL.read_text(encoding="utf-8"))["listones"]
     motivos, pasa = [], True
 
-    for f in corrida["resultados"]:
+    for f in ejecucion["resultados"]:
         if f["id"] not in listones:
             # Fail-closed: un caso nuevo no entra de tapadillo sin listón declarado.
             pasa = False
@@ -358,12 +358,12 @@ def _puerta(corrida: dict) -> tuple[bool, list[str]]:
 def main() -> None:
     p = argparse.ArgumentParser(description="Corre el eval-set y lo añade al historial.")
     p.add_argument("--nota",
-                   help="QUÉ cambió respecto a la corrida anterior. Es la columna "
+                   help="QUÉ cambió respecto a la ejecución anterior. Es la columna "
                         "'cambio aplicado' de la tabla: sin ella la fila no se explica. "
                         "Obligatoria salvo en --ci (una máquina no tiene nada que contar).")
     p.add_argument("--ci", action="store_true",
                    help="Modo máquina: NO escribe en el historial y sale con código 1 "
-                        "si la corrida no pasa la puerta de umbral.json. El historial es "
+                        "si la ejecución no pasa la puerta de umbral.json. El historial es "
                         "tu bitácora, escrita a mano; el CI no la ensucia.")
     p.add_argument("--version", action="append", default=[], metavar="HERR=vN",
                    help="Fuerza una versión (repetible). Por defecto, la activa.")
@@ -380,12 +380,12 @@ def main() -> None:
     # (no llega a correr nada). Pedirla ahí es pedir que justifiques algo que no
     # va a pasar — y te obliga a colar un --ci que no viene a cuento.
     if not args.ci and not args.seco and not args.nota:
-        p.error("--nota es obligatoria cuando la corrida va a escribir en el historial "
+        p.error("--nota es obligatoria cuando la ejecución va a escribir en el historial "
                 "(no hace falta con --ci ni con --seco)")
 
     casos = json.loads(RUTA_CASOS.read_text(encoding="utf-8"))["casos"]
 
-    # Qué versión usa cada herramienta en esta corrida.
+    # Qué versión usa cada herramienta en esta ejecución.
     versiones = dict(prompts.VERSIONES_ACTIVAS)
     for par in args.version:
         herr, _, ver = par.partition("=")
@@ -402,7 +402,7 @@ def main() -> None:
     if args.seco:
         for c in casos:
             print(f"  [{c['tipo']:7}] {c['id']:34} {c['herramienta']}")
-        print("\n(corrida en seco: no se ha llamado a nada ni se ha escrito nada)")
+        print("\n(ejecución en seco: no se ha llamado a nada ni se ha escrito nada)")
         return
 
     filas = [correr_caso(c, versiones[c["herramienta"]], juez=args.juez) for c in casos]
@@ -428,7 +428,7 @@ def main() -> None:
     def media(xs):
         return round(sum(x["nota"] for x in xs) / len(xs), 3) if xs else None
 
-    corrida = {
+    ejecucion = {
         "fecha": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "cambio": args.nota,
         "modelo": MODELO,
@@ -440,21 +440,21 @@ def main() -> None:
         "resultados": filas,
     }
 
-    print(f"\nbugs {corrida['nota_bugs']} · controles {corrida['nota_controles']} "
-          f"· global {corrida['nota_global']}")
+    print(f"\nbugs {ejecucion['nota_bugs']} · controles {ejecucion['nota_controles']} "
+          f"· global {ejecucion['nota_global']}")
 
     if args.ci:
         # El historial es la bitácora de Denys: una fila por decisión suya, con su
         # nota. El CI corre en cada push y no decide nada, así que NO escribe.
-        pasa, motivos = _puerta(corrida)
+        pasa, motivos = _puerta(ejecucion)
         print("\n── puerta de regresión ──")
         for m in motivos:
             print("  " + m)
         print("PASA ✅" if pasa else "BLOQUEA ❌")
         sys.exit(0 if pasa else 1)
 
-    total = _anadir_al_historial(corrida)
-    print(f"corrida #{total} añadida a {RUTA_HISTORIAL.name}")
+    total = _anadir_al_historial(ejecucion)
+    print(f"ejecución #{total} añadida a {RUTA_HISTORIAL.name}")
 
 
 if __name__ == "__main__":

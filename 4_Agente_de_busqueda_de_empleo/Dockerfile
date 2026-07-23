@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 3) Solo lo MÍNIMO para servir, nombrado explícitamente (lista blanca).
 #    Copiando solo esto, el .env NUNCA puede colarse en la imagen aunque exista.
-COPY herramientas.py agente.py api.py prompts.py ./
+COPY herramientas.py agente.py api.py prompts.py medidor.py ./
 COPY datos_personales/cv_denys.md ./datos_personales/
 COPY static/ ./static/
 

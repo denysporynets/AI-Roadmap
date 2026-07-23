@@ -12,6 +12,7 @@ Plano conceptual completo en conceptos/01_bucle_del_agente.html.
 
 import json
 
+import medidor  # el contador de tokens/coste por petición (Artefacto 6)
 import prompts  # los prompts viven versionados ahí, no aquí
 
 # Reutilizamos el mismo cliente, modelo y las 3 herramientas de la Fase 1.
@@ -156,8 +157,13 @@ def _correr_bucle(peticion_usuario: str, max_turnos: int = 6, verboso: bool = Tr
 
     Returns:
         dict con: respuesta (str), pasos (list[str] de herramientas usadas),
-        turnos (int), completado (bool: False si agotó max_turnos sin cerrar).
+        turnos (int), completado (bool: False si agotó max_turnos sin cerrar),
+        uso (dict del medidor: llamadas_llm, tokens_entrada/salida, coste_usd).
     """
+    # Abre el contador de ESTA petición: todo lo que gasten el bucle y las
+    # herramientas de aquí al final se suma en un mismo carril (medidor.py).
+    medidor.iniciar()
+
     # La "memoria" del agente no es magia: es esta lista, que va creciendo.
     # La API es stateless, así que en cada vuelta le reenviamos todo.
     mensajes = [
@@ -174,6 +180,7 @@ def _correr_bucle(peticion_usuario: str, max_turnos: int = 6, verboso: bool = Tr
             messages=mensajes,
             tools=TOOLS,                   # ← le pasamos el menú
         )
+        medidor.registrar(resp.usage)      # orquestar también gasta: se declara
         msg = resp.choices[0].message
         mensajes.append(msg)               # 1) guarda SIEMPRE lo que dijo el modelo
 
@@ -182,7 +189,8 @@ def _correr_bucle(peticion_usuario: str, max_turnos: int = 6, verboso: bool = Tr
             if verboso:
                 print(f"\n── turno {turno}: respuesta final ─────────────")
             return {"respuesta": msg.content, "pasos": pasos,
-                    "turnos": turno, "completado": True}
+                    "turnos": turno, "completado": True,
+                    "uso": medidor.resumen(MODELO)}
 
         # 3) ACTÚA + OBSERVA: ejecuta cada herramienta pedida y devuelve el resultado.
         if verboso:
@@ -198,8 +206,11 @@ def _correr_bucle(peticion_usuario: str, max_turnos: int = 6, verboso: bool = Tr
             mensajes.append(resultado)
 
     # Guardarraíl: si agota los turnos sin cerrar, cortamos con honestidad.
+    # La cuenta se cierra TAMBIÉN aquí: una petición fallida no es gratis,
+    # y un medidor que solo cuenta los éxitos es un medidor que miente.
     return {"respuesta": "⚠️ Se alcanzó el máximo de turnos sin respuesta final.",
-            "pasos": pasos, "turnos": max_turnos, "completado": False}
+            "pasos": pasos, "turnos": max_turnos, "completado": False,
+            "uso": medidor.resumen(MODELO)}
 
 
 def agente(peticion_usuario: str, max_turnos: int = 6, verboso: bool = True) -> str:

@@ -12,9 +12,9 @@
     "un JSON no puede expresar lógica sin acabar inventándose un mini-lenguaje.",
     "",
     "'repeticiones' > 1 porque la misma entrada NO da siempre la misma salida. Esto es evidente a",
-    "temperatura 0.7 (los casos de carta van a 20 pasadas). Pero el 2026-07-18, en una corrida de",
+    "temperatura 0.7 (los casos de carta van a 20 pasadas). Pero el 2026-07-18, en una ejecución de",
     "reproducibilidad, un caso a temperatura 0 y con 1 sola pasada VOLTEÓ de acierto a fallo sin",
-    "tocar nada (cv_bug_cefr_b2: corrida #5 pasó, #6 falló). Lección: temperatura 0 baja el azar,",
+    "tocar nada (cv_bug_cefr_b2: ejecución #5 pasó, #6 falló). Lección: temperatura 0 baja el azar,",
     "no lo apaga (enrutado interno del modelo + batching no determinista del servidor). Por eso los",
     "casos a temp 0 pasan de 1 a 5 pasadas: con 1, la nota agregada de bugs es rehén de una moneda",
     "al aire. La nota de cada caso es la fracción de pasadas que pasan."
@@ -154,7 +154,7 @@
       "id": "of_bug_rango_python_o",
       "herramienta": "analizar_oferta",
       "tipo": "bug",
-      "origen": "Artefacto 5 · corrida #12 · '2 o 3 años o más' es una redundancia lógica",
+      "origen": "Artefacto 5 · ejecución #12 · '2 o 3 años o más' es una redundancia lógica",
       "mide": "'2 o 3 años o más' equivale a '2 o más años' (el '3' sobra). Mide si el analizador VE la redundancia y la colapsa (deja un mínimo de 2, sin el '3'), en vez de transcribir el rango como un loro. Es el 'of_bug_alternativa_o' llevado a terreno numérico: el 'o' ya no une dos tecnologías sino un rango de años.",
       "repeticiones": 5,
       "entrada": {
@@ -165,7 +165,7 @@
       "id": "carta_bug_rango_numerologia",
       "herramienta": "redactar_borrador",
       "tipo": "bug",
-      "origen": "Artefacto 5 · corrida #12 · mismo '2 o 3 años o más', ahora en la carta",
+      "origen": "Artefacto 5 · ejecución #12 · mismo '2 o 3 años o más', ahora en la carta",
       "mide": "El segundo bloque de la misma prueba: ese requisito, cargado de '2', '3', 'años' y 'o más', entra en el encaje y en los puntos_fuertes como tentación. Mide que v3 no cuele NINGÚN número en el cuerpo. Trampa más dura que 'más de dos años': aquí van varias cifras seguidas. Comprobación reutilizada: check_carta_bug_numerologia (opera sobre 'cuerpo', da igual de qué caso venga).",
       "repeticiones": 20,
       "entrada": {

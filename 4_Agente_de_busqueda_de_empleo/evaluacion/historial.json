@@ -703,7 +703,7 @@
         ]
       }
     ],
-    "nota_revision": "Duplicada accidental de la corrida #2 (22:39:59): configuración IDÉNTICA —mismo código, mismos prompts, mismo CV—. Se quedó corriendo una ejecución que se dio por muerta y terminó 7 min después. NO se borra: el historial es append-only y este par #2/#3 es la evidencia del ruido de fondo de la báscula (0.833 vs 0.9 sin tocar nada → una diferencia de 0.067 no significa nada). Anotada, no eliminada."
+    "nota_revision": "Duplicada accidental de la ejecución #2 (22:39:59): configuración IDÉNTICA —mismo código, mismos prompts, mismo CV—. Se quedó corriendo una ejecución que se dio por muerta y terminó 7 min después. NO se borra: el historial es append-only y este par #2/#3 es la evidencia del ruido de fondo de la báscula (0.833 vs 0.9 sin tocar nada → una diferencia de 0.067 no significa nada). Anotada, no eliminada."
   },
   {
     "fecha": "2026-07-17T21:02:34+00:00",
@@ -2281,7 +2281,7 @@
   },
   {
     "fecha": "2026-07-18T08:37:02+00:00",
-    "cambio": "REPRODUCIBILIDAD: repeticion exacta de la corrida #5 (v2, mismo hash e78ee59cdd06), SIN ningun cambio. Objetivo: medir el ruido de fondo de v2 antes de iterar a v3.",
+    "cambio": "REPRODUCIBILIDAD: repeticion exacta de la ejecución #5 (v2, mismo hash e78ee59cdd06), SIN ningun cambio. Objetivo: medir el ruido de fondo de v2 antes de iterar a v3.",
     "modelo": "gpt-4o-mini",
     "versiones": {
       "analizar_oferta": "v1",
@@ -3180,7 +3180,7 @@
   },
   {
     "fecha": "2026-07-18T08:59:25+00:00",
-    "cambio": "RE-BASELINE v1 con bascula nueva (temp0 subido de 1 a 5 pasadas). Corrida 1 de 2 para investigar fiabilidad de los casos temp0. Rompe comparabilidad con corridas <=6 en los casos temp0.",
+    "cambio": "RE-BASELINE v1 con bascula nueva (temp0 subido de 1 a 5 pasadas). Ejecución 1 de 2 para investigar fiabilidad de los casos temp0. Rompe comparabilidad con ejecuciones <=6 en los casos temp0.",
     "modelo": "gpt-4o-mini",
     "versiones": {
       "analizar_oferta": "v1",
@@ -4219,7 +4219,7 @@
   },
   {
     "fecha": "2026-07-18T09:04:13+00:00",
-    "cambio": "RE-BASELINE v1 con bascula nueva (temp0=5 pasadas). Corrida 2 de 2 para investigar fiabilidad de los casos temp0.",
+    "cambio": "RE-BASELINE v1 con bascula nueva (temp0=5 pasadas). Ejecución 2 de 2 para investigar fiabilidad de los casos temp0.",
     "modelo": "gpt-4o-mini",
     "versiones": {
       "analizar_oferta": "v1",
@@ -6459,7 +6459,7 @@
   },
   {
     "fecha": "2026-07-18T10:03:17+00:00",
-    "cambio": "CONFIRMACION v3: repeticion exacta de la corrida #9 (v3, mismo hash 8fa6752fb00f), SIN cambios. Objetivo: comprobar que el 1.0/1.0 se reproduce antes de coronar v3.",
+    "cambio": "CONFIRMACION v3: repeticion exacta de la ejecución #9 (v3, mismo hash 8fa6752fb00f), SIN cambios. Objetivo: comprobar que el 1.0/1.0 se reproduce antes de coronar v3.",
     "modelo": "gpt-4o-mini",
     "versiones": {
       "analizar_oferta": "v1",
@@ -9421,7 +9421,7 @@
   },
   {
     "fecha": "2026-07-18T15:44:55+00:00",
-    "cambio": "corrida #12 · v3 EN PRODUCCION. ANADE 2 casos (of_bug_rango_python_o + carta_bug_rango_numerologia): prueba de la REDUNDANCIA '2 o 3 anos o mas' = '2 o mas anos', que toca DOS BLOQUES -> analizar_oferta (¿ve y colapsa la redundancia, dejando minimo de 2 sin el 3?) + redactar_borrador (¿cuela numeros pese a la trampa multiple?). ROMPE COMPARABILIDAD: el eval-set paso de 6 a 8 casos -> global/bugs NO comparables con #<=11; #12 es el nuevo baseline del set ampliado. Controles: se apoyan en los existentes.",
+    "cambio": "ejecución #12 · v3 EN PRODUCCION. ANADE 2 casos (of_bug_rango_python_o + carta_bug_rango_numerologia): prueba de la REDUNDANCIA '2 o 3 anos o mas' = '2 o mas anos', que toca DOS BLOQUES -> analizar_oferta (¿ve y colapsa la redundancia, dejando minimo de 2 sin el 3?) + redactar_borrador (¿cuela numeros pese a la trampa multiple?). ROMPE COMPARABILIDAD: el eval-set paso de 6 a 8 casos -> global/bugs NO comparables con #<=11; #12 es el nuevo baseline del set ampliado. Controles: se apoyan en los existentes.",
     "modelo": "gpt-4o-mini",
     "juez": false,
     "versiones": {

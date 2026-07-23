@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel
 
+import medidor  # el contador de tokens/coste por petición (Artefacto 6)
 import prompts  # los prompts viven versionados ahí, no aquí
 
 # Carga OPENAI_API_KEY desde el .env (blindado, no sube a git).
@@ -83,6 +84,7 @@ def _parsear(molde: type[BaseModel], temperatura: float, mensajes: list[dict]) -
         response_format=molde,
         messages=mensajes,
     )
+    medidor.registrar(completion.usage)   # cada llamada declara su gasto
     mensaje = completion.choices[0].message
     if mensaje.refusal:
         raise RuntimeError(f"El modelo rehusó producir {molde.__name__}: {mensaje.refusal}")

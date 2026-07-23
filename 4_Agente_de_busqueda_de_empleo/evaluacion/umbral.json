@@ -1,7 +1,7 @@
 {
-  "_que_es_esto": "La puerta del CI. Un liston POR CASO, no una media global: mezclar casos deterministas (temp 0) con uno estocastico (temp 0.7) diluye la senal y obliga a aflojar los tres para tolerar el roce de uno. Calibrado el 21/07/2026 sobre las 13 corridas del historial, sin gastar API.",
+  "_que_es_esto": "La puerta del CI. Un liston POR CASO, no una media global: mezclar casos deterministas (temp 0) con uno estocastico (temp 0.7) diluye la senal y obliga a aflojar los tres para tolerar el roce de uno. Calibrado el 21/07/2026 sobre las 13 ejecuciones del historial, sin gastar API.",
 
-  "_como_se_calibro": "Se agruparon las filas del historial por (caso, hash_prompt, repeticiones) = configuracion identica. Lo que oscila dentro de un grupo es RUIDO. Resultado: los casos a temp 0 no oscilan nada; el unico ruidoso es la carta (temp 0.7). El diseno por caso acierta 7/7 sobre las corridas de veredicto conocido; la media+margen acertaba 5/7 (bloqueaba la #13, que esta en produccion y funciona).",
+  "_como_se_calibro": "Se agruparon las filas del historial por (caso, hash_prompt, repeticiones) = configuracion identica. Lo que oscila dentro de un grupo es RUIDO. Resultado: los casos a temp 0 no oscilan nada; el unico ruidoso es la carta (temp 0.7). El diseno por caso acierta 7/7 sobre las ejecuciones de veredicto conocido; la media+margen acertaba 5/7 (bloqueaba la #13, que esta en produccion y funciona).",
 
   "listones": {
     "of_control_compuesto_y": 1.0,
@@ -15,14 +15,14 @@
   },
 
   "_por_que_cada_uno": {
-    "of_control_compuesto_y": "temp 0, determinista: nunca ha fallado en 13 corridas. Cualquier fallo es real.",
+    "of_control_compuesto_y": "temp 0, determinista: nunca ha fallado en 13 ejecuciones. Cualquier fallo es real.",
     "cv_control_bloqueante_real": "temp 0, determinista: idem.",
     "carta_control_sigue_siendo_carta": "temp 0.7, el UNICO ruidoso. 0.9 tolera 2 roces de 20. La regresion de v2 marcaba 0.55/0.45 (con aceptacion 125) = sigue saltando con margen de sobra. La tolerancia va en la TASA, no en el assert: una carta corta suelta no significa nada, 16 de 20 significa que el prompt se rompio.",
     "of_bug_alternativa_o": "v3 lo clava 5/5 de forma estable.",
     "cv_bug_cefr_b2": "arreglado y estable, pero con algo de varianza historica (0.8-1.0).",
     "carta_bug_numerologia": "el bug que costo la Fase 3. v3 lo tiene en 1.0; 0.8 deja margen de ruido a temp 0.7.",
     "carta_bug_rango_numerologia": "mismo criterio que el anterior.",
-    "of_bug_rango_python_o": "FUERA DE LA PUERTA a proposito (liston 0.0). Es la sonda de redundancia ('2 o 3 anos o mas'): marca 0.0 en las dos corridas donde existe, nunca se ha superado. Es una OBSERVACION ABIERTA, no un estandar alcanzado. Si entrase en la puerta, el CI nacria en rojo permanente. Subir este liston el dia que se arregle."
+    "of_bug_rango_python_o": "FUERA DE LA PUERTA a proposito (liston 0.0). Es la sonda de redundancia ('2 o 3 anos o mas'): marca 0.0 en las dos ejecuciones donde existe, nunca se ha superado. Es una OBSERVACION ABIERTA, no un estandar alcanzado. Si entrase en la puerta, el CI nacria en rojo permanente. Subir este liston el dia que se arregle."
   },
 
   "_cabo_pendiente": "Revisar en frio la banda del producto (cuantas palabras quieres TU en tus cartas). Es una decision de producto, no de CI. Cambiarla es barato: el historial guarda el recuento de cada intento, asi que se puede re-puntuar entero sin llamar a la API."

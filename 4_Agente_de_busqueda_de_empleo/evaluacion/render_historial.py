@@ -8,8 +8,8 @@ de evolución. Es el paso barato del patrón (ficha 04):
   ● CUESTA API             ▲ FUENTE DE VERDAD     ○ GRATIS, no llama a nada
 
 Regla de oro: aquí NO se escribe ningún dato a mano. Cada fila de la tabla y cada
-punto de la gráfica sale de una corrida real del JSON. Si una fila no tiene una
-corrida detrás, no existe. El informe no puede decir nada que la báscula no midiera.
+punto de la gráfica sale de una ejecución real del JSON. Si una fila no tiene una
+ejecución detrás, no existe. El informe no puede decir nada que la báscula no midiera.
 
 Uso:
     python evaluacion/render_historial.py
@@ -24,7 +24,7 @@ AQUI = Path(__file__).parent
 RUTA_HISTORIAL = AQUI / "historial.json"
 RUTA_SALIDA = AQUI / "historial.html"
 
-# Suelo de ruido de la báscula. NO es un número inventado: sale del par de corridas
+# Suelo de ruido de la báscula. NO es un número inventado: sale del par de ejecuciones
 # #2/#3, que tenían configuración IDÉNTICA y aun así dieron 0.833 y 0.9. Ese 0.067
 # es lo que se mueve la nota SIN que cambies nada. Una diferencia menor que esto no
 # es una mejora ni un empeoramiento: es azar. El informe lo dice en voz alta.
@@ -54,9 +54,9 @@ def _esc(t) -> str:
     return (str(t).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
-def _versiones_compactas(corrida: dict) -> str:
+def _versiones_compactas(ejecucion: dict) -> str:
     """{'analizar_oferta':'v1',...} → 'v1' si todas coinciden, si no el detalle."""
-    vs = corrida.get("versiones", {})
+    vs = ejecucion.get("versiones", {})
     if not vs:
         return "—"
     unicas = set(vs.values())
@@ -82,7 +82,7 @@ def svg_evolucion(historial: list) -> str:
 
     partes = [
         f'<svg viewBox="0 0 {W} {H}" width="100%" role="img" '
-        f'aria-label="Evolución de las notas por corrida" font-family="system-ui,sans-serif">',
+        f'aria-label="Evolución de las notas por ejecución" font-family="system-ui,sans-serif">',
         # superficie clara fija: así la paleta validada vale aunque la página se oscurezca
         f'<rect x="{ML}" y="{MT}" width="{pw}" height="{ph}" fill="#fcfcfb" '
         f'stroke="#e7e2d8"/>',
@@ -96,7 +96,7 @@ def svg_evolucion(historial: list) -> str:
         partes.append(f'<text x="{ML - 8}" y="{yy + 4:.1f}" text-anchor="end" '
                       f'font-size="11" fill="#9a9284">{g:.2f}</text>')
 
-    # etiquetas del eje X (una por corrida)
+    # etiquetas del eje X (una por ejecución)
     for i, c in enumerate(historial):
         partes.append(f'<text x="{x(i):.1f}" y="{MT + ph + 16:.1f}" text-anchor="middle" '
                       f'font-size="11" fill="#6b6357">#{i + 1}</text>')
@@ -117,7 +117,7 @@ def svg_evolucion(historial: list) -> str:
             # anillo de superficie de 2px donde los puntos se solapan (marks spec)
             partes.append(f'<circle cx="{px:.1f}" cy="{py:.1f}" r="5" fill="{color}" '
                           f'stroke="#fcfcfb" stroke-width="2">'
-                          f'<title>corrida #{i + 1} · {etiqueta} {v}</title></circle>')
+                          f'<title>ejecución #{i + 1} · {etiqueta} {v}</title></circle>')
         # etiqueta directa SOLO en el último punto (identidad = punto de color + texto en tinta)
         lx, ly = pts[-1]
         partes.append(f'<circle cx="{lx + 16:.1f}" cy="{ly:.1f}" r="4" fill="{color}"/>')
@@ -132,7 +132,7 @@ def svg_evolucion(historial: list) -> str:
 # LA TABLA DE TRAZABILIDAD
 # ─────────────────────────────────────────────────────────────
 def _veredicto(actual: float, previa) -> str:
-    """Compara con la corrida anterior, pero con el ruido puesto delante."""
+    """Compara con la ejecución anterior, pero con el ruido puesto delante."""
     if previa is None:
         return '<span class="v-base">baseline</span>'
     d = actual - previa
@@ -143,7 +143,7 @@ def _veredicto(actual: float, previa) -> str:
     return f'<span class="v-baja">▼ empeora ({d:+.3f})</span>'
 
 
-def tabla_corridas(historial: list) -> str:
+def tabla_ejecuciones(historial: list) -> str:
     filas = []
     prev_global = None
     for i, c in enumerate(historial):
@@ -167,7 +167,7 @@ def tabla_corridas(historial: list) -> str:
     cabecera = ("<tr><th>#</th><th>fecha</th><th>cambio aplicado</th>"
                 "<th>bugs</th><th>controles</th><th>global</th>"
                 "<th>vs. anterior</th></tr>")
-    return f'<table class="corridas">{cabecera}{"".join(filas)}</table>'
+    return f'<table class="ejecuciones">{cabecera}{"".join(filas)}</table>'
 
 
 # ─────────────────────────────────────────────────────────────
@@ -292,7 +292,7 @@ PLANTILLA = """<!DOCTYPE html>
 <header>
   <div class="kicker">Artefacto 5 · AI Engineering · Fase 2</div>
   <h1>Historial de la báscula</h1>
-  <div class="sub">Generado de historial.json el {generado}. Ninguna fila se escribe a mano: si no hay corrida detrás, no aparece.</div>
+  <div class="sub">Generado de historial.json el {generado}. Ninguna fila se escribe a mano: si no hay ejecución detrás, no aparece.</div>
 </header>
 
 <h2>Evolución</h2>
@@ -304,19 +304,19 @@ PLANTILLA = """<!DOCTYPE html>
   </div>
   {grafica}
   <p style="font-size:13px;color:var(--soft);margin:14px 0 0;font-family:system-ui,sans-serif">
-    Banda de ruido ≈ ±{ruido}: sale del par de corridas #2/#3, de configuración idéntica y notas distintas.
+    Banda de ruido ≈ ±{ruido}: sale del par de ejecuciones #2/#3, de configuración idéntica y notas distintas.
     Un salto menor que eso no es señal, es azar.</p>
 </div>
 
-<h2>Trazabilidad · una fila por corrida</h2>
-<div class="tabla-wrap card">{tabla_corridas}</div>
+<h2>Trazabilidad · una fila por ejecución</h2>
+<div class="tabla-wrap card">{tabla_ejecuciones}</div>
 
 <h2>El detalle · caso a caso</h2>
-<p style="font-size:14.5px;color:var(--soft)">Cada celda es la nota de ese caso en esa corrida (pasa el ratón: pasadas/repeticiones). Aquí se ve <em>qué</em> caso movió la media, no solo que se movió.</p>
+<p style="font-size:14.5px;color:var(--soft)">Cada celda es la nota de ese caso en esa ejecución (pasa el ratón: pasadas/repeticiones). Aquí se ve <em>qué</em> caso movió la media, no solo que se movió.</p>
 <div class="tabla-wrap card">{tabla_porherr}</div>
 
 <footer>
-  Artefacto 5 · Endurecimiento · render_historial.py — {n} corrida(s) · generado {generado}.<br>
+  Artefacto 5 · Endurecimiento · render_historial.py — {n_ejecuciones} · generado {generado}.<br>
   Paso gratis del patrón caro-una-vez / barato-mil-veces: no llama a ninguna API.
 </footer>
 </div>
@@ -343,16 +343,20 @@ def main() -> None:
     if not historial:
         raise SystemExit("historial.json está vacío: no hay nada que pintar")
 
+    # Plural bien hecho: «1 ejecución» / «13 ejecuciones» (la palabra cambia de forma).
+    n = len(historial)
+    n_ejecuciones = f"{n} {'ejecución' if n == 1 else 'ejecuciones'}"
+
     html = PLANTILLA.format(
         generado=datetime.now().strftime("%d/%m/%Y %H:%M"),
         grafica=svg_evolucion(historial),
-        tabla_corridas=tabla_corridas(historial),
+        tabla_ejecuciones=tabla_ejecuciones(historial),
         tabla_porherr=tabla_por_herramienta(historial),
         ruido=RUIDO,
-        n=len(historial),
+        n_ejecuciones=n_ejecuciones,
     )
     RUTA_SALIDA.write_text(html, encoding="utf-8")
-    print(f"escrito {RUTA_SALIDA.name} · {len(historial)} corrida(s) · no se ha llamado a ninguna API")
+    print(f"escrito {RUTA_SALIDA.name} · {n_ejecuciones} · no se ha llamado a ninguna API")
 
 
 if __name__ == "__main__":
