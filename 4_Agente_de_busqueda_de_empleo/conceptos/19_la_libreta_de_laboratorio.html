@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Para qué sirve MLflow y cómo funciona por dentro: el problema del experimento perdido, la libreta de laboratorio estandarizada, la jerarquía experimento/ejecución/parámetros/métricas/artefactos, los dos almacenes, la UI de comparación, y por qué historial.json ya era un MLflow hecho a mano.">
+<meta name="color-scheme" content="light dark">
+<title>19 · La libreta de laboratorio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%A7%AA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#DEDCD5; --paper-2:#E5E4DE; --paper-3:#D6D3C8;
+  --ink:#20272A; --pine:#1E3A34; --signal:#C8502A; --signal-ink:#A83E1E;
+  --brass:#9A7420; --sage:#6E7A6F;
+  --line:rgba(30,58,52,.16); --line-2:rgba(30,58,52,.09);
+  --font-display:"Spectral",Georgia,serif;
+  --font-body:"IBM Plex Sans",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --measure:68ch; --pad:clamp(20px,5vw,40px);
+}
+:root[data-theme="dark"]{
+  --paper:#161F1C; --paper-2:#1D2724; --paper-3:#26302C;
+  --ink:#E4E0D5; --pine:#A9C6B8; --signal:#D6603C; --signal-ink:#E8825C;
+  --brass:#CBA24D; --sage:#93A096;
+  --line:rgba(196,214,204,.16); --line-2:rgba(196,214,204,.09);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--font-body); font-size:17px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  transition:background .4s ease,color .4s ease;
+}
+#velo{position:fixed; inset:0; pointer-events:none; z-index:9999;
+      background:#FF8A1E; mix-blend-mode:multiply; opacity:0; transition:opacity .3s ease}
+
+.wrap{max-width:var(--measure); margin:0 auto; padding:0 var(--pad) 100px}
+
+.mandos{position:sticky; top:0; z-index:50; background:color-mix(in srgb,var(--paper) 92%,transparent);
+        backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border-bottom:1px solid var(--line-2); margin-bottom:56px}
+.mandos-in{max-width:var(--measure); margin:0 auto; padding:10px var(--pad);
+           display:flex; align-items:center; gap:18px; flex-wrap:wrap}
+.mandos .tag{font-family:var(--font-mono); font-size:11px; letter-spacing:.14em;
+             text-transform:uppercase; color:var(--sage); margin-right:auto}
+.mandos label{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em;
+              text-transform:uppercase; color:var(--sage)}
+input[type=range]{width:110px; accent-color:var(--brass); vertical-align:middle}
+.tbtn{font:500 12px/1 var(--font-mono); letter-spacing:.08em; text-transform:uppercase;
+      background:transparent; color:var(--ink); border:1px solid var(--line);
+      border-radius:999px; padding:7px 14px; cursor:pointer; transition:all .2s ease}
+.tbtn:hover{border-color:var(--brass); color:var(--brass)}
+
+header{padding:26px 0 12px}
+.kicker{font-family:var(--font-mono); font-size:11.5px; letter-spacing:.18em;
+        text-transform:uppercase; color:var(--signal); margin:0 0 14px}
+h1{font-family:var(--font-display); font-weight:600; font-size:clamp(30px,6vw,44px);
+   line-height:1.14; letter-spacing:-.015em; margin:0 0 16px}
+.lede{font-size:19px; color:color-mix(in srgb,var(--ink) 78%,var(--paper));
+      border-left:2px solid var(--brass); padding-left:18px; margin:0 0 8px}
+.meta{font-family:var(--font-mono); font-size:12px; color:var(--sage); margin-top:26px}
+
+h2{font-family:var(--font-display); font-weight:600; font-size:26px; line-height:1.25;
+   letter-spacing:-.01em; margin:64px 0 4px; padding-top:22px; border-top:1px solid var(--line-2)}
+h2 .num{font-family:var(--font-mono); font-size:12px; color:var(--brass);
+        letter-spacing:.14em; display:block; margin-bottom:9px; font-weight:500}
+h3{font-family:var(--font-body); font-weight:600; font-size:17px; margin:34px 0 6px; color:var(--pine)}
+:root[data-theme="dark"] h3{color:var(--pine)}
+p{margin:14px 0}
+strong{font-weight:600}
+em{font-family:var(--font-display); font-style:italic}
+code{font-family:var(--font-mono); font-size:.88em; background:var(--paper-3);
+     padding:1px 5px; border-radius:3px}
+:root[data-theme="dark"] code{background:var(--paper-3)}
+
+pre{font-family:var(--font-mono); font-size:13px; line-height:1.6; background:var(--paper-2);
+    border:1px solid var(--line-2); border-left:2px solid var(--brass);
+    padding:16px 18px; border-radius:4px; overflow-x:auto; margin:20px 0}
+pre b{color:var(--signal); font-weight:500}
+pre i{color:var(--sage); font-style:normal}
+
+.tabla-caja{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:420px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+   color:var(--sage); font-weight:500; border-bottom:1px solid var(--line)}
+td.n{font-family:var(--font-mono); white-space:nowrap}
+.ok{color:var(--pine); font-weight:600}
+.no{color:var(--signal-ink); font-weight:600}
+:root[data-theme="dark"] .no{color:var(--signal-ink)}
+
+.nota{background:var(--paper-2); border:1px solid var(--line-2);
+      border-left:3px solid var(--signal); padding:16px 20px; border-radius:4px; margin:26px 0}
+.nota .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+          text-transform:uppercase; color:var(--signal); display:block; margin-bottom:7px}
+.clave{background:var(--paper-2); border:1px solid var(--line-2);
+       border-left:3px solid var(--brass); padding:16px 20px; border-radius:4px; margin:26px 0}
+.clave .et{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.16em;
+           text-transform:uppercase; color:var(--brass); display:block; margin-bottom:7px}
+blockquote{font-family:var(--font-display); font-size:21px; line-height:1.45; font-style:italic;
+           margin:34px 0; padding-left:20px; border-left:2px solid var(--brass); color:var(--pine)}
+ul{padding-left:20px} li{margin:8px 0}
+hr{border:0; border-top:1px solid var(--line-2); margin:56px 0}
+.marca{text-align:center; color:var(--brass); font-family:var(--font-mono);
+       font-size:12px; letter-spacing:.5em; margin:56px 0}
+footer{border-top:1px solid var(--line); margin-top:64px; padding-top:22px;
+       font-family:var(--font-mono); font-size:12px; color:var(--sage)}
+a{color:var(--signal-ink); text-decoration-thickness:1px; text-underline-offset:2px}
+</style>
+
+<div id="velo"></div>
+
+<div class="mandos"><div class="mandos-in">
+  <span class="tag">Libro 19 · Extra</span>
+  <label for="hora">Hora</label>
+  <input type="range" id="hora" min="0" max="100" value="0" aria-label="Filtro de luz cálida">
+  <button class="tbtn" id="tema">Noche</button>
+</div></div>
+
+<div class="wrap">
+
+<header>
+  <p class="kicker">Extra post-roadmap · MLflow · para qué sirve y cómo funciona</p>
+  <h1>La libreta de laboratorio</h1>
+  <p class="lede">Un científico no confía en su memoria: apunta cada ensayo en una libreta —qué mezcló, en qué proporción, qué salió— para poder repetirlo, compararlo y, sobre todo, <strong>saber qué cambió cuando el resultado cambió</strong>. <strong>MLflow</strong> es esa libreta, pero para el que entrena modelos y ajusta prompts. Y lo curioso es que tú ya llevabas una a mano sin saber que tenía nombre de plataforma.</p>
+  <p class="meta">24 de julio de 2026 · open source (Databricks, 2018) · el estándar de facto del <em>experiment tracking</em> · ancla del proyecto: <code>evaluacion/historial.json</code></p>
+</header>
+
+<h2><span class="num">01</span>El problema: el experimento que se pierde</h2>
+
+<p>Cualquiera que ajuste un sistema por prueba y error se topa con la misma escena. Cambias un parámetro, lanzas, sale <code>0.87</code>. Cambias otro, sale <code>0.84</code>. Cambias tres cosas a la vez, sale <code>0.91</code> — y una semana después no tienes ni idea de <em>cuál</em> de las tres lo mejoró. La libreta, si la hubo, fue una celda de notebook sobrescrita, un nombre de fichero <code>modelo_final_v2_bueno_DEFINITIVO.pkl</code>, o un mensaje a ti mismo que ya no significa nada.</p>
+
+<p>El problema tiene tres caras, y las tres duelen:</p>
+
+<ul>
+  <li><strong>Reproducibilidad:</strong> «¿con qué parámetros salió ese número?» — y ya no se puede reconstruir.</li>
+  <li><strong>Comparación:</strong> tienes veinte resultados sueltos y ninguna forma de ponerlos en fila y ordenarlos por la métrica que importa.</li>
+  <li><strong>Trazabilidad:</strong> el modelo que está en producción salió de <em>algún</em> experimento… pero ¿de cuál, con qué datos, quién lo aprobó?</li>
+</ul>
+
+<p>MLflow existe para que estas tres preguntas tengan respuesta automática. Su propuesta es sencilla y ambiciosa a la vez: <strong>que registrar un experimento cueste una línea de código, y que a partir de ahí nunca se pierda.</strong></p>
+
+<h2><span class="num">02</span>Ya llevabas una — se llama <code>historial.json</code></h2>
+
+<p>Aquí está el ancla, y es literal. Cuando construimos la báscula del Artefacto 5, hicimos un fichero <code>historial.json</code>: una lista <em>append-only</em> donde cada evaluación de los prompts deja una fila con qué versiones usó, qué modelo, qué nota sacó y una descripción del cambio. Eso <strong>es</strong> un registro de experimentos. Lo montaste a mano porque lo necesitabas, sin saber que la industria le había puesto nombre, UI y diez años de pulido.</p>
+
+<p>La traducción es casi uno a uno — y verla es entender MLflow entero:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Lo que ya tienes en historial.json</th><th>Cómo lo llama MLflow</th></tr>
+  <tr><td>la báscula de prompts DOBE (el proyecto entero)</td><td class="n">Experiment</td></tr>
+  <tr><td>cada fila (una evaluación completa)</td><td class="n">Run</td></tr>
+  <tr><td><code>modelo</code>, <code>versiones</code> (analizar_oferta=v1…), <code>juez</code></td><td class="n">Params</td></tr>
+  <tr><td><code>nota_bugs</code>, <code>nota_controles</code>, <code>nota_global</code>, notas del juez</td><td class="n">Metrics</td></tr>
+  <tr><td><code>cambio</code> (la descripción en prosa), <code>fecha</code></td><td class="n">Tags</td></tr>
+  <tr><td>el bloque <code>resultados</code> (las cartas y salidas reales de cada caso)</td><td class="n">Artifacts</td></tr>
+</table>
+</div>
+
+<div class="clave">
+  <span class="et">La idea que se lleva uno</span>
+  No aprendes MLflow desde cero: aprendes a nombrar en el vocabulario estándar algo que ya sabías hacer. Un <em>parámetro</em> es una perilla de entrada que TÚ eliges (la versión del prompt); una <em>métrica</em> es un número de salida que MIDES (la nota). Confundirlos es el error clásico — y tu <code>versiones</code> vs <code>notas</code> ya los tenía separados por instinto.
+</div>
+
+<h2><span class="num">03</span>La jerarquía: experimento, ejecución, y lo que se cuelga de ella</h2>
+
+<p>Todo en MLflow vive dentro de una estructura de dos niveles, y una ejecución cuelga de sí cuatro tipos de cosa:</p>
+
+<h3>Experiment → Run</h3>
+<p>Un <strong>experimento</strong> es una carpeta con nombre («báscula-prompts-dobe») que agrupa intentos del mismo problema. Una <strong>ejecución</strong> (<em>run</em>) es un intento concreto: se abre, se le cuelgan datos, se cierra. Cada una recibe un identificador único y queda para siempre; nunca se sobrescribe una anterior. Es exactamente la disciplina <em>append-only</em> de tu historial, hecha norma de la plataforma.</p>
+
+<h3>Lo que se le cuelga a una ejecución</h3>
+<div class="tabla-caja">
+<table>
+  <tr><th>Qué</th><th>Qué es</th><th>Ejemplo en tu báscula</th></tr>
+  <tr><td class="n">Params</td><td>entradas que elegiste (texto o número, fijas)</td><td><code>redactar_borrador="v3"</code>, <code>modelo="gpt-4o-mini"</code></td></tr>
+  <tr><td class="n">Metrics</td><td>números medidos (pueden tener serie temporal)</td><td><code>nota_global=0.869</code>, <code>juez_arranque=3.95</code></td></tr>
+  <tr><td class="n">Tags</td><td>etiquetas libres para buscar y anotar</td><td><code>cambio="Fase 4 · structured outputs"</code></td></tr>
+  <tr><td class="n">Artifacts</td><td>ficheros de cualquier tamaño (el «adjunto»)</td><td>el JSON con las 8 cartas generadas, un gráfico</td></tr>
+</table>
+</div>
+
+<p>La API para hacerlo es deliberadamente mínima — este es MLflow al desnudo:</p>
+
+<pre>import mlflow
+mlflow.set_experiment("bascula-prompts-dobe")
+
+<b>with</b> mlflow.start_run(run_name="ejec-13"):     <i># abre la ejecución, se cierra sola al salir</i>
+    mlflow.log_param("redactar_borrador", "v3")   <i># una perilla de entrada</i>
+    mlflow.log_param("modelo", "gpt-4o-mini")
+    mlflow.log_metric("nota_global", 0.869)        <i># un número de salida</i>
+    mlflow.log_metric("nota_bugs", 0.80)
+    mlflow.set_tag("cambio", "structured outputs")
+    mlflow.log_artifact("salida_cartas.json")      <i># el adjunto pesado</i></pre>
+
+<p>Ocho líneas y ya tienes una ejecución trazable para siempre. Ese es el pacto de MLflow: fricción casi cero en la escritura a cambio de que nada se pierda en la lectura.</p>
+
+<h2><span class="num">04</span>Cómo funciona por dentro: dos almacenes distintos</h2>
+
+<p>La pieza que de verdad explica MLflow es que guarda las cosas en <strong>dos sitios separados a propósito</strong>, porque son dos naturalezas de dato:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Almacén</th><th>Qué guarda</th><th>Dónde puede vivir</th></tr>
+  <tr><td><strong>Backend store</strong><br>(metadatos)</td><td>params, métricas, tags, quién y cuándo — datos pequeños y <em>consultables</em></td><td>ficheros locales (<code>./mlruns</code>), <strong>SQLite</strong>, o una base de datos (Postgres/MySQL)</td></tr>
+  <tr><td><strong>Artifact store</strong><br>(adjuntos)</td><td>modelos, gráficos, datasets — ficheros grandes y <em>opacos</em></td><td>una carpeta local, o almacenamiento de objetos (S3, GCS…)</td></tr>
+</table>
+</div>
+
+<p>¿Por qué separarlos? Porque para <em>comparar y ordenar</em> veinte ejecuciones por su métrica necesitas algo que sepa consultar —una base de datos—, y las métricas son diminutas. Pero un modelo entrenado pesa megas y no se consulta, se descarga: eso quiere un almacén de <em>blobs</em>. Meter lo segundo dentro de lo primero sería como guardar un PDF de 40 MB en una celda de Excel.</p>
+
+<div class="clave">
+  <span class="et">Un eco de dos libros atrás</span>
+  Ya viste esta frontera dos veces. En Pinecone: el <em>embedding</em> (pequeño, se compara) vive aparte del <em>payload</em> (el texto real, se recupera). En Cloud Logging: <code>jsonPayload</code> (campos consultables) frente al artefacto opaco. Metadato-que-se-consulta ≠ adjunto-que-se-recupera es un patrón que se repite en toda la ingeniería de datos, y MLflow es una instancia más.
+</div>
+
+<p>Para elegir dónde escribir se fija una <strong>tracking URI</strong>. En tu caso —un extra local, coste cero— apunta a un fichero SQLite:</p>
+
+<pre>mlflow.set_tracking_uri("sqlite:///mlflow.db")   <i># metadatos a una BD local; los artefactos, a ./mlruns por defecto</i></pre>
+
+<p>En un equipo de verdad, esa misma URI apuntaría a un <strong>tracking server</strong> compartido (un servicio con su base de datos y su bucket), y toda la gente del equipo escribiría sus ejecuciones al mismo sitio. La API que llamas es idéntica; solo cambia a dónde va. Esa es la gracia: el código de tu portátil y el del clúster de producción se escriben igual.</p>
+
+<h2><span class="num">05</span>La UI: donde el susto se vuelve gráfico</h2>
+
+<p>Registrar es la mitad; la otra mitad es <em>ver</em>. Un comando —</p>
+
+<pre>mlflow ui --backend-store-uri sqlite:///mlflow.db   <i># abre en http://localhost:5000</i></pre>
+
+<p>— levanta una interfaz web donde las ejecuciones aparecen en tabla: una fila cada una, columnas de params y métricas, ordenable por cualquiera. Seleccionas varias y las compara lado a lado; hay vistas de coordenadas paralelas para ver qué parámetro empuja qué métrica, y gráficas de una métrica a lo largo del entrenamiento.</p>
+
+<p>Y aquí conecta con el momento más importante del Artefacto 5. ¿Recuerdas el susto del juez —con <strong>N=3</strong> la conclusión decía «v3 es peor», con <strong>N=15</strong> se invertía a «v3 gana en todo»? Esa comparación la hicimos a ojo, leyendo números en la terminal. En la UI de MLflow, v1 y v3 serían <strong>dos ejecuciones que pones una al lado de la otra y ordenas por <code>juez_arranque</code></strong>: la inversión del signo se vería de un vistazo, sin recontar a mano. La libreta no solo guarda: <strong>enseña a comparar</strong>.</p>
+
+<h2><span class="num">06</span>Los otros tres componentes de la plataforma</h2>
+
+<p>El <em>tracking</em> de los capítulos anteriores es el corazón y lo único que tu extra va a usar. Pero «plataforma» significa que MLflow trae tres piezas más, y conviene saber para qué son aunque no las toques hoy:</p>
+
+<h3>MLflow Models — el formato de empaquetado</h3>
+<p>Una forma estándar de guardar un modelo con su «receta de servir» (sus <em>flavors</em>): el mismo modelo se puede cargar como función Python genérica, o en su formato nativo (sklearn, PyTorch…), o servir como API REST con un comando. Resuelve el «lo entrené aquí, ahora cómo lo ejecuto allá».</p>
+
+<h3>MLflow Model Registry — el control de versiones de modelos</h3>
+<p>Un catálogo central donde un modelo tiene <strong>versiones numeradas</strong>, y a cada versión le pones un <em>alias</em> —<code>@champion</code>, <code>@challenger</code>— para marcar cuál está en producción y cuál se está probando, con su historia de quién la promovió. Es <code>git</code> pero para modelos entrenados. (Es la trazabilidad del capítulo 01, hecha producto.)</p>
+
+<h3>MLflow Projects — la reproducibilidad empaquetada</h3>
+<p>Un fichero que declara el entorno y el comando de ejecución para que cualquiera reproduzca tu experimento con una orden, sin adivinar dependencias. El «en mi máquina funcionaba» resuelto por contrato — la misma idea del Dockerfile del libro 06, aplicada al experimento.</p>
+
+<h2><span class="num">07</span>Y desde hace poco, el mundo LLM</h2>
+
+<p>MLflow nació para <em>machine learning</em> clásico (entrenas, mides <em>accuracy</em>), pero la plataforma creció justo hacia los problemas que tú resolviste a mano en el agente. Vale la pena nombrarlo porque el paralelismo es exacto:</p>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Lo que MLflow trae para LLM</th><th>Lo que tú ya hiciste a mano</th></tr>
+  <tr><td><strong>LLM Evaluate</strong>: métricas con juez-LLM sobre respuestas</td><td>tu <code>juez_estilo.py</code> (gpt-4o puntúa arranque/suena/engancha)</td></tr>
+  <tr><td><strong>Prompt Registry</strong>: versiona prompts como artefactos de primera clase</td><td>tu <code>prompts.obtener</code> con hashes v1/v3 y <code>VERSIONES_ACTIVAS</code></td></tr>
+  <tr><td><strong>Tracing</strong>: registra cada llamada/turno de un agente para inspeccionarlo</td><td>tu <code>medidor.py</code> + la <code>bitacora()</code> a stdout</td></tr>
+</table>
+</div>
+
+<p>No es que debieras haber usado MLflow desde el principio — hacerlo a mano fue lo que te enseñó <em>qué</em> resuelve la herramienta. Pero es la mejor prueba de que ibas por el camino correcto: <strong>la industria construyó producto alrededor de exactamente los problemas que fuiste encontrando.</strong></p>
+
+<h2><span class="num">08</span>El límite honesto: vitrina, no archivo</h2>
+
+<p>Aquí toca la sinceridad que este proyecto siempre se ha exigido. Para <em>nuestro</em> caso —una báscula que se ejecuta a mano un puñado de veces— MLflow no es una necesidad; es una <strong>vitrina y una práctica de herramienta estándar</strong>. Y por eso la regla del extra es clara:</p>
+
+<blockquote>La fuente de verdad sigue siendo <code>historial.json</code>. MLflow es un espejo que se alimenta de él, no un sustituto que lo reemplace.</blockquote>
+
+<p>MLflow brilla de verdad cuando hay <strong>volumen y equipo</strong>: cientos de ejecuciones, varias personas escribiendo al mismo servidor, modelos que hay que promover a producción con trazabilidad. Para un solo autor y trece ejecuciones, montar un tracking server sería el mismo error que descartamos con Airflow —maquinaria permanente para un problema que no la pide. Por eso el extra es un <strong>SQLite local de coste cero</strong>: la herramienta de verdad, a la escala honesta del proyecto.</p>
+
+<div class="nota">
+  <span class="et">La deuda que esto salda</span>
+  En el CV figura MLflow entre las tecnologías, y hasta hoy sin un proyecto detrás que la respalde. Este extra —un espejo de ~25 líneas que vuelca las 13 ejecuciones históricas y las abre en la UI— convierte esa línea del CV en algo que puedes <strong>enseñar y explicar</strong>. Honestidad antes que inventario.
+</div>
+
+<h2><span class="num">09</span>Las palabras que se lleva el CV</h2>
+
+<div class="tabla-caja">
+<table>
+  <tr><th>Término</th><th>Lo que significa aquí</th></tr>
+  <tr><td class="n">experiment tracking</td><td>registrar cada ensayo (params + métricas + artefactos) para reproducir y comparar; el núcleo de MLflow</td></tr>
+  <tr><td class="n">run / experiment</td><td>una ejecución concreta; el grupo con nombre que las reúne</td></tr>
+  <tr><td class="n">param vs metric</td><td>perilla de entrada que eliges vs número de salida que mides — no confundirlos</td></tr>
+  <tr><td class="n">backend vs artifact store</td><td>metadatos consultables (BD/SQLite) vs adjuntos opacos (blobs); separados a propósito</td></tr>
+  <tr><td class="n">tracking URI</td><td>a dónde se escriben las ejecuciones; misma API para tu portátil o un server de equipo</td></tr>
+  <tr><td class="n">Model Registry / alias</td><td>versiones de modelos con @champion/@challenger y linaje; git para modelos</td></tr>
+  <tr><td class="n">autolog</td><td>una línea (<code>mlflow.&lt;libreria&gt;.autolog()</code>) que registra params/métricas sin instrumentar a mano</td></tr>
+</table>
+</div>
+
+<h2><span class="num">10</span>Lo que queda abierto</h2>
+
+<ul>
+  <li><strong>El espejo, a construir:</strong> ~25 líneas en <code>evaluar_prompts.py</code> que, tras cada ejecución, hagan <code>log_params</code>/<code>log_metrics</code> a un SQLite local — sin tocar la lógica de la báscula ni gastar una sola llamada a la API.</li>
+  <li><strong>El volcado histórico:</strong> un script de una pasada que lea las 13 filas de <code>historial.json</code> y las reproduzca como 13 ejecuciones de MLflow — la vitrina se estrena ya poblada, y de nuevo con coste cero de API.</li>
+  <li><strong>Verlo con los ojos:</strong> <code>mlflow ui</code>, poner v1 y v3 en fila, y reencontrar el susto del juez dibujado en vez de recontado.</li>
+</ul>
+
+<p class="marca">· · ·</p>
+
+<footer>
+Libro 19 · Extra post-roadmap · MLflow (para qué sirve y cómo funciona) · 24 jul 2026<br>
+Sigue a <a href="18_la_sala_de_lectura.html">18 · La sala de lectura</a> · protocolo ds-nexus
+</footer>
+</div>
+
+<script>
+(function(){
+  var raiz=document.documentElement, btn=document.getElementById('tema');
+  function pinta(t){ raiz.setAttribute('data-theme',t); btn.textContent = t==='dark' ? 'Día' : 'Noche';
+                     try{localStorage.setItem('a6mlf-tema',t)}catch(e){} }
+  var g=null; try{g=localStorage.getItem('a6mlf-tema')}catch(e){}
+  pinta(g || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  btn.addEventListener('click',function(){
+    pinta(raiz.getAttribute('data-theme')==='dark'?'light':'dark');
+  });
+
+  var hora=document.getElementById('hora'), velo=document.getElementById('velo');
+  function calor(v){ velo.style.opacity=(v/100*0.42).toFixed(3);
+                     try{localStorage.setItem('a6mlf-hora',v)}catch(e){} }
+  var h=null; try{h=localStorage.getItem('a6mlf-hora')}catch(e){}
+  if(h!==null){ hora.value=h; }
+  calor(hora.value);
+  hora.addEventListener('input',function(){ calor(this.value); });
+})();
+</script>
