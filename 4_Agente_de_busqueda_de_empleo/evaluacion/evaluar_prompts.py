@@ -118,6 +118,47 @@ def _telefonos_del_cv() -> set[str]:
 
 TELEFONOS_CV = _telefonos_del_cv()
 
+_PATRON_EMAIL = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+
+
+def _emails_del_cv() -> set[str]:
+    """Los emails que aparezcan en la cabecera del CV."""
+    return set(re.findall(_PATRON_EMAIL, _cargar_cv()[:600]))
+
+
+EMAILS_CV = _emails_del_cv()
+
+
+def _sanear_pii(texto: str) -> str:
+    """Redacta de un texto los datos de contacto REALES del CV (teléfono y email).
+
+    Guardián de privacidad: el historial se publica en un repo PÚBLICO y las cartas
+    generadas arrastran la firma del CV (teléfono + email). Los valores a redactar se
+    sacan del CV en tiempo de ejecución —NUNCA se escriben aquí— para no meter el dato
+    personal en el propio código, que también es público. Se aplica solo al ESCRIBIR:
+    las notas ya se calcularon sobre la carta real, así que redactar no altera ninguna
+    medición (mismo espíritu que el medidor: el guardián no toca lo que observa).
+    """
+    if not isinstance(texto, str):
+        return texto
+    for em in EMAILS_CV:
+        texto = texto.replace(em, "[email omitido]")
+    for trozo in re.findall(_PATRON_TELEFONO, texto):
+        if re.sub(r"\D", "", trozo) in TELEFONOS_CV:
+            texto = texto.replace(trozo, "[teléfono omitido]")
+    return texto
+
+
+def _sanear(obj):
+    """Aplica _sanear_pii a cada string de una estructura, en profundidad."""
+    if isinstance(obj, str):
+        return _sanear_pii(obj)
+    if isinstance(obj, list):
+        return [_sanear(x) for x in obj]
+    if isinstance(obj, dict):
+        return {k: _sanear(v) for k, v in obj.items()}
+    return obj
+
 
 # Números escritos en letra. 'un'/'una' quedan fuera a propósito: son artículos
 # ("un reporte"), no cifras. El bug real fue "más de dos años".
@@ -308,6 +349,7 @@ def _anadir_al_historial(ejecucion: dict) -> int:
         historial = []
         if RUTA_HISTORIAL.exists():
             historial = json.loads(RUTA_HISTORIAL.read_text(encoding="utf-8"))
+        ejecucion = _sanear(ejecucion)             # redacta el contacto del CV antes de publicar
         historial.append(ejecucion)                # SOLO se añade: nada se reescribe
         tmp = RUTA_HISTORIAL.with_suffix(".json.tmp")
         tmp.write_text(
